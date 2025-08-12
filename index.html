@@ -497,13 +497,6 @@
         <div class="max-w-sm w-full">
             <!-- EDEN Logo -->
             <div class="text-center mb-16 fade-in">
-                <div class="eden-logo w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 premium-shadow glow-effect">
-                    <svg class="w-12 h-12 text-white relative z-10" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C10.9 2 10 2.9 10 4V6H8C6.9 6 6 6.9 6 8V20C6 21.1 6.9 22 8 22H16C17.1 22 18 21.1 18 20V8C18 6.9 17.1 6 16 6H14V4C14 2.9 13.1 2 12 2ZM12 4V6H12V4ZM8 8H16V20H8V8ZM10 10V18H14V10H10ZM11 11H13V17H11V11Z"/>
-                        <circle cx="12" cy="5" r="1"/>
-                        <path d="M9 9H15V10H9V9Z"/>
-                    </svg>
-                </div>
                 <h1 class="text-6xl font-black text-gradient mb-4" style="font-family: 'Playfair Display', serif; letter-spacing: -0.02em;">EDEN</h1>
                 <p class="text-white/70 text-xl font-light tracking-wide">Sales Management System</p>
                 <p class="text-white/50 text-sm mt-2" id="loginDateTime">Loading...</p>
@@ -567,23 +560,9 @@
                         </span>
                     </button>
 
-                    <!-- Developer Details -->
-                    <div class="bg-white/5 rounded-2xl p-6 text-sm backdrop-blur-sm border border-white/10">
-                        <h4 class="font-semibold text-white/90 mb-4">Developer Info</h4>
-                        <div class="space-y-3 text-white/70">
-                            <div class="flex items-center space-x-3">
-                                <span class="text-white/50">👤</span>
-                                <span>SUAFIJ</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="text-white/50">📧</span>
-                                <span class="text-xs">mksufaij0@gmail.com</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="text-white/50">📱</span>
-                                <span>+919961296000</span>
-                            </div>
-                        </div>
+                    <!-- Developer Info -->
+                    <div class="text-center text-xs text-white/40 mt-4">
+                        Developed by SUAFIJ • mksufaij0@gmail.com • +919961296000
                     </div>
                 </form>
             </div>
@@ -1876,7 +1855,7 @@
             console.log('🔐 Login attempt started');
             e.preventDefault();
             
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.toLowerCase(); // Convert to lowercase for comparison
             const password = document.getElementById('password').value;
             
             console.log('Login attempt:', username, password ? 'password provided' : 'no password');
@@ -1897,12 +1876,12 @@
                         
                         console.log('📊 Firebase user data retrieved:', userData ? 'User found' : 'User not found');
                         
-                        if (!userData || userData.password !== password) {
+                        if (!userData || userData.password.toLowerCase() !== password.toLowerCase()) {
                             console.log('❌ Firebase user not found or password mismatch');
                             
                             // Check if user exists in demo users (for initial setup)
                             const demoUser = demoUsers[username];
-                            if (demoUser && demoUser.password === password) {
+                            if (demoUser && demoUser.password.toLowerCase() === password.toLowerCase()) {
                                 try {
                                     // Try to migrate demo user to Firebase
                                     console.log('📤 Migrating demo user to Firebase...');
@@ -1983,7 +1962,7 @@
                         
                         // Fall back to local authentication
                         const demoUser = demoUsers[username];
-                        if (!demoUser || demoUser.password !== password) {
+                        if (!demoUser || demoUser.password.toLowerCase() !== password.toLowerCase()) {
                             throw new Error('Invalid username or password');
                         }
                         
@@ -2000,7 +1979,7 @@
                     const demoUser = demoUsers[username];
                     console.log('Demo user found:', demoUser ? 'yes' : 'no');
                     
-                    if (!demoUser || demoUser.password !== password) {
+                    if (!demoUser || demoUser.password.toLowerCase() !== password.toLowerCase()) {
                         throw new Error('Invalid username or password');
                     }
                     
@@ -3656,5 +3635,5 @@
             showSuccessMessage('System backup downloaded successfully!');
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96ded185b288f9d1',t:'MTc1NDk4OTYwNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96dee506111ede5b',t:'MTc1NDk5MDQwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
