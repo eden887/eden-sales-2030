@@ -777,12 +777,15 @@
             <!-- Quick Actions -->
             <div class="premium-card rounded-3xl p-8 mb-10">
                 <h2 class="text-2xl font-bold text-white mb-8 tracking-wide">QUICK ACTIONS</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <button onclick="showSalesReportPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         📊 Sales Reports
                     </button>
+                    <button onclick="quickStoreData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
+                        💾 Quick Store Data
+                    </button>
                     <button onclick="downloadMasterData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
-                        💾 Master Data Export
+                        📄 Master Data Export
                     </button>
                     <button onclick="downloadSystemBackup()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         🔄 System Backup
@@ -928,6 +931,12 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <button onclick="quickSyncAllData()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Quick Sync</span>
+                        </button>
                         <button onclick="goBackToDashboard()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                             Back to Dashboard
                         </button>
@@ -1060,6 +1069,12 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <button onclick="quickSyncAllData()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Quick Sync</span>
+                        </button>
                         <button onclick="goBackToDashboard()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                             Back to Dashboard
                         </button>
@@ -3634,6 +3649,393 @@
             
             showSuccessMessage('System backup downloaded successfully!');
         }
+
+        // Quick Store Data Function - Store data to Firebase immediately
+        async function quickStoreData() {
+            if (!isFirebaseConfigured) {
+                showCustomAlert('Firebase is not configured. Cannot store data to cloud.');
+                return;
+            }
+            
+            console.log('💾 Starting quick store of all data...');
+            updateSyncStatus('syncing');
+            
+            // Show store progress notification
+            const storeNotification = document.createElement('div');
+            storeNotification.id = 'storeNotification';
+            storeNotification.className = 'fixed top-6 right-6 bg-purple-500/20 border border-purple-500/30 text-purple-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+            storeNotification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-pulse w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <div>
+                        <div class="font-bold">Storing Data to Cloud...</div>
+                        <div class="text-xs opacity-80" id="storeProgress">Preparing storage...</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(storeNotification);
+            
+            const updateProgress = (message) => {
+                const progressDiv = document.getElementById('storeProgress');
+                if (progressDiv) progressDiv.textContent = message;
+            };
+            
+            try {
+                let storeResults = {
+                    sales: { success: 0, failed: 0 },
+                    products: { success: 0, failed: 0 },
+                    stores: { success: 0, failed: 0 },
+                    employees: { success: 0, failed: 0 },
+                    pricing: { success: 0, failed: 0 },
+                    users: { success: 0, failed: 0 }
+                };
+                
+                // Store all data collections to Firebase
+                updateProgress('Storing sales data...');
+                console.log('📊 Storing sales data...');
+                
+                for (const sale of salesData) {
+                    try {
+                        await database.ref('sales').push(sale);
+                        storeResults.sales.success++;
+                    } catch (error) {
+                        console.error('Failed to store sale:', sale.id, error);
+                        storeResults.sales.failed++;
+                    }
+                }
+                
+                updateProgress('Storing products data...');
+                console.log('📦 Storing products data...');
+                
+                for (const product of productsData) {
+                    try {
+                        await database.ref('products').push(product);
+                        storeResults.products.success++;
+                    } catch (error) {
+                        console.error('Failed to store product:', product.id, error);
+                        storeResults.products.failed++;
+                    }
+                }
+                
+                updateProgress('Storing stores data...');
+                console.log('🏪 Storing stores data...');
+                
+                for (const store of storesData) {
+                    try {
+                        await database.ref('stores').push(store);
+                        storeResults.stores.success++;
+                    } catch (error) {
+                        console.error('Failed to store store:', store.id, error);
+                        storeResults.stores.failed++;
+                    }
+                }
+                
+                updateProgress('Storing employees data...');
+                console.log('👥 Storing employees data...');
+                
+                for (const employee of employeesData) {
+                    try {
+                        await database.ref('employees').push(employee);
+                        storeResults.employees.success++;
+                    } catch (error) {
+                        console.error('Failed to store employee:', employee.id, error);
+                        storeResults.employees.failed++;
+                    }
+                }
+                
+                updateProgress('Storing pricing data...');
+                console.log('💰 Storing pricing data...');
+                
+                for (const pricing of storePricingData) {
+                    try {
+                        await database.ref('storePricing').push(pricing);
+                        storeResults.pricing.success++;
+                    } catch (error) {
+                        console.error('Failed to store pricing:', pricing.id, error);
+                        storeResults.pricing.failed++;
+                    }
+                }
+                
+                updateProgress('Storing users data...');
+                console.log('👤 Storing users data...');
+                
+                for (const [username, userData] of Object.entries(demoUsers)) {
+                    try {
+                        await database.ref(`users/${username}`).set(userData);
+                        storeResults.users.success++;
+                    } catch (error) {
+                        console.error('Failed to store user:', username, error);
+                        storeResults.users.failed++;
+                    }
+                }
+                
+                // Calculate totals
+                const totalSuccess = Object.values(storeResults).reduce((sum, result) => sum + result.success, 0);
+                const totalFailed = Object.values(storeResults).reduce((sum, result) => sum + result.failed, 0);
+                
+                console.log('✅ Quick store completed!', storeResults);
+                
+                // Update store notification with results
+                storeNotification.className = 'fixed top-6 right-6 bg-green-500/20 border border-green-500/30 text-green-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                storeNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Data Stored Successfully!</div>
+                            <div class="text-xs opacity-80">
+                                💾 ${totalSuccess} items stored to cloud
+                                ${totalFailed > 0 ? `• ❌ ${totalFailed} failed` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('synced');
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (storeNotification && storeNotification.parentNode) {
+                        storeNotification.remove();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error('❌ Quick store failed:', error);
+                
+                // Update notification with error
+                storeNotification.className = 'fixed top-6 right-6 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                storeNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Store Failed</div>
+                            <div class="text-xs opacity-80">${error.message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('error');
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (storeNotification && storeNotification.parentNode) {
+                        storeNotification.remove();
+                    }
+                }, 8000);
+            }
+        }
+
+        // Quick Sync All Data Function
+        async function quickSyncAllData() {
+            if (!isFirebaseConfigured) {
+                showCustomAlert('Firebase is not configured. Cannot sync data to cloud.');
+                return;
+            }
+            
+            console.log('🔄 Starting quick sync of all data...');
+            updateSyncStatus('syncing');
+            
+            // Show sync progress notification
+            const syncNotification = document.createElement('div');
+            syncNotification.id = 'syncNotification';
+            syncNotification.className = 'fixed top-6 right-6 bg-blue-500/20 border border-blue-500/30 text-blue-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+            syncNotification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <div>
+                        <div class="font-bold">Syncing All Data...</div>
+                        <div class="text-xs opacity-80" id="syncProgress">Preparing sync...</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(syncNotification);
+            
+            const updateProgress = (message) => {
+                const progressDiv = document.getElementById('syncProgress');
+                if (progressDiv) progressDiv.textContent = message;
+            };
+            
+            try {
+                let syncResults = {
+                    sales: { success: 0, failed: 0 },
+                    products: { success: 0, failed: 0 },
+                    stores: { success: 0, failed: 0 },
+                    employees: { success: 0, failed: 0 },
+                    pricing: { success: 0, failed: 0 },
+                    users: { success: 0, failed: 0 }
+                };
+                
+                // 1. Sync Sales Data
+                updateProgress('Syncing sales data...');
+                console.log('📊 Syncing sales data...');
+                
+                // Clear existing sales data in Firebase and re-upload all
+                await database.ref('sales').remove();
+                for (const sale of salesData) {
+                    try {
+                        await database.ref('sales').push(sale);
+                        syncResults.sales.success++;
+                    } catch (error) {
+                        console.error('Failed to sync sale:', sale.id, error);
+                        syncResults.sales.failed++;
+                    }
+                }
+                
+                // 2. Sync Products Data
+                updateProgress('Syncing products data...');
+                console.log('📦 Syncing products data...');
+                
+                await database.ref('products').remove();
+                for (const product of productsData) {
+                    try {
+                        await database.ref('products').push(product);
+                        syncResults.products.success++;
+                    } catch (error) {
+                        console.error('Failed to sync product:', product.id, error);
+                        syncResults.products.failed++;
+                    }
+                }
+                
+                // 3. Sync Stores Data
+                updateProgress('Syncing stores data...');
+                console.log('🏪 Syncing stores data...');
+                
+                await database.ref('stores').remove();
+                for (const store of storesData) {
+                    try {
+                        await database.ref('stores').push(store);
+                        syncResults.stores.success++;
+                    } catch (error) {
+                        console.error('Failed to sync store:', store.id, error);
+                        syncResults.stores.failed++;
+                    }
+                }
+                
+                // 4. Sync Employees Data
+                updateProgress('Syncing employees data...');
+                console.log('👥 Syncing employees data...');
+                
+                await database.ref('employees').remove();
+                for (const employee of employeesData) {
+                    try {
+                        await database.ref('employees').push(employee);
+                        syncResults.employees.success++;
+                    } catch (error) {
+                        console.error('Failed to sync employee:', employee.id, error);
+                        syncResults.employees.failed++;
+                    }
+                }
+                
+                // 5. Sync Store Pricing Data
+                updateProgress('Syncing pricing data...');
+                console.log('💰 Syncing pricing data...');
+                
+                await database.ref('storePricing').remove();
+                for (const pricing of storePricingData) {
+                    try {
+                        await database.ref('storePricing').push(pricing);
+                        syncResults.pricing.success++;
+                    } catch (error) {
+                        console.error('Failed to sync pricing:', pricing.id, error);
+                        syncResults.pricing.failed++;
+                    }
+                }
+                
+                // 6. Sync Users Data
+                updateProgress('Syncing users data...');
+                console.log('👤 Syncing users data...');
+                
+                await database.ref('users').remove();
+                for (const [username, userData] of Object.entries(demoUsers)) {
+                    try {
+                        await database.ref(`users/${username}`).set(userData);
+                        syncResults.users.success++;
+                    } catch (error) {
+                        console.error('Failed to sync user:', username, error);
+                        syncResults.users.failed++;
+                    }
+                }
+                
+                // Calculate totals
+                const totalSuccess = Object.values(syncResults).reduce((sum, result) => sum + result.success, 0);
+                const totalFailed = Object.values(syncResults).reduce((sum, result) => sum + result.failed, 0);
+                
+                console.log('✅ Quick sync completed!', syncResults);
+                
+                // Update sync notification with results
+                syncNotification.className = 'fixed top-6 right-6 bg-green-500/20 border border-green-500/30 text-green-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                syncNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Sync Completed!</div>
+                            <div class="text-xs opacity-80">
+                                ✅ ${totalSuccess} items synced successfully
+                                ${totalFailed > 0 ? `• ❌ ${totalFailed} failed` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('synced');
+                
+                // Update all UI components
+                if (currentUser) {
+                    if (currentUser.role === 'admin') {
+                        updateAdminStats();
+                        updateEmployeesList();
+                        updateStoresList();
+                        updatePricingList();
+                    } else {
+                        updateSalesStats();
+                        updateRecentSales();
+                    }
+                }
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (syncNotification && syncNotification.parentNode) {
+                        syncNotification.remove();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error('❌ Quick sync failed:', error);
+                
+                // Update notification with error
+                syncNotification.className = 'fixed top-6 right-6 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                syncNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Sync Failed</div>
+                            <div class="text-xs opacity-80">${error.message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('error');
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (syncNotification && syncNotification.parentNode) {
+                        syncNotification.remove();
+                    }
+                }, 8000);
+            }
+        }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96dee506111ede5b',t:'MTc1NDk5MDQwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96def323a48df9fc',t:'MTc1NDk5MDk4Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
