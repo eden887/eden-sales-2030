@@ -497,13 +497,6 @@
         <div class="max-w-sm w-full">
             <!-- EDEN Logo -->
             <div class="text-center mb-16 fade-in">
-                <div class="eden-logo w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 premium-shadow glow-effect">
-                    <svg class="w-12 h-12 text-white relative z-10" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C10.9 2 10 2.9 10 4V6H8C6.9 6 6 6.9 6 8V20C6 21.1 6.9 22 8 22H16C17.1 22 18 21.1 18 20V8C18 6.9 17.1 6 16 6H14V4C14 2.9 13.1 2 12 2ZM12 4V6H12V4ZM8 8H16V20H8V8ZM10 10V18H14V10H10ZM11 11H13V17H11V11Z"/>
-                        <circle cx="12" cy="5" r="1"/>
-                        <path d="M9 9H15V10H9V9Z"/>
-                    </svg>
-                </div>
                 <h1 class="text-6xl font-black text-gradient mb-4" style="font-family: 'Playfair Display', serif; letter-spacing: -0.02em;">EDEN</h1>
                 <p class="text-white/70 text-xl font-light tracking-wide">Sales Management System</p>
                 <p class="text-white/50 text-sm mt-2" id="loginDateTime">Loading...</p>
@@ -567,23 +560,9 @@
                         </span>
                     </button>
 
-                    <!-- Developer Details -->
-                    <div class="bg-white/5 rounded-2xl p-6 text-sm backdrop-blur-sm border border-white/10">
-                        <h4 class="font-semibold text-white/90 mb-4">Developer Info</h4>
-                        <div class="space-y-3 text-white/70">
-                            <div class="flex items-center space-x-3">
-                                <span class="text-white/50">👤</span>
-                                <span>SUAFIJ</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="text-white/50">📧</span>
-                                <span class="text-xs">mksufaij0@gmail.com</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="text-white/50">📱</span>
-                                <span>+919961296000</span>
-                            </div>
-                        </div>
+                    <!-- Developer Info -->
+                    <div class="text-center text-xs text-white/40 mt-4">
+                        Developed by SUAFIJ • mksufaij0@gmail.com • +919961296000
                     </div>
                 </form>
             </div>
@@ -620,10 +599,6 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-6">
-                        <div class="text-right">
-                            <div class="text-xs text-white/60 font-medium">TOTAL SALES</div>
-                            <div class="text-lg font-bold text-yellow-400" id="totalSalesHeader">0</div>
-                        </div>
                         <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors">
                             Sign Out
                         </button>
@@ -655,14 +630,6 @@
                         <select id="storeName" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
                             <option value="">Select store</option>
-                            <option value="Mall of Emirates">Mall of Emirates</option>
-                            <option value="Dubai Mall">Dubai Mall</option>
-                            <option value="City Centre Deira">City Centre Deira</option>
-                            <option value="Ibn Battuta Mall">Ibn Battuta Mall</option>
-                            <option value="Marina Mall">Marina Mall</option>
-                            <option value="Mercato Mall">Mercato Mall</option>
-                            <option value="BurJuman Centre">BurJuman Centre</option>
-                            <option value="Al Ghurair Centre">Al Ghurair Centre</option>
                         </select>
                     </div>
                     
@@ -671,16 +638,6 @@
                         <select id="product" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
                             <option value="">Select product</option>
-                            <option value="iPhone 15 Pro">iPhone 15 Pro</option>
-                            <option value="iPhone 15">iPhone 15</option>
-                            <option value="Samsung Galaxy S24">Samsung Galaxy S24</option>
-                            <option value="iPad Pro">iPad Pro</option>
-                            <option value="MacBook Air">MacBook Air</option>
-                            <option value="AirPods Pro">AirPods Pro</option>
-                            <option value="Apple Watch">Apple Watch</option>
-                            <option value="Samsung Tab">Samsung Tab</option>
-                            <option value="Accessories">Accessories</option>
-                            <option value="Cases & Covers">Cases & Covers</option>
                         </select>
                     </div>
                     
@@ -758,10 +715,6 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-6">
-                        <div class="text-right">
-                            <div class="text-xs text-white/60 font-medium">TOTAL SALES</div>
-                            <div class="text-lg font-bold text-yellow-400" id="totalSalesHeader">0</div>
-                        </div>
                         <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors">
                             Sign Out
                         </button>
@@ -798,12 +751,15 @@
             <!-- Quick Actions -->
             <div class="premium-card rounded-3xl p-8 mb-10">
                 <h2 class="text-2xl font-bold text-white mb-8 tracking-wide">QUICK ACTIONS</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <button onclick="showSalesReportPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         📊 Sales Reports
                     </button>
+                    <button onclick="quickStoreData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
+                        🔄 Smart Sync Data
+                    </button>
                     <button onclick="downloadMasterData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
-                        💾 Master Data Export
+                        📄 Master Data Export
                     </button>
                     <button onclick="downloadSystemBackup()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         🔄 System Backup
@@ -825,30 +781,9 @@
                         <h2 class="text-xl font-bold text-white tracking-wide">EMPLOYEE MANAGEMENT</h2>
                         <button onclick="showAddEmployeeModal()" class="premium-button px-4 py-2 text-white font-bold rounded-xl text-sm">+ ADD EMPLOYEE</button>
                     </div>
-                    <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar">
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">john_doe</div>
-                                <div class="text-sm text-white/60">Employee • Last active: Today</div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
-                                <button onclick="editEmployee('john_doe')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                                <button onclick="deleteEmployee('john_doe')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">admin_user</div>
-                                <div class="text-sm text-white/60">Admin • Last active: Now</div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-full text-sm font-bold border border-blue-500/30">ONLINE</span>
-                                <button onclick="editEmployee('admin_user')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                                <button onclick="deleteEmployee('admin_user')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar"><div class="text-white/50 text-center py-8 font-medium">No employees found</div></div>
+</div>
+</div>
                 </div>
 
                 <!-- Stores Management -->
@@ -857,12 +792,8 @@
                         <h2 class="text-2xl font-bold text-white tracking-wide">STORE MANAGEMENT</h2>
                         <button onclick="showAddStoreModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ ADD STORE</button>
                     </div>
-                    <div id="storesList" class="space-y-4">
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">Mall of Emirates</div>
-                                <div class="text-sm text-white/60">Dubai • Premium Location</div>
-                            </div>
+                    <div id="storesList" class="space-y-4"><div class="text-white/50 text-center py-8 font-medium">No stores found</div></div>
+</div>
                             <div class="flex items-center space-x-3">
                                 <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
                                 <button onclick="editStore('Mall of Emirates')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
@@ -949,6 +880,12 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <button onclick="quickSyncAllData()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Quick Sync</span>
+                        </button>
                         <button onclick="goBackToDashboard()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                             Back to Dashboard
                         </button>
@@ -1081,6 +1018,12 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
+                        <button onclick="quickSyncAllData()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Quick Sync</span>
+                        </button>
                         <button onclick="goBackToDashboard()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                             Back to Dashboard
                         </button>
@@ -1099,9 +1042,7 @@
                     <h2 class="text-xl font-bold text-white tracking-wide">Product Catalog</h2>
                     <button onclick="showAddProductModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ Add Product</button>
                 </div>
-                <div id="productsPageList" class="space-y-4">
-                    <!-- Products will be loaded here -->
-                </div>
+                <div id="productsPageList" class="space-y-4"><div class="text-white/50 text-center py-8 font-medium">No products found</div></div>
             </div>
 
             <!-- Product Modal -->
@@ -1495,40 +1436,67 @@
                     database.ref('users').once('value')
                 ]);
                 
-                // Update local data with Firebase data
+                // Update local data with Firebase data, preserving Firebase keys
                 if (salesSnap.exists()) {
-                    salesData = Object.values(salesSnap.val());
+                    const firebaseSales = salesSnap.val();
+                    salesData = Object.keys(firebaseSales).map(key => ({
+                        ...firebaseSales[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenSalesData', JSON.stringify(salesData));
                     console.log(`📊 Loaded ${salesData.length} sales records from Firebase`);
                 }
                 
                 if (productsSnap.exists()) {
-                    productsData = Object.values(productsSnap.val());
+                    const firebaseProducts = productsSnap.val();
+                    productsData = Object.keys(firebaseProducts).map(key => ({
+                        ...firebaseProducts[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                     console.log(`📦 Loaded ${productsData.length} products from Firebase`);
                 }
                 
                 if (storesSnap.exists()) {
-                    storesData = Object.values(storesSnap.val());
+                    const firebaseStores = storesSnap.val();
+                    storesData = Object.keys(firebaseStores).map(key => ({
+                        ...firebaseStores[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                     console.log(`🏪 Loaded ${storesData.length} stores from Firebase`);
                 }
                 
                 if (employeesSnap.exists()) {
-                    employeesData = Object.values(employeesSnap.val());
+                    const firebaseEmployees = employeesSnap.val();
+                    employeesData = Object.keys(firebaseEmployees).map(key => ({
+                        ...firebaseEmployees[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                     console.log(`👥 Loaded ${employeesData.length} employees from Firebase`);
                 }
                 
                 if (pricingSnap.exists()) {
-                    storePricingData = Object.values(pricingSnap.val());
+                    const firebasePricing = pricingSnap.val();
+                    storePricingData = Object.keys(firebasePricing).map(key => ({
+                        ...firebasePricing[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                     console.log(`💰 Loaded ${storePricingData.length} custom prices from Firebase`);
                 }
                 
                 if (usersSnap.exists()) {
-                    Object.assign(demoUsers, usersSnap.val());
-                    console.log(`👤 Loaded ${Object.keys(usersSnap.val()).length} users from Firebase`);
+                    const firebaseUsers = usersSnap.val();
+                    // Users are stored by username, so preserve that structure
+                    Object.keys(firebaseUsers).forEach(username => {
+                        demoUsers[username] = {
+                            ...firebaseUsers[username],
+                            firebaseKey: username
+                        };
+                    });
+                    console.log(`👤 Loaded ${Object.keys(firebaseUsers).length} users from Firebase`);
                 }
                 
                 console.log("✅ All Firebase data loaded successfully");
@@ -1549,7 +1517,10 @@
             database.ref('sales').on('value', (snapshot) => {
                 const firebaseSales = snapshot.val();
                 if (firebaseSales) {
-                    salesData = Object.values(firebaseSales);
+                    salesData = Object.keys(firebaseSales).map(key => ({
+                        ...firebaseSales[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenSalesData', JSON.stringify(salesData));
                     console.log(`📊 Sales data updated: ${salesData.length} records`);
                     
@@ -1569,7 +1540,10 @@
             database.ref('products').on('value', (snapshot) => {
                 const firebaseProducts = snapshot.val();
                 if (firebaseProducts) {
-                    productsData = Object.values(firebaseProducts);
+                    productsData = Object.keys(firebaseProducts).map(key => ({
+                        ...firebaseProducts[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                     console.log(`📦 Products data updated: ${productsData.length} products`);
                     updateProductsList();
@@ -1581,7 +1555,10 @@
             database.ref('stores').on('value', (snapshot) => {
                 const firebaseStores = snapshot.val();
                 if (firebaseStores) {
-                    storesData = Object.values(firebaseStores);
+                    storesData = Object.keys(firebaseStores).map(key => ({
+                        ...firebaseStores[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                     console.log(`🏪 Stores data updated: ${storesData.length} stores`);
                     updateStoresList();
@@ -1592,7 +1569,10 @@
             database.ref('employees').on('value', (snapshot) => {
                 const firebaseEmployees = snapshot.val();
                 if (firebaseEmployees) {
-                    employeesData = Object.values(firebaseEmployees);
+                    employeesData = Object.keys(firebaseEmployees).map(key => ({
+                        ...firebaseEmployees[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                     console.log(`👥 Employees data updated: ${employeesData.length} employees`);
                     updateEmployeesList();
@@ -1603,7 +1583,10 @@
             database.ref('storePricing').on('value', (snapshot) => {
                 const firebasePricing = snapshot.val();
                 if (firebasePricing) {
-                    storePricingData = Object.values(firebasePricing);
+                    storePricingData = Object.keys(firebasePricing).map(key => ({
+                        ...firebasePricing[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                     console.log(`💰 Pricing data updated: ${storePricingData.length} custom prices`);
                     updatePricingList();
@@ -1615,8 +1598,13 @@
             database.ref('users').on('value', (snapshot) => {
                 const firebaseUsers = snapshot.val();
                 if (firebaseUsers) {
-                    // Update demo users with Firebase data
-                    Object.assign(demoUsers, firebaseUsers);
+                    // Update demo users with Firebase data, preserving keys
+                    Object.keys(firebaseUsers).forEach(username => {
+                        demoUsers[username] = {
+                            ...firebaseUsers[username],
+                            firebaseKey: username
+                        };
+                    });
                     console.log(`👤 Users data updated: ${Object.keys(firebaseUsers).length} users`);
                 }
             });
@@ -1642,30 +1630,27 @@
         
         // Initialize demo data if Firebase is not available
         function initializeDemoData() {
-            console.log("📝 Initializing demo data...");
+            console.log("📝 Initializing fresh system...");
             
-            // Ensure demo data exists in localStorage
-            if (!localStorage.getItem('edenSalesData')) {
-                localStorage.setItem('edenSalesData', JSON.stringify(salesData));
-            }
-            if (!localStorage.getItem('edenProductsData')) {
-                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-            }
-            if (!localStorage.getItem('edenStoresData')) {
-                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-            }
-            if (!localStorage.getItem('edenEmployeesData')) {
-                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-            }
-            if (!localStorage.getItem('edenStorePricingData')) {
-                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-            }
+            // Clear existing localStorage and start fresh
+            localStorage.removeItem('edenSalesData');
+            localStorage.removeItem('edenProductsData');
+            localStorage.removeItem('edenStoresData');
+            localStorage.removeItem('edenEmployeesData');
+            localStorage.removeItem('edenStorePricingData');
+            
+            // Set empty arrays for fresh start
+            localStorage.setItem('edenSalesData', JSON.stringify([]));
+            localStorage.setItem('edenProductsData', JSON.stringify([]));
+            localStorage.setItem('edenStoresData', JSON.stringify([]));
+            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData)); // Keep only admin
+            localStorage.setItem('edenStorePricingData', JSON.stringify([]));
             
             updateSyncStatus('local');
-            console.log("✅ Demo data initialized");
+            console.log("✅ Fresh system initialized - Only admin user remains");
         }
         
-        // Save data to Firebase
+        // Save data to Firebase (for new records)
         async function saveToFirebase(path, data) {
             if (!isFirebaseConfigured) {
                 console.log("Firebase not configured, saving locally only");
@@ -1674,9 +1659,11 @@
             
             try {
                 updateSyncStatus('syncing');
-                await database.ref(path).push(data);
+                const ref = await database.ref(path).push(data);
+                // Store the Firebase key for future updates
+                data.firebaseKey = ref.key;
                 updateSyncStatus('synced');
-                return true;
+                return ref.key;
             } catch (error) {
                 console.warn("⚠️ Firebase save failed, falling back to local:", error.message);
                 updateSyncStatus('local');
@@ -1684,8 +1671,8 @@
             }
         }
         
-        // Update data in Firebase
-        async function updateInFirebase(path, data) {
+        // Update existing data in Firebase
+        async function updateInFirebase(path, firebaseKey, data) {
             if (!isFirebaseConfigured) {
                 console.log("Firebase not configured, saving locally only");
                 return false;
@@ -1693,7 +1680,14 @@
             
             try {
                 updateSyncStatus('syncing');
-                await database.ref(path).set(data);
+                if (firebaseKey) {
+                    // Update existing record
+                    await database.ref(`${path}/${firebaseKey}`).set(data);
+                } else {
+                    // Create new record if no key exists
+                    const ref = await database.ref(path).push(data);
+                    data.firebaseKey = ref.key;
+                }
                 updateSyncStatus('synced');
                 return true;
             } catch (error) {
@@ -1702,15 +1696,28 @@
                 return false;
             }
         }
+        
+        // Delete data from Firebase
+        async function deleteFromFirebase(path, firebaseKey) {
+            if (!isFirebaseConfigured || !firebaseKey) {
+                console.log("Firebase not configured or no key provided");
+                return false;
+            }
+            
+            try {
+                updateSyncStatus('syncing');
+                await database.ref(`${path}/${firebaseKey}`).remove();
+                updateSyncStatus('synced');
+                return true;
+            } catch (error) {
+                console.warn("⚠️ Firebase delete failed:", error.message);
+                updateSyncStatus('local');
+                return false;
+            }
+        }
 
-        // Demo users (will be moved to Firebase)
+        // Demo users - keeping only admin user for fresh start
         const demoUsers = {
-            'john_doe': {
-                password: 'pass123',
-                role: 'employee',
-                name: 'John Doe',
-                id: 'emp001'
-            },
             'admin_user': {
                 password: 'admin123',
                 role: 'admin',
@@ -1719,87 +1726,15 @@
             }
         };
 
-        // Sales data with sample entries (yesterday's sales)
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
-        let salesData = JSON.parse(localStorage.getItem('edenSalesData')) || [
-            {
-                id: 1701234567890,
-                employeeId: 'emp001',
-                employeeName: 'John Doe',
-                storeName: 'Mall of Emirates',
-                product: 'iPhone 15 Pro',
-                quantity: 2,
-                amount: 8598.00,
-                date: yesterdayStr,
-                timestamp: yesterday.toISOString()
-            },
-            {
-                id: 1701234567891,
-                employeeId: 'admin001',
-                employeeName: 'Admin User',
-                storeName: 'Dubai Mall',
-                product: 'Samsung Galaxy S24',
-                quantity: 1,
-                amount: 3199.00,
-                date: yesterdayStr,
-                timestamp: yesterday.toISOString()
-            },
-            {
-                id: 1701234567892,
-                employeeId: 'emp001',
-                employeeName: 'John Doe',
-                storeName: 'City Centre Deira',
-                product: 'iPad Pro',
-                quantity: 3,
-                amount: 8697.00,
-                date: yesterdayStr,
-                timestamp: yesterday.toISOString()
-            },
-            {
-                id: 1701234567893,
-                employeeId: 'admin001',
-                employeeName: 'Admin User',
-                storeName: 'Marina Mall',
-                product: 'MacBook Air',
-                quantity: 1,
-                amount: 4599.00,
-                date: yesterdayStr,
-                timestamp: yesterday.toISOString()
-            },
-            {
-                id: 1701234567894,
-                employeeId: 'emp001',
-                employeeName: 'John Doe',
-                storeName: 'Ibn Battuta Mall',
-                product: 'AirPods Pro',
-                quantity: 5,
-                amount: 4495.00,
-                date: yesterdayStr,
-                timestamp: yesterday.toISOString()
-            }
-        ];
+        // Sales data - starting fresh with empty array
+        let salesData = JSON.parse(localStorage.getItem('edenSalesData')) || [];
         let currentUser = null;
         
-        // Products data
-        let productsData = JSON.parse(localStorage.getItem('edenProductsData')) || [
-            { id: 1, name: 'iPhone 15 Pro', price: 4299.00 },
-            { id: 2, name: 'iPhone 15', price: 3699.00 },
-            { id: 3, name: 'Samsung Galaxy S24', price: 3199.00 },
-            { id: 4, name: 'iPad Pro', price: 2899.00 },
-            { id: 5, name: 'MacBook Air', price: 4599.00 },
-            { id: 6, name: 'AirPods Pro', price: 899.00 },
-            { id: 7, name: 'Apple Watch', price: 1499.00 },
-            { id: 8, name: 'Samsung Tab', price: 1299.00 }
-        ];
+        // Products data - starting fresh with empty array
+        let productsData = JSON.parse(localStorage.getItem('edenProductsData')) || [];
         
-        // Store-specific pricing data
-        let storePricingData = JSON.parse(localStorage.getItem('edenStorePricingData')) || [
-            { id: 1, productName: 'iPhone 15 Pro', storeName: 'Mall of Emirates', customPrice: 4399.00 },
-            { id: 2, productName: 'Samsung Galaxy S24', storeName: 'Dubai Mall', customPrice: 3299.00 }
-        ];
+        // Store-specific pricing data - starting fresh with empty array
+        let storePricingData = JSON.parse(localStorage.getItem('edenStorePricingData')) || [];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -1809,6 +1744,14 @@
             updateDateTime();
             loadLastSyncTime();
             setInterval(updateDateTime, 1000); // Update every second
+            
+            // Auto-refresh data every 3 seconds if Firebase is configured
+            setInterval(() => {
+                if (isFirebaseConfigured && currentUser) {
+                    console.log('🔄 Auto-refreshing data...');
+                    refreshCurrentPageData();
+                }
+            }, 3000); // Auto-refresh every 3 seconds
             
             // Setup login form handler directly
             const loginForm = document.getElementById('loginForm');
@@ -1876,7 +1819,7 @@
             console.log('🔐 Login attempt started');
             e.preventDefault();
             
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.toLowerCase();
             const password = document.getElementById('password').value;
             
             console.log('Login attempt:', username, password ? 'password provided' : 'no password');
@@ -1885,127 +1828,45 @@
             hideMessages();
             
             try {
+                // Check demo users first (for fresh database)
+                const demoUser = demoUsers[username];
+                if (!demoUser || demoUser.password.toLowerCase() !== password.toLowerCase()) {
+                    throw new Error('Invalid username or password');
+                }
+                
+                currentUser = demoUser;
+                console.log('✅ Login successful for:', currentUser.name);
+                
                 if (isFirebaseConfigured) {
-                    // Real Firebase authentication
-                    console.log('🔥 Authenticating with Firebase...');
+                    console.log('🔥 Firebase is configured, will migrate user data...');
                     updateSyncStatus('syncing');
                     
                     try {
-                        console.log('🔍 Attempting Firebase authentication for:', username);
-                        const userSnapshot = await database.ref(`users/${username}`).once('value');
-                        const userData = userSnapshot.val();
+                        // Migrate demo user to Firebase
+                        console.log('📤 Migrating user to Firebase...');
+                        await database.ref(`users/${username}`).set(demoUser);
                         
-                        console.log('📊 Firebase user data retrieved:', userData ? 'User found' : 'User not found');
+                        // Also migrate to employees collection
+                        const employeeData = {
+                            id: demoUser.id,
+                            username: username,
+                            name: demoUser.name,
+                            role: demoUser.role,
+                            status: 'active',
+                            lastActive: new Date().toISOString(),
+                            createdAt: new Date().toISOString(),
+                            password: demoUser.password
+                        };
+                        await database.ref('employees').push(employeeData);
                         
-                        if (!userData || userData.password !== password) {
-                            console.log('❌ Firebase user not found or password mismatch');
-                            
-                            // Check if user exists in demo users (for initial setup)
-                            const demoUser = demoUsers[username];
-                            if (demoUser && demoUser.password === password) {
-                                try {
-                                    // Try to migrate demo user to Firebase
-                                    console.log('📤 Migrating demo user to Firebase...');
-                                    await database.ref(`users/${username}`).set(demoUser);
-                                    
-                                    // Also migrate to employees collection
-                                    const employeeData = {
-                                        id: demoUser.id,
-                                        username: username,
-                                        name: demoUser.name,
-                                        role: demoUser.role,
-                                        status: 'active',
-                                        lastActive: new Date().toISOString(),
-                                        createdAt: new Date().toISOString()
-                                    };
-                                    await database.ref(`employees/${demoUser.id}`).set(employeeData);
-                                    
-                                    currentUser = demoUser;
-                                    console.log('✅ Demo user migrated to Firebase:', currentUser.name);
-                                    updateSyncStatus('synced');
-                                } catch (migrationError) {
-                                    console.error('❌ Firebase migration failed:', migrationError);
-                                    console.error('Migration error details:', {
-                                        code: migrationError.code,
-                                        message: migrationError.message
-                                    });
-                                    
-                                    // Fall back to local mode
-                                    currentUser = demoUser;
-                                    updateSyncStatus('local');
-                                }
-                            } else {
-                                throw new Error('Invalid username or password');
-                            }
-                        } else {
-                            currentUser = userData;
-                            console.log('✅ Firebase login successful for:', currentUser.name);
-                            
-                            try {
-                                // Update last active time
-                                console.log('📝 Updating user activity status...');
-                                await database.ref(`users/${username}/lastActive`).set(new Date().toISOString());
-                                await database.ref(`employees/${userData.id}/lastActive`).set(new Date().toISOString());
-                                await database.ref(`employees/${userData.id}/status`).set('online');
-                                console.log('✅ User status updated successfully');
-                                updateSyncStatus('synced');
-                            } catch (updateError) {
-                                console.error('❌ Failed to update user status:', updateError);
-                                console.error('Update error details:', {
-                                    code: updateError.code,
-                                    message: updateError.message
-                                });
-                                updateSyncStatus('local');
-                            }
-                        }
-                        
-                        // Try to initialize user data if first time
-                        try {
-                            console.log('🔄 Initializing user data...');
-                            await initializeUserData();
-                            console.log('✅ User data initialization complete');
-                        } catch (initError) {
-                            console.error('❌ Failed to initialize Firebase data:', initError);
-                            console.error('Init error details:', {
-                                code: initError.code,
-                                message: initError.message
-                            });
-                            updateSyncStatus('local');
-                        }
-                        
-                    } catch (firebaseError) {
-                        console.error('❌ Firebase authentication failed:', firebaseError);
-                        console.error('Firebase auth error details:', {
-                            code: firebaseError.code,
-                            message: firebaseError.message,
-                            stack: firebaseError.stack
-                        });
-                        
-                        // Fall back to local authentication
-                        const demoUser = demoUsers[username];
-                        if (!demoUser || demoUser.password !== password) {
-                            throw new Error('Invalid username or password');
-                        }
-                        
-                        currentUser = demoUser;
-                        console.log('✅ Local login successful for:', currentUser.name);
+                        console.log('✅ User migrated to Firebase successfully');
+                        updateSyncStatus('synced');
+                    } catch (migrationError) {
+                        console.error('❌ Firebase migration failed:', migrationError);
                         updateSyncStatus('local');
                     }
-                    
                 } else {
-                    // Fallback to demo mode
-                    console.log('⚠️ Running in demo mode');
-                    await simulateNetworkDelay();
-                    
-                    const demoUser = demoUsers[username];
-                    console.log('Demo user found:', demoUser ? 'yes' : 'no');
-                    
-                    if (!demoUser || demoUser.password !== password) {
-                        throw new Error('Invalid username or password');
-                    }
-                    
-                    currentUser = demoUser;
-                    console.log('✅ Demo login successful for:', currentUser.name);
+                    console.log('⚠️ Running in local mode');
                     updateSyncStatus('local');
                 }
                 
@@ -2036,19 +1897,10 @@
         
         // Initialize user data on first login
         async function initializeUserData() {
-            if (!isFirebaseConfigured) return;
-            
-            try {
-                console.log('🔄 Initializing user data...');
-                
-                // Check if initial data exists, if not, populate it
-                const salesSnapshot = await database.ref('sales').once('value');
-                if (!salesSnapshot.exists() && salesData.length > 0) {
-                    console.log('📊 Populating initial sales data...');
-                    for (const sale of salesData) {
-                        await database.ref('sales').push(sale);
-                    }
-                }
+  // Disabled: prevent auto-populating Firebase with any local/demo data.
+  return;
+}
+}
                 
                 const productsSnapshot = await database.ref('products').once('value');
                 if (!productsSnapshot.exists() && productsData.length > 0) {
@@ -2121,11 +1973,11 @@
                 console.log('💾 Saving sale entry:', sale);
 
                 // Save to Firebase first, then update local data
-                const firebaseSaved = await saveToFirebase('sales', sale);
+                const firebaseKey = await saveToFirebase('sales', sale);
                 
-                if (firebaseSaved) {
+                if (firebaseKey) {
                     // Firebase will trigger the real-time listener to update salesData
-                    console.log('✅ Sale saved to Firebase successfully');
+                    console.log('✅ Sale saved to Firebase successfully with key:', firebaseKey);
                     
                     // Show success feedback
                     submitButton.innerHTML = '✅ Saved to Cloud!';
@@ -2258,9 +2110,6 @@
             document.getElementById('totalRevenue').textContent = `${totalRevenue.toFixed(2)} DHS`;
             document.getElementById('activeUsers').textContent = Object.keys(demoUsers).length;
             document.getElementById('avgSaleAmount').textContent = `${avgSale.toFixed(2)} DHS`;
-            
-            // Update header total sales counter
-            document.getElementById('totalSalesHeader').textContent = totalSales;
             
             // Initialize management lists
             updateEmployeesList();
@@ -2452,19 +2301,12 @@
             });
         }
 
-        // Data storage for management
+        // Data storage for management - keeping only admin user
         let employeesData = JSON.parse(localStorage.getItem('edenEmployeesData')) || [
-            { id: 'emp001', username: 'john_doe', name: 'John Doe', role: 'employee', status: 'active', lastActive: 'Today' },
             { id: 'admin001', username: 'admin_user', name: 'Admin User', role: 'admin', status: 'online', lastActive: 'Now' }
         ];
         
-        let storesData = JSON.parse(localStorage.getItem('edenStoresData')) || [
-            { id: 1, name: 'Mall of Emirates', location: 'Dubai', description: 'Premium Location', status: 'active' },
-            { id: 2, name: 'Dubai Mall', location: 'Dubai', description: 'Flagship Store', status: 'active' },
-            { id: 3, name: 'City Centre Deira', location: 'Dubai', description: 'Central Location', status: 'active' },
-            { id: 4, name: 'Ibn Battuta Mall', location: 'Dubai', description: 'Theme Mall', status: 'active' },
-            { id: 5, name: 'Marina Mall', location: 'Abu Dhabi', description: 'Waterfront Location', status: 'active' }
-        ];
+        let storesData = JSON.parse(localStorage.getItem('edenStoresData')) || [];
 
         // Management Functions
         function showManagementTab(tab) {
@@ -2561,7 +2403,17 @@
             const employee = employeesData.find(emp => emp.id === employeeId);
             if (!employee) return;
             
-            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, () => {
+            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, async () => {
+                // Delete from Firebase first
+                if (employee.firebaseKey) {
+                    await deleteFromFirebase('employees', employee.firebaseKey);
+                }
+                
+                // Delete user from Firebase
+                if (demoUsers[employee.username] && demoUsers[employee.username].firebaseKey) {
+                    await deleteFromFirebase('users', demoUsers[employee.username].firebaseKey);
+                }
+                
                 employeesData = employeesData.filter(emp => emp.id !== employeeId);
                 // Also remove from demo users
                 delete demoUsers[employee.username];
@@ -2642,7 +2494,12 @@
             const store = storesData.find(s => s.name === storeName);
             if (!store) return;
             
-            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, () => {
+            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, async () => {
+                // Delete from Firebase first
+                if (store.firebaseKey) {
+                    await deleteFromFirebase('stores', store.firebaseKey);
+                }
+                
                 storesData = storesData.filter(s => s.name !== storeName);
                 localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                 updateStoresList();
@@ -2724,7 +2581,12 @@
             const product = productsData.find(p => p.name === productName);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, () => {
+            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, async () => {
+                // Delete from Firebase first
+                if (product.firebaseKey) {
+                    await deleteFromFirebase('products', product.firebaseKey);
+                }
+                
                 productsData = productsData.filter(p => p.name !== productName);
                 localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                 updateProductsManagementList();
@@ -2786,6 +2648,10 @@
                                     demoUsers[currentEditItem.username].password = data.password;
                                 }
                             }
+                            
+                            // Update in Firebase
+                            await updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
                             showSuccessMessage('Employee updated successfully!');
@@ -2794,6 +2660,10 @@
                             currentEditItem.name = data.storeName;
                             currentEditItem.location = data.location;
                             currentEditItem.description = data.description || '';
+                            
+                            // Update in Firebase
+                            await updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
                             showSuccessMessage('Store updated successfully!');
@@ -2802,6 +2672,10 @@
                             currentEditItem.productName = data.productName;
                             currentEditItem.storeName = data.storeName;
                             currentEditItem.customPrice = parseFloat(data.customPrice);
+                            
+                            // Update in Firebase
+                            await updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
                             // Refresh unit price if currently viewing sales form with same product/store
@@ -2813,6 +2687,10 @@
                             // Product edit
                             currentEditItem.name = data.productName;
                             currentEditItem.price = parseFloat(data.price);
+                            
+                            // Update in Firebase
+                            await updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
                             // Refresh unit price if currently viewing sales form with same product
@@ -2833,15 +2711,26 @@
                                 status: 'active',
                                 lastActive: 'Never'
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('employees', newEmployee);
+                            if (firebaseKey) {
+                                newEmployee.firebaseKey = firebaseKey;
+                            }
+                            
                             employeesData.push(newEmployee);
                             
                             // Add to demo users for login
-                            demoUsers[data.username] = {
+                            const newUser = {
                                 password: data.password,
                                 role: data.role,
                                 name: data.fullName,
                                 id: newEmployee.id
                             };
+                            demoUsers[data.username] = newUser;
+                            
+                            // Save user to Firebase
+                            await updateInFirebase('users', data.username, newUser);
                             
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
@@ -2855,6 +2744,13 @@
                                 description: data.description || '',
                                 status: 'active'
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('stores', newStore);
+                            if (firebaseKey) {
+                                newStore.firebaseKey = firebaseKey;
+                            }
+                            
                             storesData.push(newStore);
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
@@ -2867,6 +2763,13 @@
                                 storeName: data.storeName,
                                 customPrice: parseFloat(data.customPrice)
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('storePricing', newPricing);
+                            if (firebaseKey) {
+                                newPricing.firebaseKey = firebaseKey;
+                            }
+                            
                             storePricingData.push(newPricing);
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
@@ -2882,6 +2785,13 @@
                                 name: data.productName,
                                 price: parseFloat(data.price)
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('products', newProduct);
+                            if (firebaseKey) {
+                                newProduct.firebaseKey = firebaseKey;
+                            }
+                            
                             productsData.push(newProduct);
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
@@ -2908,6 +2818,10 @@
                         // Edit existing product
                         currentEditProductItem.name = data.productName;
                         currentEditProductItem.price = parseFloat(data.price);
+                        
+                        // Update in Firebase
+                        await updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
+                        
                         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                         updateProductsList();
                         showSuccessMessage('Product updated successfully!');
@@ -2918,6 +2832,13 @@
                             name: data.productName,
                             price: parseFloat(data.price)
                         };
+                        
+                        // Save to Firebase first
+                        const firebaseKey = await saveToFirebase('products', newProduct);
+                        if (firebaseKey) {
+                            newProduct.firebaseKey = firebaseKey;
+                        }
+                        
                         productsData.push(newProduct);
                         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                         updateProductsList();
@@ -3035,7 +2956,12 @@
             const product = productsData.find(p => p.id === productId);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, () => {
+            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, async () => {
+                // Delete from Firebase first
+                if (product.firebaseKey) {
+                    await deleteFromFirebase('products', product.firebaseKey);
+                }
+                
                 productsData = productsData.filter(p => p.id !== productId);
                 localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                 updateProductsList();
@@ -3106,7 +3032,12 @@
             const pricing = storePricingData.find(p => p.id === pricingId);
             if (!pricing) return;
             
-            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, () => {
+            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, async () => {
+                // Delete from Firebase first
+                if (pricing.firebaseKey) {
+                    await deleteFromFirebase('storePricing', pricing.firebaseKey);
+                }
+                
                 storePricingData = storePricingData.filter(p => p.id !== pricingId);
                 localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                 updatePricingList();
@@ -3655,6 +3586,528 @@
             
             showSuccessMessage('System backup downloaded successfully!');
         }
+
+        // Smart Sync Data Function - Intelligently sync data without duplicates
+        async function quickStoreData() {
+            if (!confirm('Sync to cloud now? This will write current local data to Firebase.')) { return; }
+            if (!isFirebaseConfigured) {
+                showCustomAlert('Firebase is not configured. Cannot sync data to cloud.');
+                return;
+            }
+            
+            console.log('🧠 Starting Smart Sync Data...');
+            updateSyncStatus('syncing');
+            
+            // Show sync progress notification
+            const syncNotification = document.createElement('div');
+            syncNotification.id = 'syncNotification';
+            syncNotification.className = 'fixed top-6 right-6 bg-purple-500/20 border border-purple-500/30 text-purple-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+            syncNotification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <div>
+                        <div class="font-bold">Smart Sync Data</div>
+                        <div class="text-xs opacity-80" id="syncProgress">Analyzing data...</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(syncNotification);
+            
+            const updateProgress = (message) => {
+                const progressDiv = document.getElementById('syncProgress');
+                if (progressDiv) progressDiv.textContent = message;
+            };
+            
+            try {
+                let syncResults = {
+                    sales: { updated: 0, created: 0, failed: 0 },
+                    products: { updated: 0, created: 0, failed: 0 },
+                    stores: { updated: 0, created: 0, failed: 0 },
+                    employees: { updated: 0, created: 0, failed: 0 },
+                    pricing: { updated: 0, created: 0, failed: 0 },
+                    users: { updated: 0, created: 0, failed: 0 }
+                };
+                
+                // Smart sync function for each data type
+                const smartSyncToFirebase = async (localData, firebasePath, idField = 'id') => {
+                    updateProgress(`Smart syncing ${firebasePath}...`);
+                    console.log(`🧠 Smart syncing ${firebasePath}...`);
+                    
+                    // Get existing Firebase data
+                    const firebaseSnapshot = await database.ref(firebasePath).once('value');
+                    const firebaseData = firebaseSnapshot.val() || {};
+                    
+                    // Create maps for efficient lookup
+                    const firebaseByLocalId = {};
+                    Object.keys(firebaseData).forEach(firebaseKey => {
+                        const item = firebaseData[firebaseKey];
+                        if (item[idField]) {
+                            firebaseByLocalId[item[idField]] = { ...item, firebaseKey };
+                        }
+                    });
+                    
+                    // Process each local item
+                    for (const localItem of localData) {
+                        try {
+                            const localId = localItem[idField];
+                            const existingFirebaseItem = firebaseByLocalId[localId];
+                            
+                            if (existingFirebaseItem) {
+                                // Update existing item
+                                const updatedItem = {
+                                    ...localItem,
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                await database.ref(`${firebasePath}/${existingFirebaseItem.firebaseKey}`).set(updatedItem);
+                                localItem.firebaseKey = existingFirebaseItem.firebaseKey;
+                                syncResults[firebasePath.split('/')[0]].updated++;
+                                console.log(`✅ Updated ${firebasePath} item:`, localId);
+                            } else {
+                                // Create new item
+                                const newItem = {
+                                    ...localItem,
+                                    createdAt: new Date().toISOString(),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                const ref = await database.ref(firebasePath).push(newItem);
+                                localItem.firebaseKey = ref.key;
+                                syncResults[firebasePath.split('/')[0]].created++;
+                                console.log(`✅ Created ${firebasePath} item:`, localId);
+                            }
+                        } catch (error) {
+                            console.error(`❌ Failed to sync ${firebasePath} item:`, localItem[idField], error);
+                            syncResults[firebasePath.split('/')[0]].failed++;
+                        }
+                    }
+                };
+                
+                // Smart sync all data collections
+                await smartSyncToFirebase(salesData, 'sales', 'id');
+                await smartSyncToFirebase(productsData, 'products', 'id');
+                await smartSyncToFirebase(storesData, 'stores', 'id');
+                await smartSyncToFirebase(employeesData, 'employees', 'id');
+                await smartSyncToFirebase(storePricingData, 'storePricing', 'id');
+                
+                // Handle users separately (keyed by username)
+                updateProgress('Smart syncing users...');
+                console.log('🧠 Smart syncing users...');
+                
+                for (const [username, userData] of Object.entries(demoUsers)) {
+                    try {
+                        const userSnapshot = await database.ref(`users/${username}`).once('value');
+                        const existingUser = userSnapshot.val();
+                        
+                        if (existingUser) {
+                            // Update existing user
+                            const updatedUser = {
+                                ...userData,
+                                lastUpdated: new Date().toISOString()
+                            };
+                            await database.ref(`users/${username}`).set(updatedUser);
+                            syncResults.users.updated++;
+                            console.log(`✅ Updated user:`, username);
+                        } else {
+                            // Create new user
+                            const newUser = {
+                                ...userData,
+                                createdAt: new Date().toISOString(),
+                                lastUpdated: new Date().toISOString()
+                            };
+                            await database.ref(`users/${username}`).set(newUser);
+                            syncResults.users.created++;
+                            console.log(`✅ Created user:`, username);
+                        }
+                    } catch (error) {
+                        console.error(`❌ Failed to sync user:`, username, error);
+                        syncResults.users.failed++;
+                    }
+                }
+                
+                // Update local storage with Firebase keys
+                localStorage.setItem('edenSalesData', JSON.stringify(salesData));
+                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                
+                // Calculate totals
+                const totalUpdated = Object.values(syncResults).reduce((sum, result) => sum + result.updated, 0);
+                const totalCreated = Object.values(syncResults).reduce((sum, result) => sum + result.created, 0);
+                const totalFailed = Object.values(syncResults).reduce((sum, result) => sum + result.failed, 0);
+                
+                console.log('✅ Smart Sync completed!', syncResults);
+                
+                // Update sync notification with results
+                syncNotification.className = 'fixed top-6 right-6 bg-green-500/20 border border-green-500/30 text-green-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                syncNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Smart Sync Complete!</div>
+                            <div class="text-xs opacity-80">
+                                🔄 ${totalUpdated} updated • ➕ ${totalCreated} created
+                                ${totalFailed > 0 ? ` • ❌ ${totalFailed} failed` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('synced');
+                
+                // Refresh data from Firebase to ensure UI is up-to-date
+                updateProgress('Refreshing data...');
+                await loadFirebaseData();
+                
+                // Update UI components
+                if (currentUser) {
+                    if (currentUser.role === 'admin') {
+                        updateAdminStats();
+                        updateEmployeesList();
+                        updateStoresList();
+                        updatePricingList();
+                    } else {
+                        updateSalesStats();
+                        updateRecentSales();
+                    }
+                }
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (syncNotification && syncNotification.parentNode) {
+                        syncNotification.remove();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error('❌ Smart Sync failed:', error);
+                
+                // Update notification with error
+                syncNotification.className = 'fixed top-6 right-6 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                syncNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Smart Sync Failed</div>
+                            <div class="text-xs opacity-80">${error.message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('error');
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (syncNotification && syncNotification.parentNode) {
+                        syncNotification.remove();
+                    }
+                }, 8000);
+            }
+        }
+
+        // Auto-refresh current page data
+        function refreshCurrentPageData() {
+            if (!currentUser) return;
+            
+            try {
+                if (currentUser.role === 'admin') {
+                    // Admin page is visible
+                    if (!document.getElementById('adminPage').classList.contains('hidden')) {
+                        updateAdminStats();
+                        updateEmployeesList();
+                        updateStoresList();
+                        updatePricingList();
+                    }
+                    // Sales report page is visible
+                    else if (!document.getElementById('salesReportPage').classList.contains('hidden')) {
+                        // Don't auto-refresh reports as they are user-generated
+                    }
+                    // Products page is visible
+                    else if (!document.getElementById('productsPage').classList.contains('hidden')) {
+                        updateProductsList();
+                    }
+                } else {
+                    // Employee sales page is visible
+                    if (!document.getElementById('salesPage').classList.contains('hidden')) {
+                        updateSalesStats();
+                        updateRecentSales();
+                    }
+                }
+            } catch (error) {
+                console.warn('Auto-refresh error:', error);
+            }
+        }
+
+        // Quick Sync All Data Function
+        async function quickSyncAllData() {
+            if (!isFirebaseConfigured) {
+                showCustomAlert('Firebase is not configured. Cannot sync data to cloud.');
+                return;
+            }
+            
+            console.log('🔄 Starting quick sync of all data...');
+            updateSyncStatus('syncing');
+            
+            // Show sync progress notification
+            const syncNotification = document.createElement('div');
+            syncNotification.id = 'syncNotification';
+            syncNotification.className = 'fixed top-6 right-6 bg-blue-500/20 border border-blue-500/30 text-blue-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+            syncNotification.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <div>
+                        <div class="font-bold">Syncing All Data...</div>
+                        <div class="text-xs opacity-80" id="syncProgress">Preparing sync...</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(syncNotification);
+            
+            const updateProgress = (message) => {
+                const progressDiv = document.getElementById('syncProgress');
+                if (progressDiv) progressDiv.textContent = message;
+            };
+            
+            try {
+                let syncResults = {
+                    sales: { success: 0, failed: 0 },
+                    products: { success: 0, failed: 0 },
+                    stores: { success: 0, failed: 0 },
+                    employees: { success: 0, failed: 0 },
+                    pricing: { success: 0, failed: 0 },
+                    users: { success: 0, failed: 0 }
+                };
+                
+                // 1. Sync Sales Data
+                updateProgress('Syncing sales data...');
+                console.log('📊 Syncing sales data...');
+                
+                // Clear existing sales data in Firebase and re-upload all
+                await database.ref('sales').remove();
+                for (const sale of salesData) {
+                    try {
+                        await database.ref('sales').push(sale);
+                        syncResults.sales.success++;
+                    } catch (error) {
+                        console.error('Failed to sync sale:', sale.id, error);
+                        syncResults.sales.failed++;
+                    }
+                }
+                
+                // 2. Sync Products Data
+                updateProgress('Syncing products data...');
+                console.log('📦 Syncing products data...');
+                
+                await database.ref('products').remove();
+                for (const product of productsData) {
+                    try {
+                        await database.ref('products').push(product);
+                        syncResults.products.success++;
+                    } catch (error) {
+                        console.error('Failed to sync product:', product.id, error);
+                        syncResults.products.failed++;
+                    }
+                }
+                
+                // 3. Sync Stores Data
+                updateProgress('Syncing stores data...');
+                console.log('🏪 Syncing stores data...');
+                
+                await database.ref('stores').remove();
+                for (const store of storesData) {
+                    try {
+                        await database.ref('stores').push(store);
+                        syncResults.stores.success++;
+                    } catch (error) {
+                        console.error('Failed to sync store:', store.id, error);
+                        syncResults.stores.failed++;
+                    }
+                }
+                
+                // 4. Sync Employees Data
+                updateProgress('Syncing employees data...');
+                console.log('👥 Syncing employees data...');
+                
+                await database.ref('employees').remove();
+                for (const employee of employeesData) {
+                    try {
+                        await database.ref('employees').push(employee);
+                        syncResults.employees.success++;
+                    } catch (error) {
+                        console.error('Failed to sync employee:', employee.id, error);
+                        syncResults.employees.failed++;
+                    }
+                }
+                
+                // 5. Sync Store Pricing Data
+                updateProgress('Syncing pricing data...');
+                console.log('💰 Syncing pricing data...');
+                
+                await database.ref('storePricing').remove();
+                for (const pricing of storePricingData) {
+                    try {
+                        await database.ref('storePricing').push(pricing);
+                        syncResults.pricing.success++;
+                    } catch (error) {
+                        console.error('Failed to sync pricing:', pricing.id, error);
+                        syncResults.pricing.failed++;
+                    }
+                }
+                
+                // 6. Sync Users Data
+                updateProgress('Syncing users data...');
+                console.log('👤 Syncing users data...');
+                
+                await database.ref('users').remove();
+                for (const [username, userData] of Object.entries(demoUsers)) {
+                    try {
+                        await database.ref(`users/${username}`).set(userData);
+                        syncResults.users.success++;
+                    } catch (error) {
+                        console.error('Failed to sync user:', username, error);
+                        syncResults.users.failed++;
+                    }
+                }
+                
+                // Calculate totals
+                const totalSuccess = Object.values(syncResults).reduce((sum, result) => sum + result.success, 0);
+                const totalFailed = Object.values(syncResults).reduce((sum, result) => sum + result.failed, 0);
+                
+                console.log('✅ Quick sync completed!', syncResults);
+                
+                // Update sync notification with results
+                syncNotification.className = 'fixed top-6 right-6 bg-green-500/20 border border-green-500/30 text-green-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                syncNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Sync Completed!</div>
+                            <div class="text-xs opacity-80">
+                                ✅ ${totalSuccess} items synced successfully
+                                ${totalFailed > 0 ? `• ❌ ${totalFailed} failed` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('synced');
+                
+                // Update all UI components
+                if (currentUser) {
+                    if (currentUser.role === 'admin') {
+                        updateAdminStats();
+                        updateEmployeesList();
+                        updateStoresList();
+                        updatePricingList();
+                    } else {
+                        updateSalesStats();
+                        updateRecentSales();
+                    }
+                }
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (syncNotification && syncNotification.parentNode) {
+                        syncNotification.remove();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error('❌ Quick sync failed:', error);
+                
+                // Update notification with error
+                syncNotification.className = 'fixed top-6 right-6 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+                syncNotification.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <div>
+                            <div class="font-bold">Sync Failed</div>
+                            <div class="text-xs opacity-80">${error.message}</div>
+                        </div>
+                    </div>
+                `;
+                
+                updateSyncStatus('error');
+                
+                // Remove notification after delay
+                setTimeout(() => {
+                    if (syncNotification && syncNotification.parentNode) {
+                        syncNotification.remove();
+                    }
+                }, 8000);
+            }
+        }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96ded185b288f9d1',t:'MTc1NDk4OTYwNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e04caad19af9e3',t:'MTc1NTAwNTEzNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
+// === Dynamic Dropdown Loader ===
+async function loadDropdownData() {
+    if (!firebase || !firebase.auth || !firebase.database) {
+        console.warn("Firebase not initialized, cannot load dropdowns.");
+        return;
+    }
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        console.warn("No authenticated user, cannot load dropdowns.");
+        return;
+    }
+    const db = firebase.database();
+
+    // Load Stores
+    const storeSelect = document.getElementById("storeName");
+    storeSelect.innerHTML = '<option value="">Select store</option>';
+    try {
+        const storeSnap = await db.ref(`users/${user.uid}/stores`).once('value');
+        const stores = storeSnap.val();
+        if (stores) {
+            Object.values(stores).forEach(store => {
+                const opt = document.createElement('option');
+                opt.value = store.name || "";
+                opt.textContent = store.name || "";
+                storeSelect.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Error loading stores:", err);
+    }
+
+    // Load Products
+    const productSelect = document.getElementById("product");
+    productSelect.innerHTML = '<option value="">Select product</option>';
+    try {
+        const productSnap = await db.ref(`users/${user.uid}/products`).once('value');
+        const products = productSnap.val();
+        if (products) {
+            Object.values(products).forEach(product => {
+                const opt = document.createElement('option');
+                opt.value = product.name || "";
+                opt.textContent = product.name || "";
+                productSelect.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Error loading products:", err);
+    }
+}
+
+// Call loader after login
+document.addEventListener("DOMContentLoaded", () => {
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            loadDropdownData();
+        }
+    });
+});
+
+</script></body>
 </html>
