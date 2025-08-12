@@ -1489,40 +1489,67 @@
                     database.ref('users').once('value')
                 ]);
                 
-                // Update local data with Firebase data
+                // Update local data with Firebase data, preserving Firebase keys
                 if (salesSnap.exists()) {
-                    salesData = Object.values(salesSnap.val());
+                    const firebaseSales = salesSnap.val();
+                    salesData = Object.keys(firebaseSales).map(key => ({
+                        ...firebaseSales[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenSalesData', JSON.stringify(salesData));
                     console.log(`📊 Loaded ${salesData.length} sales records from Firebase`);
                 }
                 
                 if (productsSnap.exists()) {
-                    productsData = Object.values(productsSnap.val());
+                    const firebaseProducts = productsSnap.val();
+                    productsData = Object.keys(firebaseProducts).map(key => ({
+                        ...firebaseProducts[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                     console.log(`📦 Loaded ${productsData.length} products from Firebase`);
                 }
                 
                 if (storesSnap.exists()) {
-                    storesData = Object.values(storesSnap.val());
+                    const firebaseStores = storesSnap.val();
+                    storesData = Object.keys(firebaseStores).map(key => ({
+                        ...firebaseStores[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                     console.log(`🏪 Loaded ${storesData.length} stores from Firebase`);
                 }
                 
                 if (employeesSnap.exists()) {
-                    employeesData = Object.values(employeesSnap.val());
+                    const firebaseEmployees = employeesSnap.val();
+                    employeesData = Object.keys(firebaseEmployees).map(key => ({
+                        ...firebaseEmployees[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                     console.log(`👥 Loaded ${employeesData.length} employees from Firebase`);
                 }
                 
                 if (pricingSnap.exists()) {
-                    storePricingData = Object.values(pricingSnap.val());
+                    const firebasePricing = pricingSnap.val();
+                    storePricingData = Object.keys(firebasePricing).map(key => ({
+                        ...firebasePricing[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                     console.log(`💰 Loaded ${storePricingData.length} custom prices from Firebase`);
                 }
                 
                 if (usersSnap.exists()) {
-                    Object.assign(demoUsers, usersSnap.val());
-                    console.log(`👤 Loaded ${Object.keys(usersSnap.val()).length} users from Firebase`);
+                    const firebaseUsers = usersSnap.val();
+                    // Users are stored by username, so preserve that structure
+                    Object.keys(firebaseUsers).forEach(username => {
+                        demoUsers[username] = {
+                            ...firebaseUsers[username],
+                            firebaseKey: username
+                        };
+                    });
+                    console.log(`👤 Loaded ${Object.keys(firebaseUsers).length} users from Firebase`);
                 }
                 
                 console.log("✅ All Firebase data loaded successfully");
@@ -1543,7 +1570,10 @@
             database.ref('sales').on('value', (snapshot) => {
                 const firebaseSales = snapshot.val();
                 if (firebaseSales) {
-                    salesData = Object.values(firebaseSales);
+                    salesData = Object.keys(firebaseSales).map(key => ({
+                        ...firebaseSales[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenSalesData', JSON.stringify(salesData));
                     console.log(`📊 Sales data updated: ${salesData.length} records`);
                     
@@ -1563,7 +1593,10 @@
             database.ref('products').on('value', (snapshot) => {
                 const firebaseProducts = snapshot.val();
                 if (firebaseProducts) {
-                    productsData = Object.values(firebaseProducts);
+                    productsData = Object.keys(firebaseProducts).map(key => ({
+                        ...firebaseProducts[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                     console.log(`📦 Products data updated: ${productsData.length} products`);
                     updateProductsList();
@@ -1575,7 +1608,10 @@
             database.ref('stores').on('value', (snapshot) => {
                 const firebaseStores = snapshot.val();
                 if (firebaseStores) {
-                    storesData = Object.values(firebaseStores);
+                    storesData = Object.keys(firebaseStores).map(key => ({
+                        ...firebaseStores[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                     console.log(`🏪 Stores data updated: ${storesData.length} stores`);
                     updateStoresList();
@@ -1586,7 +1622,10 @@
             database.ref('employees').on('value', (snapshot) => {
                 const firebaseEmployees = snapshot.val();
                 if (firebaseEmployees) {
-                    employeesData = Object.values(firebaseEmployees);
+                    employeesData = Object.keys(firebaseEmployees).map(key => ({
+                        ...firebaseEmployees[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                     console.log(`👥 Employees data updated: ${employeesData.length} employees`);
                     updateEmployeesList();
@@ -1597,7 +1636,10 @@
             database.ref('storePricing').on('value', (snapshot) => {
                 const firebasePricing = snapshot.val();
                 if (firebasePricing) {
-                    storePricingData = Object.values(firebasePricing);
+                    storePricingData = Object.keys(firebasePricing).map(key => ({
+                        ...firebasePricing[key],
+                        firebaseKey: key
+                    }));
                     localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                     console.log(`💰 Pricing data updated: ${storePricingData.length} custom prices`);
                     updatePricingList();
@@ -1609,8 +1651,13 @@
             database.ref('users').on('value', (snapshot) => {
                 const firebaseUsers = snapshot.val();
                 if (firebaseUsers) {
-                    // Update demo users with Firebase data
-                    Object.assign(demoUsers, firebaseUsers);
+                    // Update demo users with Firebase data, preserving keys
+                    Object.keys(firebaseUsers).forEach(username => {
+                        demoUsers[username] = {
+                            ...firebaseUsers[username],
+                            firebaseKey: username
+                        };
+                    });
                     console.log(`👤 Users data updated: ${Object.keys(firebaseUsers).length} users`);
                 }
             });
@@ -1659,7 +1706,7 @@
             console.log("✅ Demo data initialized");
         }
         
-        // Save data to Firebase
+        // Save data to Firebase (for new records)
         async function saveToFirebase(path, data) {
             if (!isFirebaseConfigured) {
                 console.log("Firebase not configured, saving locally only");
@@ -1668,9 +1715,11 @@
             
             try {
                 updateSyncStatus('syncing');
-                await database.ref(path).push(data);
+                const ref = await database.ref(path).push(data);
+                // Store the Firebase key for future updates
+                data.firebaseKey = ref.key;
                 updateSyncStatus('synced');
-                return true;
+                return ref.key;
             } catch (error) {
                 console.warn("⚠️ Firebase save failed, falling back to local:", error.message);
                 updateSyncStatus('local');
@@ -1678,8 +1727,8 @@
             }
         }
         
-        // Update data in Firebase
-        async function updateInFirebase(path, data) {
+        // Update existing data in Firebase
+        async function updateInFirebase(path, firebaseKey, data) {
             if (!isFirebaseConfigured) {
                 console.log("Firebase not configured, saving locally only");
                 return false;
@@ -1687,11 +1736,37 @@
             
             try {
                 updateSyncStatus('syncing');
-                await database.ref(path).set(data);
+                if (firebaseKey) {
+                    // Update existing record
+                    await database.ref(`${path}/${firebaseKey}`).set(data);
+                } else {
+                    // Create new record if no key exists
+                    const ref = await database.ref(path).push(data);
+                    data.firebaseKey = ref.key;
+                }
                 updateSyncStatus('synced');
                 return true;
             } catch (error) {
                 console.warn("⚠️ Firebase update failed, falling back to local:", error.message);
+                updateSyncStatus('local');
+                return false;
+            }
+        }
+        
+        // Delete data from Firebase
+        async function deleteFromFirebase(path, firebaseKey) {
+            if (!isFirebaseConfigured || !firebaseKey) {
+                console.log("Firebase not configured or no key provided");
+                return false;
+            }
+            
+            try {
+                updateSyncStatus('syncing');
+                await database.ref(`${path}/${firebaseKey}`).remove();
+                updateSyncStatus('synced');
+                return true;
+            } catch (error) {
+                console.warn("⚠️ Firebase delete failed:", error.message);
                 updateSyncStatus('local');
                 return false;
             }
@@ -2115,11 +2190,11 @@
                 console.log('💾 Saving sale entry:', sale);
 
                 // Save to Firebase first, then update local data
-                const firebaseSaved = await saveToFirebase('sales', sale);
+                const firebaseKey = await saveToFirebase('sales', sale);
                 
-                if (firebaseSaved) {
+                if (firebaseKey) {
                     // Firebase will trigger the real-time listener to update salesData
-                    console.log('✅ Sale saved to Firebase successfully');
+                    console.log('✅ Sale saved to Firebase successfully with key:', firebaseKey);
                     
                     // Show success feedback
                     submitButton.innerHTML = '✅ Saved to Cloud!';
@@ -2555,7 +2630,17 @@
             const employee = employeesData.find(emp => emp.id === employeeId);
             if (!employee) return;
             
-            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, () => {
+            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, async () => {
+                // Delete from Firebase first
+                if (employee.firebaseKey) {
+                    await deleteFromFirebase('employees', employee.firebaseKey);
+                }
+                
+                // Delete user from Firebase
+                if (demoUsers[employee.username] && demoUsers[employee.username].firebaseKey) {
+                    await deleteFromFirebase('users', demoUsers[employee.username].firebaseKey);
+                }
+                
                 employeesData = employeesData.filter(emp => emp.id !== employeeId);
                 // Also remove from demo users
                 delete demoUsers[employee.username];
@@ -2636,7 +2721,12 @@
             const store = storesData.find(s => s.name === storeName);
             if (!store) return;
             
-            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, () => {
+            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, async () => {
+                // Delete from Firebase first
+                if (store.firebaseKey) {
+                    await deleteFromFirebase('stores', store.firebaseKey);
+                }
+                
                 storesData = storesData.filter(s => s.name !== storeName);
                 localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                 updateStoresList();
@@ -2718,7 +2808,12 @@
             const product = productsData.find(p => p.name === productName);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, () => {
+            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, async () => {
+                // Delete from Firebase first
+                if (product.firebaseKey) {
+                    await deleteFromFirebase('products', product.firebaseKey);
+                }
+                
                 productsData = productsData.filter(p => p.name !== productName);
                 localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                 updateProductsManagementList();
@@ -2780,6 +2875,10 @@
                                     demoUsers[currentEditItem.username].password = data.password;
                                 }
                             }
+                            
+                            // Update in Firebase
+                            await updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
                             showSuccessMessage('Employee updated successfully!');
@@ -2788,6 +2887,10 @@
                             currentEditItem.name = data.storeName;
                             currentEditItem.location = data.location;
                             currentEditItem.description = data.description || '';
+                            
+                            // Update in Firebase
+                            await updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
                             showSuccessMessage('Store updated successfully!');
@@ -2796,6 +2899,10 @@
                             currentEditItem.productName = data.productName;
                             currentEditItem.storeName = data.storeName;
                             currentEditItem.customPrice = parseFloat(data.customPrice);
+                            
+                            // Update in Firebase
+                            await updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
                             // Refresh unit price if currently viewing sales form with same product/store
@@ -2807,6 +2914,10 @@
                             // Product edit
                             currentEditItem.name = data.productName;
                             currentEditItem.price = parseFloat(data.price);
+                            
+                            // Update in Firebase
+                            await updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
+                            
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
                             // Refresh unit price if currently viewing sales form with same product
@@ -2827,15 +2938,26 @@
                                 status: 'active',
                                 lastActive: 'Never'
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('employees', newEmployee);
+                            if (firebaseKey) {
+                                newEmployee.firebaseKey = firebaseKey;
+                            }
+                            
                             employeesData.push(newEmployee);
                             
                             // Add to demo users for login
-                            demoUsers[data.username] = {
+                            const newUser = {
                                 password: data.password,
                                 role: data.role,
                                 name: data.fullName,
                                 id: newEmployee.id
                             };
+                            demoUsers[data.username] = newUser;
+                            
+                            // Save user to Firebase
+                            await updateInFirebase('users', data.username, newUser);
                             
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
@@ -2849,6 +2971,13 @@
                                 description: data.description || '',
                                 status: 'active'
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('stores', newStore);
+                            if (firebaseKey) {
+                                newStore.firebaseKey = firebaseKey;
+                            }
+                            
                             storesData.push(newStore);
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
@@ -2861,6 +2990,13 @@
                                 storeName: data.storeName,
                                 customPrice: parseFloat(data.customPrice)
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('storePricing', newPricing);
+                            if (firebaseKey) {
+                                newPricing.firebaseKey = firebaseKey;
+                            }
+                            
                             storePricingData.push(newPricing);
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
@@ -2876,6 +3012,13 @@
                                 name: data.productName,
                                 price: parseFloat(data.price)
                             };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('products', newProduct);
+                            if (firebaseKey) {
+                                newProduct.firebaseKey = firebaseKey;
+                            }
+                            
                             productsData.push(newProduct);
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
@@ -2902,6 +3045,10 @@
                         // Edit existing product
                         currentEditProductItem.name = data.productName;
                         currentEditProductItem.price = parseFloat(data.price);
+                        
+                        // Update in Firebase
+                        await updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
+                        
                         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                         updateProductsList();
                         showSuccessMessage('Product updated successfully!');
@@ -2912,6 +3059,13 @@
                             name: data.productName,
                             price: parseFloat(data.price)
                         };
+                        
+                        // Save to Firebase first
+                        const firebaseKey = await saveToFirebase('products', newProduct);
+                        if (firebaseKey) {
+                            newProduct.firebaseKey = firebaseKey;
+                        }
+                        
                         productsData.push(newProduct);
                         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                         updateProductsList();
@@ -3029,7 +3183,12 @@
             const product = productsData.find(p => p.id === productId);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, () => {
+            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, async () => {
+                // Delete from Firebase first
+                if (product.firebaseKey) {
+                    await deleteFromFirebase('products', product.firebaseKey);
+                }
+                
                 productsData = productsData.filter(p => p.id !== productId);
                 localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                 updateProductsList();
@@ -3100,7 +3259,12 @@
             const pricing = storePricingData.find(p => p.id === pricingId);
             if (!pricing) return;
             
-            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, () => {
+            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, async () => {
+                // Delete from Firebase first
+                if (pricing.firebaseKey) {
+                    await deleteFromFirebase('storePricing', pricing.firebaseKey);
+                }
+                
                 storePricingData = storePricingData.filter(p => p.id !== pricingId);
                 localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                 updatePricingList();
@@ -4037,5 +4201,5 @@
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96def323a48df9fc',t:'MTc1NDk5MDk4Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96df102bf6acf9ec',t:'MTc1NDk5MjE3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
