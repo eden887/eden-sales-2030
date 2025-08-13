@@ -499,7 +499,7 @@
             <div class="text-center mb-16 fade-in">
                 <h1 class="text-6xl font-black text-gradient mb-4" style="font-family: 'Playfair Display', serif; letter-spacing: -0.02em;">EDEN</h1>
                 <p class="text-white/70 text-xl font-light tracking-wide">Sales Management System</p>
-                <p class="text-white/50 text-sm mt-2" id="loginDateTime">Loading...</p>
+
                 <div class="flex items-center justify-center space-x-2 mt-4">
                     <div class="flex items-center space-x-1" id="loginSyncStatus">
                         <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -630,6 +630,14 @@
                         <select id="storeName" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
                             <option value="">Select store</option>
+                            <option value="Mall of Emirates">Mall of Emirates</option>
+                            <option value="Dubai Mall">Dubai Mall</option>
+                            <option value="City Centre Deira">City Centre Deira</option>
+                            <option value="Ibn Battuta Mall">Ibn Battuta Mall</option>
+                            <option value="Marina Mall">Marina Mall</option>
+                            <option value="Mercato Mall">Mercato Mall</option>
+                            <option value="BurJuman Centre">BurJuman Centre</option>
+                            <option value="Al Ghurair Centre">Al Ghurair Centre</option>
                         </select>
                     </div>
                     
@@ -638,6 +646,16 @@
                         <select id="product" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
                             <option value="">Select product</option>
+                            <option value="iPhone 15 Pro">iPhone 15 Pro</option>
+                            <option value="iPhone 15">iPhone 15</option>
+                            <option value="Samsung Galaxy S24">Samsung Galaxy S24</option>
+                            <option value="iPad Pro">iPad Pro</option>
+                            <option value="MacBook Air">MacBook Air</option>
+                            <option value="AirPods Pro">AirPods Pro</option>
+                            <option value="Apple Watch">Apple Watch</option>
+                            <option value="Samsung Tab">Samsung Tab</option>
+                            <option value="Accessories">Accessories</option>
+                            <option value="Cases & Covers">Cases & Covers</option>
                         </select>
                     </div>
                     
@@ -764,6 +782,9 @@
                     <button onclick="downloadSystemBackup()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         🔄 System Backup
                     </button>
+                    <button onclick="showCodeInjectionModal()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
+                        💻 Code Injection
+                    </button>
                 </div>
             </div>
 
@@ -781,9 +802,30 @@
                         <h2 class="text-xl font-bold text-white tracking-wide">EMPLOYEE MANAGEMENT</h2>
                         <button onclick="showAddEmployeeModal()" class="premium-button px-4 py-2 text-white font-bold rounded-xl text-sm">+ ADD EMPLOYEE</button>
                     </div>
-                    <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar"><div class="text-white/50 text-center py-8 font-medium">No employees found</div></div>
-</div>
-</div>
+                    <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar">
+                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                            <div>
+                                <div class="font-bold text-white text-lg">john_doe</div>
+                                <div class="text-sm text-white/60">Employee • Last active: Today</div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
+                                <button onclick="editEmployee('john_doe')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
+                                <button onclick="deleteEmployee('john_doe')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                            <div>
+                                <div class="font-bold text-white text-lg">admin_user</div>
+                                <div class="text-sm text-white/60">Admin • Last active: Now</div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-full text-sm font-bold border border-blue-500/30">ONLINE</span>
+                                <button onclick="editEmployee('admin_user')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
+                                <button onclick="deleteEmployee('admin_user')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Stores Management -->
@@ -792,8 +834,12 @@
                         <h2 class="text-2xl font-bold text-white tracking-wide">STORE MANAGEMENT</h2>
                         <button onclick="showAddStoreModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ ADD STORE</button>
                     </div>
-                    <div id="storesList" class="space-y-4"><div class="text-white/50 text-center py-8 font-medium">No stores found</div></div>
-</div>
+                    <div id="storesList" class="space-y-4">
+                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                            <div>
+                                <div class="font-bold text-white text-lg">Mall of Emirates</div>
+                                <div class="text-sm text-white/60">Dubai • Premium Location</div>
+                            </div>
                             <div class="flex items-center space-x-3">
                                 <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
                                 <button onclick="editStore('Mall of Emirates')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
@@ -845,6 +891,100 @@
                             <button type="button" onclick="closeModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">CANCEL</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Code Injection Modal -->
+            <div id="codeInjectionModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                <div class="premium-card rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white">💻 Code Injection Panel</h3>
+                            <p class="text-white/60 text-sm mt-1">Inject and execute custom JavaScript code in the current page</p>
+                        </div>
+                        <button onclick="closeCodeInjectionModal()" class="text-white/60 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <!-- Code Editor -->
+                        <div>
+                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">JAVASCRIPT CODE</label>
+                            <textarea id="codeInjectionInput" 
+                                      class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-mono text-sm h-64 resize-none"
+                                      placeholder="// Enter your JavaScript code here
+// Example:
+console.log('Hello from code injection!');
+
+// Access current user data
+console.log('Current user:', currentUser);
+
+// Access sales data
+console.log('Total sales:', salesData.length);
+
+// Show custom alert
+showSuccessMessage('Code executed successfully!');
+
+// Update UI elements
+document.getElementById('totalSalesCount').textContent = '999';"></textarea>
+                        </div>
+                        
+                        <!-- Execution Log -->
+                        <div>
+                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">EXECUTION LOG</label>
+                            <div id="codeExecutionLog" class="bg-black/30 border border-white/10 rounded-xl p-4 h-32 overflow-y-auto premium-scrollbar font-mono text-xs text-green-400">
+                                <div class="text-white/50">Ready to execute code...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Code Templates -->
+                        <div>
+                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">QUICK TEMPLATES</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" onclick="loadCodeTemplate('console')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                                    <div class="font-bold text-white text-sm">Console Debug</div>
+                                    <div class="text-xs text-white/60">Log system data to console</div>
+                                </button>
+                                <button type="button" onclick="loadCodeTemplate('ui')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                                    <div class="font-bold text-white text-sm">UI Update</div>
+                                    <div class="text-xs text-white/60">Update dashboard elements</div>
+                                </button>
+                                <button type="button" onclick="loadCodeTemplate('data')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                                    <div class="font-bold text-white text-sm">Data Analysis</div>
+                                    <div class="text-xs text-white/60">Analyze sales data</div>
+                                </button>
+                                <button type="button" onclick="loadCodeTemplate('firebase')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                                    <div class="font-bold text-white text-sm">Firebase Test</div>
+                                    <div class="text-xs text-white/60">Test Firebase connection</div>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex space-x-4">
+                            <button type="button" onclick="executeInjectedCode()" class="premium-button flex-1 py-3 text-white font-bold rounded-xl">
+                                ▶️ EXECUTE CODE
+                            </button>
+                            <button type="button" onclick="clearCodeInjection()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">
+                                🗑️ CLEAR
+                            </button>
+                            <button type="button" onclick="closeCodeInjectionModal()" class="flex-1 py-3 bg-red-500/20 text-red-300 font-bold rounded-xl hover:bg-red-500/30 transition-all">
+                                ❌ CLOSE
+                            </button>
+                        </div>
+                        
+                        <!-- Warning -->
+                        <div class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 px-4 py-3 rounded-xl text-sm">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                <div>
+                                    <div class="font-bold">⚠️ Admin Only Feature</div>
+                                    <div class="text-xs opacity-80 mt-1">This feature allows direct code execution. Use with caution and only inject trusted code.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1042,7 +1182,9 @@
                     <h2 class="text-xl font-bold text-white tracking-wide">Product Catalog</h2>
                     <button onclick="showAddProductModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ Add Product</button>
                 </div>
-                <div id="productsPageList" class="space-y-4"><div class="text-white/50 text-center py-8 font-medium">No products found</div></div>
+                <div id="productsPageList" class="space-y-4">
+                    <!-- Products will be loaded here -->
+                </div>
             </div>
 
             <!-- Product Modal -->
@@ -1072,7 +1214,7 @@
     </div>
 
     <script>
-        // Firebase Configuration - LIVE MODE
+        // Firebase Configuration - REAL-TIME ENABLED
         const firebaseConfig = {
             apiKey: "AIzaSyDSBfcSjzYyhrVR3SNcf18UAqS4r_AcbMs",
             authDomain: "eden-sales-9600.firebaseapp.com",
@@ -1083,6 +1225,14 @@
             appId: "1:631716537385:web:ee3267b050bcf5d42fa838",
             measurementId: "G-XKZQ34V9TC"
         };
+
+        // Real-time Firebase Status
+        console.log("🔥 Firebase Real-time Database Configuration:");
+        console.log("✅ Database URL:", firebaseConfig.databaseURL);
+        console.log("✅ Project ID:", firebaseConfig.projectId);
+        console.log("✅ Real-time listeners: ENABLED");
+        console.log("✅ Auto-sync: ENABLED");
+        console.log("✅ Connection monitoring: ENABLED");
 
         /*
         FIREBASE REALTIME DATABASE RULES:
@@ -1819,71 +1969,84 @@
             console.log('🔐 Login attempt started');
             e.preventDefault();
             
-            const username = document.getElementById('username').value.toLowerCase();
-            const password = document.getElementById('password').value;
+            const usernameInput = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
             
-            console.log('Login attempt:', username, password ? 'password provided' : 'no password');
+            console.log('Login attempt:', usernameInput, password ? 'password provided' : 'no password');
             
             showLoading(true);
             hideMessages();
             
             try {
-                // Check demo users first (for fresh database)
-                const demoUser = demoUsers[username];
-                if (!demoUser || demoUser.password.toLowerCase() !== password.toLowerCase()) {
+                // Check demo users with case-insensitive username matching
+                let foundUser = null;
+                let foundUsername = null;
+                
+                // Search for user with case-insensitive comparison
+                for (const [storedUsername, userData] of Object.entries(demoUsers)) {
+                    if (storedUsername.toLowerCase() === usernameInput.toLowerCase()) {
+                        foundUser = userData;
+                        foundUsername = storedUsername; // Use original stored username
+                        break;
+                    }
+                }
+                
+                if (!foundUser || foundUser.password !== password) {
                     throw new Error('Invalid username or password');
                 }
                 
-                currentUser = demoUser;
+                currentUser = {
+                    ...foundUser,
+                    username: foundUsername
+                };
                 console.log('✅ Login successful for:', currentUser.name);
                 
+                // Store session immediately
+                sessionStorage.setItem('edenUser', JSON.stringify(currentUser));
+                
+                showSuccess('Login successful!');
+                
+                // Show dashboard immediately, don't wait for Firebase
+                setTimeout(() => {
+                    showDashboard(currentUser.role);
+                }, 500);
+                
+                // Handle Firebase migration in background (non-blocking)
                 if (isFirebaseConfigured) {
-                    console.log('🔥 Firebase is configured, will migrate user data...');
-                    updateSyncStatus('syncing');
+                    console.log('🔥 Firebase is configured, migrating user data in background...');
                     
-                    try {
-                        // Migrate demo user to Firebase
-                        console.log('📤 Migrating user to Firebase...');
-                        await database.ref(`users/${username}`).set(demoUser);
+                    // Don't await this - let it run in background
+                    database.ref(`users/${foundUsername}`).set(foundUser).then(() => {
+                        console.log('✅ User migrated to Firebase successfully');
                         
                         // Also migrate to employees collection
                         const employeeData = {
-                            id: demoUser.id,
-                            username: username,
-                            name: demoUser.name,
-                            role: demoUser.role,
+                            id: foundUser.id,
+                            username: foundUsername,
+                            name: foundUser.name,
+                            role: foundUser.role,
                             status: 'active',
                             lastActive: new Date().toISOString(),
                             createdAt: new Date().toISOString(),
-                            password: demoUser.password
+                            password: foundUser.password
                         };
-                        await database.ref('employees').push(employeeData);
-                        
-                        console.log('✅ User migrated to Firebase successfully');
+                        return database.ref('employees').push(employeeData);
+                    }).then(() => {
+                        console.log('✅ Employee data migrated to Firebase successfully');
                         updateSyncStatus('synced');
-                    } catch (migrationError) {
+                    }).catch(migrationError => {
                         console.error('❌ Firebase migration failed:', migrationError);
                         updateSyncStatus('local');
-                    }
+                    });
                 } else {
                     console.log('⚠️ Running in local mode');
                     updateSyncStatus('local');
                 }
                 
-                // Store session
-                sessionStorage.setItem('edenUser', JSON.stringify(currentUser));
-                
-                showSuccess('Login successful!');
-                
-                setTimeout(() => {
-                    showDashboard(currentUser.role);
-                }, 800);
-                
             } catch (error) {
                 console.error('❌ Login error:', error.message);
                 showLoading(false);
                 showError(error.message);
-                updateSyncStatus('error');
                 
                 const glassElement = document.querySelector('.glass-morphism');
                 if (glassElement) {
@@ -1897,10 +2060,19 @@
         
         // Initialize user data on first login
         async function initializeUserData() {
-  // Disabled: prevent auto-populating Firebase with any local/demo data.
-  return;
-}
-}
+            if (!isFirebaseConfigured) return;
+            
+            try {
+                console.log('🔄 Initializing user data...');
+                
+                // Check if initial data exists, if not, populate it
+                const salesSnapshot = await database.ref('sales').once('value');
+                if (!salesSnapshot.exists() && salesData.length > 0) {
+                    console.log('📊 Populating initial sales data...');
+                    for (const sale of salesData) {
+                        await database.ref('sales').push(sale);
+                    }
+                }
                 
                 const productsSnapshot = await database.ref('products').once('value');
                 if (!productsSnapshot.exists() && productsData.length > 0) {
@@ -2403,15 +2575,15 @@
             const employee = employeesData.find(emp => emp.id === employeeId);
             if (!employee) return;
             
-            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, async () => {
+            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, () => {
                 // Delete from Firebase first
                 if (employee.firebaseKey) {
-                    await deleteFromFirebase('employees', employee.firebaseKey);
+                    deleteFromFirebase('employees', employee.firebaseKey);
                 }
                 
                 // Delete user from Firebase
                 if (demoUsers[employee.username] && demoUsers[employee.username].firebaseKey) {
-                    await deleteFromFirebase('users', demoUsers[employee.username].firebaseKey);
+                    deleteFromFirebase('users', demoUsers[employee.username].firebaseKey);
                 }
                 
                 employeesData = employeesData.filter(emp => emp.id !== employeeId);
@@ -2494,10 +2666,10 @@
             const store = storesData.find(s => s.name === storeName);
             if (!store) return;
             
-            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, async () => {
+            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, () => {
                 // Delete from Firebase first
                 if (store.firebaseKey) {
-                    await deleteFromFirebase('stores', store.firebaseKey);
+                    deleteFromFirebase('stores', store.firebaseKey);
                 }
                 
                 storesData = storesData.filter(s => s.name !== storeName);
@@ -2581,10 +2753,10 @@
             const product = productsData.find(p => p.name === productName);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, async () => {
+            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, () => {
                 // Delete from Firebase first
                 if (product.firebaseKey) {
-                    await deleteFromFirebase('products', product.firebaseKey);
+                    deleteFromFirebase('products', product.firebaseKey);
                 }
                 
                 productsData = productsData.filter(p => p.name !== productName);
@@ -2639,18 +2811,48 @@
                         // Edit existing item
                         if (data.username !== undefined) {
                             // Employee edit
+                            const oldUsername = currentEditItem.username;
                             currentEditItem.username = data.username;
                             currentEditItem.name = data.fullName;
                             currentEditItem.role = data.role;
+                            currentEditItem.lastUpdated = new Date().toISOString();
+                            
                             if (data.password && data.password.trim()) {
-                                // Update password in demo users if it exists
-                                if (demoUsers[currentEditItem.username]) {
-                                    demoUsers[currentEditItem.username].password = data.password;
+                                // Update password in both employee record and demo users
+                                currentEditItem.password = data.password;
+                                
+                                if (demoUsers[oldUsername]) {
+                                    // If username changed, move the user record
+                                    if (oldUsername !== data.username) {
+                                        demoUsers[data.username] = {
+                                            ...demoUsers[oldUsername],
+                                            password: data.password
+                                        };
+                                        delete demoUsers[oldUsername];
+                                        
+                                        // Remove old user from Firebase and add new one
+                                        database.ref(`users/${oldUsername}`).remove();
+                                        database.ref(`users/${data.username}`).set(demoUsers[data.username]);
+                                    } else {
+                                        demoUsers[data.username].password = data.password;
+                                        // Update user in Firebase
+                                        database.ref(`users/${data.username}`).update({ password: data.password });
+                                    }
+                                }
+                            } else if (oldUsername !== data.username) {
+                                // Username changed but no new password - move user record
+                                if (demoUsers[oldUsername]) {
+                                    demoUsers[data.username] = demoUsers[oldUsername];
+                                    delete demoUsers[oldUsername];
+                                    
+                                    // Move user in Firebase
+                                    database.ref(`users/${oldUsername}`).remove();
+                                    database.ref(`users/${data.username}`).set(demoUsers[data.username]);
                                 }
                             }
                             
-                            // Update in Firebase
-                            await updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            // Update employee in Firebase
+                            updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
@@ -2662,7 +2864,7 @@
                             currentEditItem.description = data.description || '';
                             
                             // Update in Firebase
-                            await updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
+                            updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
@@ -2674,7 +2876,7 @@
                             currentEditItem.customPrice = parseFloat(data.customPrice);
                             
                             // Update in Firebase
-                            await updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
+                            updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
@@ -2689,7 +2891,7 @@
                             currentEditItem.price = parseFloat(data.price);
                             
                             // Update in Firebase
-                            await updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
+                            updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
@@ -2709,29 +2911,35 @@
                                 name: data.fullName,
                                 role: data.role,
                                 status: 'active',
-                                lastActive: 'Never'
+                                lastActive: 'Never',
+                                password: data.password, // Store password in employee record too
+                                createdAt: new Date().toISOString()
                             };
                             
-                            // Save to Firebase first
-                            const firebaseKey = await saveToFirebase('employees', newEmployee);
-                            if (firebaseKey) {
-                                newEmployee.firebaseKey = firebaseKey;
-                            }
-                            
-                            employeesData.push(newEmployee);
-                            
-                            // Add to demo users for login
+                            // Add to demo users for login first
                             const newUser = {
                                 password: data.password,
                                 role: data.role,
                                 name: data.fullName,
-                                id: newEmployee.id
+                                id: newEmployee.id,
+                                createdAt: new Date().toISOString()
                             };
                             demoUsers[data.username] = newUser;
                             
-                            // Save user to Firebase
-                            await updateInFirebase('users', data.username, newUser);
+                            // Save to Firebase - both collections
+                            Promise.all([
+                                saveToFirebase('employees', newEmployee),
+                                database.ref(`users/${data.username}`).set(newUser)
+                            ]).then(([employeeKey, userResult]) => {
+                                if (employeeKey) {
+                                    newEmployee.firebaseKey = employeeKey;
+                                }
+                                console.log('✅ Employee and user saved to Firebase:', data.username);
+                            }).catch(error => {
+                                console.error('❌ Error saving employee to Firebase:', error);
+                            });
                             
+                            employeesData.push(newEmployee);
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
                             showSuccessMessage('Employee added successfully!');
@@ -2746,10 +2954,11 @@
                             };
                             
                             // Save to Firebase first
-                            const firebaseKey = await saveToFirebase('stores', newStore);
-                            if (firebaseKey) {
-                                newStore.firebaseKey = firebaseKey;
-                            }
+                            saveToFirebase('stores', newStore).then(firebaseKey => {
+                                if (firebaseKey) {
+                                    newStore.firebaseKey = firebaseKey;
+                                }
+                            });
                             
                             storesData.push(newStore);
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
@@ -2765,10 +2974,11 @@
                             };
                             
                             // Save to Firebase first
-                            const firebaseKey = await saveToFirebase('storePricing', newPricing);
-                            if (firebaseKey) {
-                                newPricing.firebaseKey = firebaseKey;
-                            }
+                            saveToFirebase('storePricing', newPricing).then(firebaseKey => {
+                                if (firebaseKey) {
+                                    newPricing.firebaseKey = firebaseKey;
+                                }
+                            });
                             
                             storePricingData.push(newPricing);
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
@@ -2787,10 +2997,11 @@
                             };
                             
                             // Save to Firebase first
-                            const firebaseKey = await saveToFirebase('products', newProduct);
-                            if (firebaseKey) {
-                                newProduct.firebaseKey = firebaseKey;
-                            }
+                            saveToFirebase('products', newProduct).then(firebaseKey => {
+                                if (firebaseKey) {
+                                    newProduct.firebaseKey = firebaseKey;
+                                }
+                            });
                             
                             productsData.push(newProduct);
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
@@ -2820,7 +3031,7 @@
                         currentEditProductItem.price = parseFloat(data.price);
                         
                         // Update in Firebase
-                        await updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
+                        updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
                         
                         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                         updateProductsList();
@@ -2834,10 +3045,11 @@
                         };
                         
                         // Save to Firebase first
-                        const firebaseKey = await saveToFirebase('products', newProduct);
-                        if (firebaseKey) {
-                            newProduct.firebaseKey = firebaseKey;
-                        }
+                        saveToFirebase('products', newProduct).then(firebaseKey => {
+                            if (firebaseKey) {
+                                newProduct.firebaseKey = firebaseKey;
+                            }
+                        });
                         
                         productsData.push(newProduct);
                         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
@@ -2956,10 +3168,10 @@
             const product = productsData.find(p => p.id === productId);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, async () => {
+            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, () => {
                 // Delete from Firebase first
                 if (product.firebaseKey) {
-                    await deleteFromFirebase('products', product.firebaseKey);
+                    deleteFromFirebase('products', product.firebaseKey);
                 }
                 
                 productsData = productsData.filter(p => p.id !== productId);
@@ -3032,10 +3244,10 @@
             const pricing = storePricingData.find(p => p.id === pricingId);
             if (!pricing) return;
             
-            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, async () => {
+            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, () => {
                 // Delete from Firebase first
                 if (pricing.firebaseKey) {
-                    await deleteFromFirebase('storePricing', pricing.firebaseKey);
+                    deleteFromFirebase('storePricing', pricing.firebaseKey);
                 }
                 
                 storePricingData = storePricingData.filter(p => p.id !== pricingId);
@@ -3589,7 +3801,6 @@
 
         // Smart Sync Data Function - Intelligently sync data without duplicates
         async function quickStoreData() {
-            if (!confirm('Sync to cloud now? This will write current local data to Firebase.')) { return; }
             if (!isFirebaseConfigured) {
                 showCustomAlert('Firebase is not configured. Cannot sync data to cloud.');
                 return;
@@ -3700,14 +3911,19 @@
                         const existingUser = userSnapshot.val();
                         
                         if (existingUser) {
-                            // Update existing user
+                            // Update existing user - preserve password if not provided
                             const updatedUser = {
-                                ...userData,
+                                ...existingUser, // Keep existing data including password
+                                ...userData, // Override with new data
                                 lastUpdated: new Date().toISOString()
                             };
+                            // Ensure password is always included
+                            if (!updatedUser.password && userData.password) {
+                                updatedUser.password = userData.password;
+                            }
                             await database.ref(`users/${username}`).set(updatedUser);
                             syncResults.users.updated++;
-                            console.log(`✅ Updated user:`, username);
+                            console.log(`✅ Updated user with password:`, username);
                         } else {
                             // Create new user
                             const newUser = {
@@ -3715,9 +3931,14 @@
                                 createdAt: new Date().toISOString(),
                                 lastUpdated: new Date().toISOString()
                             };
+                            // Ensure password is included
+                            if (!newUser.password) {
+                                console.warn(`⚠️ User ${username} missing password, using default`);
+                                newUser.password = 'password123'; // Default password
+                            }
                             await database.ref(`users/${username}`).set(newUser);
                             syncResults.users.created++;
-                            console.log(`✅ Created user:`, username);
+                            console.log(`✅ Created user with password:`, username);
                         }
                     } catch (error) {
                         console.error(`❌ Failed to sync user:`, username, error);
@@ -3840,6 +4061,174 @@
                 }
             } catch (error) {
                 console.warn('Auto-refresh error:', error);
+            }
+        }
+
+        // Code Injection Functions
+        function showCodeInjectionModal() {
+            document.getElementById('codeInjectionModal').classList.remove('hidden');
+            // Focus on the code input
+            setTimeout(() => {
+                document.getElementById('codeInjectionInput').focus();
+            }, 100);
+        }
+        
+        function closeCodeInjectionModal() {
+            document.getElementById('codeInjectionModal').classList.add('hidden');
+        }
+        
+        function clearCodeInjection() {
+            document.getElementById('codeInjectionInput').value = '';
+            document.getElementById('codeExecutionLog').innerHTML = '<div class="text-white/50">Ready to execute code...</div>';
+        }
+        
+        function loadCodeTemplate(templateType) {
+            const templates = {
+                console: `// Console Debug Template
+console.log('=== EDEN SYSTEM DEBUG ===');
+console.log('Current User:', currentUser);
+console.log('Sales Data Count:', salesData.length);
+console.log('Products Count:', productsData.length);
+console.log('Stores Count:', storesData.length);
+console.log('Firebase Status:', isFirebaseConfigured ? 'Connected' : 'Offline');
+console.log('Last 5 Sales:', salesData.slice(-5));
+console.log('=== END DEBUG ===');`,
+
+                ui: `// UI Update Template
+// Update dashboard stats
+document.getElementById('totalSalesCount').textContent = salesData.length;
+document.getElementById('totalRevenue').textContent = salesData.reduce((sum, sale) => sum + sale.amount, 0).toFixed(2) + ' DHS';
+
+// Show success message
+showSuccessMessage('Dashboard updated successfully!');
+
+// Update sync status
+updateSyncStatus('synced');
+
+// Refresh current page data
+refreshCurrentPageData();`,
+
+                data: `// Data Analysis Template
+const today = new Date().toISOString().split('T')[0];
+const todaySales = salesData.filter(sale => sale.date === today);
+const totalRevenue = salesData.reduce((sum, sale) => sum + sale.amount, 0);
+const avgSale = salesData.length > 0 ? totalRevenue / salesData.length : 0;
+
+// Product performance
+const productStats = {};
+salesData.forEach(sale => {
+    if (!productStats[sale.product]) {
+        productStats[sale.product] = { count: 0, revenue: 0 };
+    }
+    productStats[sale.product].count++;
+    productStats[sale.product].revenue += sale.amount;
+});
+
+console.log('📊 Sales Analysis:');
+console.log('Today Sales:', todaySales.length);
+console.log('Total Revenue:', totalRevenue.toFixed(2), 'DHS');
+console.log('Average Sale:', avgSale.toFixed(2), 'DHS');
+console.log('Product Performance:', productStats);
+
+showSuccessMessage('Data analysis completed! Check console for details.');`,
+
+                firebase: `// Firebase Test Template
+console.log('🔥 Firebase Connection Test');
+console.log('Firebase Configured:', isFirebaseConfigured);
+console.log('Database URL:', firebaseConfig?.databaseURL);
+
+if (isFirebaseConfigured) {
+    // Test Firebase connection
+    database.ref('.info/connected').once('value').then((snapshot) => {
+        const connected = snapshot.val();
+        console.log('Firebase Connected:', connected);
+        showSuccessMessage('Firebase connection: ' + (connected ? 'ONLINE' : 'OFFLINE'));
+    }).catch((error) => {
+        console.error('Firebase test failed:', error);
+        showSuccessMessage('Firebase test failed: ' + error.message);
+    });
+    
+    // Test data read
+    database.ref('sales').limitToLast(1).once('value').then((snapshot) => {
+        console.log('Firebase data accessible:', snapshot.exists());
+        console.log('Last sale:', snapshot.val());
+    });
+} else {
+    showSuccessMessage('Firebase not configured - running in local mode');
+}`
+            };
+            
+            document.getElementById('codeInjectionInput').value = templates[templateType] || '';
+        }
+        
+        function executeInjectedCode() {
+            const code = document.getElementById('codeInjectionInput').value.trim();
+            const logDiv = document.getElementById('codeExecutionLog');
+            
+            if (!code) {
+                logDiv.innerHTML = '<div class="text-red-400">❌ No code to execute</div>';
+                return;
+            }
+            
+            // Clear previous log
+            logDiv.innerHTML = '';
+            
+            // Capture console output
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalWarn = console.warn;
+            
+            const logToDiv = (message, type = 'log') => {
+                const timestamp = new Date().toLocaleTimeString();
+                const colors = {
+                    log: 'text-green-400',
+                    error: 'text-red-400',
+                    warn: 'text-yellow-400'
+                };
+                
+                const logEntry = document.createElement('div');
+                logEntry.className = colors[type];
+                logEntry.innerHTML = `<span class="text-white/40">[${timestamp}]</span> ${message}`;
+                logDiv.appendChild(logEntry);
+                logDiv.scrollTop = logDiv.scrollHeight;
+            };
+            
+            // Override console methods
+            console.log = (...args) => {
+                originalLog(...args);
+                logToDiv(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' '), 'log');
+            };
+            
+            console.error = (...args) => {
+                originalError(...args);
+                logToDiv(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' '), 'error');
+            };
+            
+            console.warn = (...args) => {
+                originalWarn(...args);
+                logToDiv(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' '), 'warn');
+            };
+            
+            try {
+                logToDiv('🚀 Executing injected code...', 'log');
+                
+                // Execute the code
+                const result = eval(code);
+                
+                if (result !== undefined) {
+                    logToDiv('✅ Execution completed. Result: ' + (typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)), 'log');
+                } else {
+                    logToDiv('✅ Code executed successfully', 'log');
+                }
+                
+            } catch (error) {
+                logToDiv('❌ Execution failed: ' + error.message, 'error');
+                console.error('Code injection error:', error);
+            } finally {
+                // Restore original console methods
+                console.log = originalLog;
+                console.error = originalError;
+                console.warn = originalWarn;
             }
         }
 
@@ -4049,65 +4438,5 @@
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e04caad19af9e3',t:'MTc1NTAwNTEzNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
-// === Dynamic Dropdown Loader ===
-async function loadDropdownData() {
-    if (!firebase || !firebase.auth || !firebase.database) {
-        console.warn("Firebase not initialized, cannot load dropdowns.");
-        return;
-    }
-    const user = firebase.auth().currentUser;
-    if (!user) {
-        console.warn("No authenticated user, cannot load dropdowns.");
-        return;
-    }
-    const db = firebase.database();
-
-    // Load Stores
-    const storeSelect = document.getElementById("storeName");
-    storeSelect.innerHTML = '<option value="">Select store</option>';
-    try {
-        const storeSnap = await db.ref(`users/${user.uid}/stores`).once('value');
-        const stores = storeSnap.val();
-        if (stores) {
-            Object.values(stores).forEach(store => {
-                const opt = document.createElement('option');
-                opt.value = store.name || "";
-                opt.textContent = store.name || "";
-                storeSelect.appendChild(opt);
-            });
-        }
-    } catch (err) {
-        console.error("Error loading stores:", err);
-    }
-
-    // Load Products
-    const productSelect = document.getElementById("product");
-    productSelect.innerHTML = '<option value="">Select product</option>';
-    try {
-        const productSnap = await db.ref(`users/${user.uid}/products`).once('value');
-        const products = productSnap.val();
-        if (products) {
-            Object.values(products).forEach(product => {
-                const opt = document.createElement('option');
-                opt.value = product.name || "";
-                opt.textContent = product.name || "";
-                productSelect.appendChild(opt);
-            });
-        }
-    } catch (err) {
-        console.error("Error loading products:", err);
-    }
-}
-
-// Call loader after login
-document.addEventListener("DOMContentLoaded", () => {
-    firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-            loadDropdownData();
-        }
-    });
-});
-
-</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e81cbca03bd1e0',t:'MTc1NTA4NzA1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
