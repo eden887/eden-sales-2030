@@ -754,6 +754,9 @@
             <div class="premium-card rounded-3xl p-8 mb-10">
                 <h2 class="text-2xl font-bold text-white mb-8 tracking-wide">QUICK ACTIONS</h2>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <button onclick="showProductManagementPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
+                        📦 Product Management
+                    </button>
                     <button onclick="showSalesReportPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         📊 Sales Reports
                     </button>
@@ -972,7 +975,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                         <!-- Quick Code Templates -->
                         <div>
                             <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">QUICK TEMPLATES</label>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-3 gap-3">
                                 <button type="button" onclick="loadCodeTemplate('console')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
                                     <div class="font-bold text-white text-sm">Console Debug</div>
                                     <div class="text-xs text-white/60">Log system data to console</div>
@@ -988,6 +991,10 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 <button type="button" onclick="loadCodeTemplate('firebase')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
                                     <div class="font-bold text-white text-sm">Firebase Test</div>
                                     <div class="text-xs text-white/60">Test Firebase connection</div>
+                                </button>
+                                <button type="button" onclick="loadCodeTemplate('products')" class="text-left p-3 bg-green-500/10 rounded-xl hover:bg-green-500/20 transition-all border border-green-500/20">
+                                    <div class="font-bold text-green-300 text-sm">📦 Add Products</div>
+                                    <div class="text-xs text-green-400/80">Bulk add sample products</div>
                                 </button>
                             </div>
                         </div>
@@ -1161,7 +1168,121 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         </div>
     </div>
 
-    <!-- Products Page -->
+    <!-- Product Management Page -->
+    <div id="productManagementPage" class="hidden min-h-screen premium-bg">
+        <!-- Header -->
+        <header class="luxury-header sticky top-0 z-50">
+            <div class="max-w-6xl mx-auto px-6 py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="eden-logo w-12 h-12 rounded-xl flex items-center justify-center">
+                            <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM4 8h16v11H4V8z"/>
+                                <path d="M15 10H9v2h6v-2zM15 13H9v2h6v-2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-3">
+                                <h1 class="text-2xl font-bold text-white tracking-wide">PRODUCT MANAGEMENT</h1>
+                                <div class="flex flex-col items-start">
+                                    <div class="flex items-center space-x-1" id="productMgmtSyncStatus">
+                                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                        <span class="text-xs text-green-400 font-medium">SYNCED</span>
+                                    </div>
+                                    <div class="text-xs text-white/40" id="productMgmtLastSync">Last sync: Never</div>
+                                </div>
+                            </div>
+                            <p class="text-sm text-white/60">Complete Product Catalog Management</p>
+                            <p class="text-xs text-white/40" id="productMgmtDateTime">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="quickSyncAllData()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Quick Sync</span>
+                        </button>
+                        <button onclick="goBackToDashboard()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
+                            Back to Dashboard
+                        </button>
+                        <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors">
+                            Sign Out
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-6xl mx-auto p-6 premium-scrollbar">
+            <!-- Product Stats Overview -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="stat-card rounded-3xl p-6">
+                    <div class="text-sm text-white/60 font-medium tracking-wide">TOTAL PRODUCTS</div>
+                    <div class="text-3xl font-black text-premium mt-2" id="totalProductsCount">0</div>
+                </div>
+                <div class="stat-card rounded-3xl p-6">
+                    <div class="text-sm text-white/60 font-medium tracking-wide">AVG PRICE</div>
+                    <div class="text-3xl font-black text-premium mt-2" id="avgProductPrice">0 DHS</div>
+                </div>
+                <div class="stat-card rounded-3xl p-6">
+                    <div class="text-sm text-white/60 font-medium tracking-wide">HIGHEST PRICE</div>
+                    <div class="text-3xl font-black text-premium mt-2" id="highestPrice">0 DHS</div>
+                </div>
+                <div class="stat-card rounded-3xl p-6">
+                    <div class="text-sm text-white/60 font-medium tracking-wide">CATEGORIES</div>
+                    <div class="text-3xl font-black text-premium mt-2" id="totalCategories">0</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="premium-card rounded-3xl p-8 mb-8">
+                <h2 class="text-2xl font-bold text-white mb-6 tracking-wide">PRODUCT MANAGEMENT</h2>
+                <div class="flex justify-center">
+                    <button onclick="showAddProductModal()" class="premium-button py-4 px-8 text-white font-bold rounded-xl">
+                        ➕ Add New Product
+                    </button>
+                </div>
+            </div>
+
+            <!-- Product List -->
+            <div class="premium-card rounded-3xl p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white tracking-wide">ALL PRODUCTS</h2>
+                    <div class="text-sm text-white/60">Total: <span id="productCount">0</span> products</div>
+                </div>
+                <div id="productCatalogList" class="space-y-4">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Product Modal -->
+            <div id="productModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                <div class="premium-card rounded-3xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 id="productModalTitle" class="text-2xl font-bold text-white">Add Product</h3>
+                        <button onclick="closeProductManagementModal()" class="text-white/60 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    <form id="productModalForm" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-white/90 mb-3">Product Name</label>
+                            <input type="text" name="productName" required class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium" placeholder="Enter product name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-white/90 mb-3">Price (DHS)</label>
+                            <input type="number" name="price" required step="0.01" min="0" class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium" placeholder="0.00">
+                        </div>
+                        <div class="flex space-x-4">
+                            <button type="submit" class="premium-button flex-1 py-3 text-white font-bold rounded-xl">Save</button>
+                            <button type="button" onclick="closeProductManagementModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Page (Legacy - kept for compatibility) -->
     <div id="productsPage" class="hidden min-h-screen premium-bg">
         <!-- Header -->
         <header class="luxury-header sticky top-0 z-50">
@@ -1213,7 +1334,10 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             <div class="premium-card rounded-3xl p-8">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white tracking-wide">Product Catalog</h2>
-                    <button onclick="showAddProductModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ Add Product</button>
+                    <div class="flex space-x-4">
+                        <button onclick="showAddProductModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ Add Product</button>
+                        <button onclick="showProductsManagementPage()" class="premium-button px-6 py-3 text-white font-bold rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30">📦 Manage Products</button>
+                    </div>
                 </div>
                 <div id="productsPageList" class="space-y-4">
                     <!-- Products will be loaded here -->
@@ -1238,7 +1362,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                         </div>
                         <div class="flex space-x-4">
                             <button type="submit" class="premium-button flex-1 py-3 text-white font-bold rounded-xl">Save</button>
-                            <button type="button" onclick="closeProductModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">Cancel</button>
+                            <button type="button" onclick="closeProductManagementModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -1691,29 +1815,37 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         }
 
         // Real-time Firebase Functions
+        let listenersInitialized = false;
+        
         function initializeRealtimeListeners() {
-            if (!isFirebaseConfigured) return;
+            if (!isFirebaseConfigured || listenersInitialized) return;
             
             console.log("🔄 Setting up real-time listeners...");
+            listenersInitialized = true;
             
             // Listen for sales data changes
             database.ref('sales').on('value', (snapshot) => {
                 const firebaseSales = snapshot.val();
                 if (firebaseSales) {
-                    salesData = Object.keys(firebaseSales).map(key => ({
+                    const newSalesData = Object.keys(firebaseSales).map(key => ({
                         ...firebaseSales[key],
                         firebaseKey: key
                     }));
-                    localStorage.setItem('edenSalesData', JSON.stringify(salesData));
-                    console.log(`📊 Sales data updated: ${salesData.length} records`);
                     
-                    // Update UI if on sales or admin page
-                    if (currentUser) {
-                        if (currentUser.role === 'admin') {
-                            updateAdminStats();
-                        } else {
-                            updateSalesStats();
-                            updateRecentSales();
+                    // Only update if data actually changed
+                    if (JSON.stringify(newSalesData) !== JSON.stringify(salesData)) {
+                        salesData = newSalesData;
+                        localStorage.setItem('edenSalesData', JSON.stringify(salesData));
+                        console.log(`📊 Sales data updated: ${salesData.length} records`);
+                        
+                        // Update UI if on sales or admin page
+                        if (currentUser) {
+                            if (currentUser.role === 'admin') {
+                                updateAdminStats();
+                            } else {
+                                updateSalesStats();
+                                updateRecentSales();
+                            }
                         }
                     }
                 }
@@ -1723,14 +1855,19 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('products').on('value', (snapshot) => {
                 const firebaseProducts = snapshot.val();
                 if (firebaseProducts) {
-                    productsData = Object.keys(firebaseProducts).map(key => ({
+                    const newProductsData = Object.keys(firebaseProducts).map(key => ({
                         ...firebaseProducts[key],
                         firebaseKey: key
                     }));
-                    localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                    console.log(`📦 Products data updated: ${productsData.length} products`);
-                    updateProductsList();
-                    refreshCurrentSalesFormPrice();
+                    
+                    // Only update if data actually changed
+                    if (JSON.stringify(newProductsData) !== JSON.stringify(productsData)) {
+                        productsData = newProductsData;
+                        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                        console.log(`📦 Products data updated: ${productsData.length} products`);
+                        updateProductsList();
+                        refreshCurrentSalesFormPrice();
+                    }
                 }
             });
             
@@ -1738,13 +1875,18 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('stores').on('value', (snapshot) => {
                 const firebaseStores = snapshot.val();
                 if (firebaseStores) {
-                    storesData = Object.keys(firebaseStores).map(key => ({
+                    const newStoresData = Object.keys(firebaseStores).map(key => ({
                         ...firebaseStores[key],
                         firebaseKey: key
                     }));
-                    localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                    console.log(`🏪 Stores data updated: ${storesData.length} stores`);
-                    updateStoresList();
+                    
+                    // Only update if data actually changed
+                    if (JSON.stringify(newStoresData) !== JSON.stringify(storesData)) {
+                        storesData = newStoresData;
+                        localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                        console.log(`🏪 Stores data updated: ${storesData.length} stores`);
+                        updateStoresList();
+                    }
                 }
             });
             
@@ -1752,13 +1894,18 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('employees').on('value', (snapshot) => {
                 const firebaseEmployees = snapshot.val();
                 if (firebaseEmployees) {
-                    employeesData = Object.keys(firebaseEmployees).map(key => ({
+                    const newEmployeesData = Object.keys(firebaseEmployees).map(key => ({
                         ...firebaseEmployees[key],
                         firebaseKey: key
                     }));
-                    localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                    console.log(`👥 Employees data updated: ${employeesData.length} employees`);
-                    updateEmployeesList();
+                    
+                    // Only update if data actually changed
+                    if (JSON.stringify(newEmployeesData) !== JSON.stringify(employeesData)) {
+                        employeesData = newEmployeesData;
+                        localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                        console.log(`👥 Employees data updated: ${employeesData.length} employees`);
+                        updateEmployeesList();
+                    }
                 }
             });
             
@@ -1766,14 +1913,19 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('storePricing').on('value', (snapshot) => {
                 const firebasePricing = snapshot.val();
                 if (firebasePricing) {
-                    storePricingData = Object.keys(firebasePricing).map(key => ({
+                    const newPricingData = Object.keys(firebasePricing).map(key => ({
                         ...firebasePricing[key],
                         firebaseKey: key
                     }));
-                    localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                    console.log(`💰 Pricing data updated: ${storePricingData.length} custom prices`);
-                    updatePricingList();
-                    refreshCurrentSalesFormPrice();
+                    
+                    // Only update if data actually changed
+                    if (JSON.stringify(newPricingData) !== JSON.stringify(storePricingData)) {
+                        storePricingData = newPricingData;
+                        localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                        console.log(`💰 Pricing data updated: ${storePricingData.length} custom prices`);
+                        updatePricingList();
+                        refreshCurrentSalesFormPrice();
+                    }
                 }
             });
             
@@ -1781,14 +1933,21 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('users').on('value', (snapshot) => {
                 const firebaseUsers = snapshot.val();
                 if (firebaseUsers) {
-                    // Update demo users with Firebase data, preserving keys
+                    // Check if users data actually changed
+                    const currentUsersString = JSON.stringify(demoUsers);
+                    const newUsersData = {};
+                    
                     Object.keys(firebaseUsers).forEach(username => {
-                        demoUsers[username] = {
+                        newUsersData[username] = {
                             ...firebaseUsers[username],
                             firebaseKey: username
                         };
                     });
-                    console.log(`👤 Users data updated: ${Object.keys(firebaseUsers).length} users`);
+                    
+                    if (JSON.stringify(newUsersData) !== currentUsersString) {
+                        demoUsers = newUsersData;
+                        console.log(`👤 Users data updated: ${Object.keys(firebaseUsers).length} users`);
+                    }
                 }
             });
             
@@ -1956,6 +2115,9 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             
             // Setup modal handlers
             setupModalHandlers();
+            
+            // Setup new product form handler
+            setupNewProductFormHandler();
         });
 
         function setupDateConstraints() {
@@ -2149,6 +2311,11 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             const submitButton = e.target.querySelector('button[type="submit"]');
             const originalText = submitButton.innerHTML;
             
+            // Prevent double submission
+            if (submitButton.disabled) {
+                return;
+            }
+            
             // Show loading state
             submitButton.innerHTML = '💾 Saving...';
             submitButton.disabled = true;
@@ -2165,7 +2332,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 }
                 
                 const sale = {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(), // Ensure unique ID
                     employeeId: currentUser.id,
                     employeeName: currentUser.name,
                     storeName: storeName,
@@ -2180,19 +2347,21 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
 
                 console.log('💾 Saving sale entry:', sale);
 
-                // Save to Firebase first, then update local data
-                const firebaseKey = await saveToFirebase('sales', sale);
-                
-                if (firebaseKey) {
-                    // Firebase will trigger the real-time listener to update salesData
-                    console.log('✅ Sale saved to Firebase successfully with key:', firebaseKey);
+                if (isFirebaseConfigured) {
+                    // Save to Firebase only - let real-time listener handle local update
+                    const firebaseKey = await saveToFirebase('sales', sale);
                     
-                    // Show success feedback
-                    submitButton.innerHTML = '✅ Saved to Cloud!';
-                    submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
-                    
+                    if (firebaseKey) {
+                        console.log('✅ Sale saved to Firebase successfully with key:', firebaseKey);
+                        
+                        // Show success feedback
+                        submitButton.innerHTML = '✅ Saved to Cloud!';
+                        submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+                    } else {
+                        throw new Error('Firebase save failed');
+                    }
                 } else {
-                    // Fallback to local storage
+                    // Fallback to local storage only
                     sale.syncStatus = 'local';
                     salesData.push(sale);
                     localStorage.setItem('edenSalesData', JSON.stringify(salesData));
@@ -2204,7 +2373,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                     submitButton.innerHTML = '💾 Saved Locally';
                     submitButton.style.background = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
                     
-                    // Update displays immediately for local saves
+                    // Update displays immediately for local saves only
                     updateSalesStats();
                     updateRecentSales();
                 }
@@ -2888,8 +3057,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 }
                             }
                             
-                            // Update employee in Firebase
-                            updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            // Update employee in Firebase (no duplicates)
+                            await updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
@@ -2900,8 +3069,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             currentEditItem.location = data.location;
                             currentEditItem.description = data.description || '';
                             
-                            // Update in Firebase
-                            updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
+                            // Update in Firebase (no duplicates)
+                            await updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
@@ -2912,8 +3081,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             currentEditItem.storeName = data.storeName;
                             currentEditItem.customPrice = parseFloat(data.customPrice);
                             
-                            // Update in Firebase
-                            updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
+                            // Update in Firebase (no duplicates)
+                            await updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
@@ -2927,8 +3096,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             currentEditItem.name = data.productName;
                             currentEditItem.price = parseFloat(data.price);
                             
-                            // Update in Firebase
-                            updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
+                            // Update in Firebase (no duplicates)
+                            await updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
@@ -2963,18 +3132,20 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             };
                             demoUsers[data.username] = newUser;
                             
-                            // Save to Firebase - both collections
-                            Promise.all([
-                                saveToFirebase('employees', newEmployee),
-                                database.ref(`users/${data.username}`).set(newUser)
-                            ]).then(([employeeKey, userResult]) => {
+                            // Save to Firebase - both collections (no duplicates)
+                            try {
+                                const [employeeKey, userResult] = await Promise.all([
+                                    saveToFirebase('employees', newEmployee),
+                                    database.ref(`users/${data.username}`).set(newUser)
+                                ]);
+                                
                                 if (employeeKey) {
                                     newEmployee.firebaseKey = employeeKey;
                                 }
                                 console.log('✅ Employee and user saved to Firebase:', data.username);
-                            }).catch(error => {
+                            } catch (error) {
                                 console.error('❌ Error saving employee to Firebase:', error);
-                            });
+                            }
                             
                             employeesData.push(newEmployee);
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
@@ -2990,12 +3161,15 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 status: 'active'
                             };
                             
-                            // Save to Firebase first
-                            saveToFirebase('stores', newStore).then(firebaseKey => {
+                            // Save to Firebase first (no duplicates)
+                            try {
+                                const firebaseKey = await saveToFirebase('stores', newStore);
                                 if (firebaseKey) {
                                     newStore.firebaseKey = firebaseKey;
                                 }
-                            });
+                            } catch (error) {
+                                console.error('❌ Error saving store to Firebase:', error);
+                            }
                             
                             storesData.push(newStore);
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
@@ -3010,12 +3184,15 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 customPrice: parseFloat(data.customPrice)
                             };
                             
-                            // Save to Firebase first
-                            saveToFirebase('storePricing', newPricing).then(firebaseKey => {
+                            // Save to Firebase first (no duplicates)
+                            try {
+                                const firebaseKey = await saveToFirebase('storePricing', newPricing);
                                 if (firebaseKey) {
                                     newPricing.firebaseKey = firebaseKey;
                                 }
-                            });
+                            } catch (error) {
+                                console.error('❌ Error saving pricing to Firebase:', error);
+                            }
                             
                             storePricingData.push(newPricing);
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
@@ -3033,12 +3210,15 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 price: parseFloat(data.price)
                             };
                             
-                            // Save to Firebase first
-                            saveToFirebase('products', newProduct).then(firebaseKey => {
+                            // Save to Firebase first (no duplicates)
+                            try {
+                                const firebaseKey = await saveToFirebase('products', newProduct);
                                 if (firebaseKey) {
                                     newProduct.firebaseKey = firebaseKey;
                                 }
-                            });
+                            } catch (error) {
+                                console.error('❌ Error saving product to Firebase:', error);
+                            }
                             
                             productsData.push(newProduct);
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
@@ -3057,44 +3237,63 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             
             const productModalForm = document.getElementById('productModalForm');
             if (productModalForm) {
-                productModalForm.addEventListener('submit', function(e) {
+                productModalForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     const formData = new FormData(e.target);
                     const data = Object.fromEntries(formData);
                     
-                    if (currentEditProductItem) {
-                        // Edit existing product
-                        currentEditProductItem.name = data.productName;
-                        currentEditProductItem.price = parseFloat(data.price);
-                        
-                        // Update in Firebase
-                        updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
-                        
-                        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                        updateProductsList();
-                        showSuccessMessage('Product updated successfully!');
-                    } else {
-                        // Add new product
-                        const newProduct = {
-                            id: Date.now(),
-                            name: data.productName,
-                            price: parseFloat(data.price)
-                        };
-                        
-                        // Save to Firebase first
-                        saveToFirebase('products', newProduct).then(firebaseKey => {
+                    try {
+                        if (currentEditProductItem) {
+                            // Edit existing product
+                            currentEditProductItem.name = data.productName;
+                            currentEditProductItem.price = parseFloat(data.price);
+                            currentEditProductItem.lastUpdated = new Date().toISOString();
+                            
+                            // Update in Firebase
+                            await updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
+                            
+                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                            
+                            // Update all relevant UI components
+                            updateProductsList();
+                            updateProductCatalog();
+                            updateProductStats();
+                            populateProductDropdown();
+                            
+                            showSuccessMessage('Product updated successfully!');
+                        } else {
+                            // Add new product
+                            const newProduct = {
+                                id: Date.now(),
+                                name: data.productName,
+                                price: parseFloat(data.price),
+                                createdAt: new Date().toISOString(),
+                                lastUpdated: new Date().toISOString()
+                            };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('products', newProduct);
                             if (firebaseKey) {
                                 newProduct.firebaseKey = firebaseKey;
                             }
-                        });
+                            
+                            productsData.push(newProduct);
+                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                            
+                            // Update all relevant UI components
+                            updateProductsList();
+                            updateProductCatalog();
+                            updateProductStats();
+                            populateProductDropdown();
+                            
+                            showSuccessMessage('Product added successfully!');
+                        }
                         
-                        productsData.push(newProduct);
-                        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                        updateProductsList();
-                        showSuccessMessage('Product added successfully!');
+                        closeProductModal();
+                    } catch (error) {
+                        console.error('Error saving product:', error);
+                        showCustomAlert('Error saving product: ' + error.message);
                     }
-                    
-                    closeProductModal();
                 });
             }
         }
@@ -3157,6 +3356,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         function goBackToDashboard() {
             // Hide all secondary pages
             document.getElementById('productsPage').classList.add('hidden');
+            document.getElementById('productsManagementPage').classList.add('hidden');
+            document.getElementById('productManagementPage').classList.add('hidden');
             document.getElementById('salesReportPage').classList.add('hidden');
             
             // Show appropriate dashboard
@@ -3165,6 +3366,256 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             } else {
                 document.getElementById('salesPage').classList.remove('hidden');
             }
+        }
+
+        // Product Management Functions
+        function showProductManagementPage() {
+            // Hide all other pages
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('productsPage').classList.add('hidden');
+            document.getElementById('salesReportPage').classList.add('hidden');
+            
+            // Show product management page
+            document.getElementById('productManagementPage').classList.remove('hidden');
+            
+            // Update the page
+            updateProductManagementPage();
+        }
+
+        function updateProductManagementPage() {
+            // Update sync status
+            updateSyncStatus(isFirebaseConfigured ? 'synced' : 'local');
+            
+            // Update date/time
+            updateDateTime();
+            
+            // Update product stats
+            updateProductStats();
+            
+            // Update product catalog
+            updateProductCatalog();
+            
+            // Update categories
+            updateCategoriesList();
+            
+            // Update analytics
+            updateProductAnalytics();
+        }
+
+        function updateProductStats() {
+            const totalProducts = productsData.length;
+            const avgPrice = totalProducts > 0 ? productsData.reduce((sum, p) => sum + p.price, 0) / totalProducts : 0;
+            const highestPrice = totalProducts > 0 ? Math.max(...productsData.map(p => p.price)) : 0;
+            const categories = [...new Set(productsData.map(p => p.category).filter(c => c))];
+            
+            document.getElementById('totalProductsCount').textContent = totalProducts;
+            document.getElementById('avgProductPrice').textContent = `${avgPrice.toFixed(2)} DHS`;
+            document.getElementById('highestPrice').textContent = `${highestPrice.toFixed(2)} DHS`;
+            document.getElementById('totalCategories').textContent = categories.length;
+        }
+
+
+
+        function updateProductCatalog() {
+            const listDiv = document.getElementById('productCatalogList');
+            const countSpan = document.getElementById('productCount');
+            
+            if (countSpan) {
+                countSpan.textContent = productsData.length;
+            }
+            
+            if (productsData.length === 0) {
+                listDiv.innerHTML = '<div class="text-white/50 text-center py-12 font-medium">No products in catalog. Add your first product to get started!</div>';
+                return;
+            }
+
+            // Sort products by name
+            const sortedProducts = [...productsData].sort((a, b) => a.name.localeCompare(b.name));
+
+            listDiv.innerHTML = sortedProducts.map(product => `
+                <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-white/10">
+                            <span class="text-xl">📦</span>
+                        </div>
+                        <div>
+                            <div class="font-bold text-white text-lg">${product.name}</div>
+                            <div class="text-sm text-white/60">ID: ${product.id}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6">
+                        <div class="text-right">
+                            <div class="text-2xl font-black text-premium">${product.price.toFixed(2)} DHS</div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="editProductInCatalog(${product.id})" class="text-blue-400 hover:text-blue-300 font-medium transition-colors px-3 py-1 rounded-lg hover:bg-blue-500/10">Edit</button>
+                            <button onclick="deleteProductFromCatalog(${product.id})" class="text-red-400 hover:text-red-300 font-medium transition-colors px-3 py-1 rounded-lg hover:bg-red-500/10">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+
+
+        function editProductInCatalog(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+            
+            currentEditProductItem = product;
+            document.getElementById('productModalTitle').textContent = 'Edit Product';
+            
+            // Fill form with existing data
+            const form = document.getElementById('productModalForm');
+            form.productName.value = product.name;
+            form.price.value = product.price;
+            
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function deleteProductFromCatalog(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+            
+            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, async () => {
+                try {
+                    // Delete from Firebase first
+                    if (product.firebaseKey) {
+                        await deleteFromFirebase('products', product.firebaseKey);
+                    }
+                    
+                    // Remove from local array
+                    productsData = productsData.filter(p => p.id !== productId);
+                    localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                    
+                    // Update UI
+                    updateProductManagementPage();
+                    populateProductDropdown(); // Update sales form dropdown
+                    
+                    showSuccessMessage('Product deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting product:', error);
+                    showCustomAlert('Error deleting product: ' + error.message);
+                }
+            });
+        }
+
+        function showAddProductModal() {
+            currentEditProductItem = null;
+            document.getElementById('productModalTitle').textContent = 'Add Product';
+            
+            // Clear form
+            const form = document.getElementById('productModalForm');
+            form.productName.value = '';
+            form.price.value = '';
+            
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+            currentEditProductItem = null;
+        }
+
+        function closeProductManagementModal() {
+            document.getElementById('productModal').classList.add('hidden');
+            currentEditProductItem = null;
+        }
+
+
+        
+        function showProductsManagementPage() {
+            // Hide all other pages
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('productsPage').classList.add('hidden');
+            document.getElementById('salesReportPage').classList.add('hidden');
+            
+            // Show products management page
+            document.getElementById('productsManagementPage').classList.remove('hidden');
+            
+            // Update the page
+            updateProductsManagementPage();
+        }
+        
+        function updateProductsManagementPage() {
+            // Update sync status
+            updateSyncStatus(isFirebaseConfigured ? 'synced' : 'local');
+            
+            // Update date/time
+            updateDateTime();
+            
+            // Update products count
+            document.getElementById('totalProductsCount').textContent = productsData.length;
+            
+            // Update existing products list
+            updateExistingProductsList();
+        }
+        
+        function updateExistingProductsList() {
+            const listDiv = document.getElementById('existingProductsList');
+            
+            if (productsData.length === 0) {
+                listDiv.innerHTML = '<div class="text-white/50 text-center py-8 font-medium">No products created yet. Add your first product above!</div>';
+                return;
+            }
+
+            listDiv.innerHTML = productsData.map(product => `
+                <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                    <div class="flex-1">
+                        <div class="font-bold text-white text-lg">${product.name}</div>
+                        <div class="text-sm text-white/60">Price: ${product.price.toFixed(2)} DHS</div>
+                        ${product.description ? `<div class="text-xs text-white/40 mt-1">${product.description}</div>` : ''}
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-2xl font-black text-premium">${product.price.toFixed(2)} DHS</div>
+                            <div class="text-xs text-white/40">ID: ${product.id}</div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
+                            <button onclick="editExistingProduct(${product.id})" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
+                            <button onclick="deleteExistingProduct(${product.id})" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function editExistingProduct(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+            
+            // Fill the form with existing data
+            document.getElementById('newProductName').value = product.name;
+            document.getElementById('newProductPrice').value = product.price;
+            document.getElementById('newProductDescription').value = product.description || '';
+            
+            // Change form title and button
+            document.querySelector('#newProductForm h2').textContent = '✏️ EDIT PRODUCT';
+            document.querySelector('#newProductForm button[type="submit"]').innerHTML = '💾 UPDATE PRODUCT';
+            
+            // Store the product being edited
+            window.editingProductId = productId;
+            
+            // Scroll to form
+            document.querySelector('#newProductForm').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function deleteExistingProduct(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+            
+            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, () => {
+                // Delete from Firebase first
+                if (product.firebaseKey) {
+                    deleteFromFirebase('products', product.firebaseKey);
+                }
+                
+                productsData = productsData.filter(p => p.id !== productId);
+                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                updateProductsManagementPage();
+                showSuccessMessage('Product deleted successfully!');
+            });
         }
         
         function updateProductsList() {
@@ -4192,7 +4643,227 @@ if (isFirebaseConfigured) {
     });
 } else {
     showSuccessMessage('Firebase not configured - running in local mode');
-}`
+}`,
+
+                products: `// 📦 PRODUCT INJECTION CODE - Bulk Add Sample Products
+console.log('📦 Starting bulk product addition...');
+
+// Define sample products to add (you can customize these)
+const newProducts = [
+    {
+        id: Date.now() + 1,
+        name: 'iPhone 15 Pro',
+        price: 4999.00,
+        description: 'Latest iPhone with Pro features and titanium design',
+        category: 'Electronics',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 2,
+        name: 'Samsung Galaxy S24',
+        price: 3999.00,
+        description: 'Premium Android smartphone with AI features',
+        category: 'Electronics',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 3,
+        name: 'MacBook Air M3',
+        price: 8999.00,
+        description: 'Apple laptop with M3 chip - 13 inch',
+        category: 'Computers',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 4,
+        name: 'iPad Pro 12.9',
+        price: 3499.00,
+        description: 'Professional tablet for creative work',
+        category: 'Tablets',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 5,
+        name: 'AirPods Pro 2',
+        price: 899.00,
+        description: 'Wireless earbuds with active noise cancellation',
+        category: 'Audio',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 6,
+        name: 'Dell XPS 13',
+        price: 7499.00,
+        description: 'Premium Windows laptop with InfinityEdge display',
+        category: 'Computers',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 7,
+        name: 'Sony WH-1000XM5',
+        price: 1299.00,
+        description: 'Industry-leading noise canceling headphones',
+        category: 'Audio',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    },
+    {
+        id: Date.now() + 8,
+        name: 'Apple Watch Series 9',
+        price: 1599.00,
+        description: 'Advanced smartwatch with health monitoring',
+        category: 'Wearables',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+    }
+];
+
+// Function to check if product already exists (case-insensitive)
+const productExists = (productName) => {
+    return productsData.some(product => 
+        product.name.toLowerCase().trim() === productName.toLowerCase().trim()
+    );
+};
+
+// Function to validate product data
+const validateProduct = (product) => {
+    if (!product.name || product.name.trim().length === 0) {
+        console.error('❌ Product missing name:', product);
+        return false;
+    }
+    if (!product.price || product.price <= 0) {
+        console.error('❌ Product has invalid price:', product);
+        return false;
+    }
+    return true;
+};
+
+// Add products with validation and duplicate checking
+let addedCount = 0;
+let skippedCount = 0;
+let errorCount = 0;
+
+console.log('🔍 Checking for existing products and validating new ones...');
+
+for (const product of newProducts) {
+    // Validate product data
+    if (!validateProduct(product)) {
+        errorCount++;
+        console.error('❌ Invalid product data, skipped:', product.name || 'Unknown');
+        continue;
+    }
+    
+    // Check for duplicates
+    if (!productExists(product.name)) {
+        try {
+            // Add to local array
+            productsData.push(product);
+            
+            // Save to Firebase if configured (async - don't wait)
+            if (isFirebaseConfigured) {
+                saveToFirebase('products', product).then(firebaseKey => {
+                    if (firebaseKey) {
+                        product.firebaseKey = firebaseKey;
+                        console.log('✅ Product synced to Firebase:', product.name);
+                    }
+                }).catch(error => {
+                    console.error('❌ Firebase sync failed for:', product.name, error.message);
+                });
+            }
+            
+            addedCount++;
+            console.log(\`✅ Added: "\${product.name}" - \${product.price.toFixed(2)} DHS (\${product.category || 'No Category'})\`);
+            
+        } catch (error) {
+            errorCount++;
+            console.error('❌ Error adding product:', product.name, error.message);
+        }
+    } else {
+        skippedCount++;
+        console.log(\`⚠️ Already exists, skipped: "\${product.name}"\`);
+    }
+}
+
+// Update local storage with new products
+if (addedCount > 0) {
+    try {
+        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+        console.log('💾 Local storage updated successfully');
+    } catch (error) {
+        console.error('❌ Failed to update local storage:', error.message);
+    }
+}
+
+// Update all UI components that display products
+console.log('🔄 Updating UI components...');
+
+// Update products management page if visible
+if (typeof updateProductsManagementPage === 'function') {
+    updateProductsManagementPage();
+    console.log('✅ Products management page updated');
+}
+
+// Update product dropdowns in sales form
+if (typeof populateProductDropdown === 'function') {
+    populateProductDropdown();
+    console.log('✅ Sales form product dropdown updated');
+}
+
+// Update product lists on admin page
+if (typeof updateProductsList === 'function') {
+    updateProductsList();
+    console.log('✅ Admin product list updated');
+}
+
+// Update existing products list if on products management page
+if (typeof updateExistingProductsList === 'function') {
+    updateExistingProductsList();
+    console.log('✅ Existing products list updated');
+}
+
+// Update product count display
+const totalProductsCountElement = document.getElementById('totalProductsCount');
+if (totalProductsCountElement) {
+    totalProductsCountElement.textContent = productsData.length;
+    console.log('✅ Product count display updated');
+}
+
+// Show comprehensive results
+console.log('\\n📊 PRODUCT INJECTION RESULTS:');
+console.log('=====================================');
+console.log(\`✅ Products successfully added: \${addedCount}\`);
+console.log(\`⚠️ Products skipped (duplicates): \${skippedCount}\`);
+console.log(\`❌ Products failed (errors): \${errorCount}\`);
+console.log(\`📦 Total products in system: \${productsData.length}\`);
+console.log(\`🔥 Firebase sync: \${isFirebaseConfigured ? 'ENABLED' : 'DISABLED (Local only)'}\`);
+console.log('=====================================');
+
+// Show success message to user
+if (addedCount > 0) {
+    showSuccessMessage(\`📦 Product injection completed! Added: \${addedCount} products. Total: \${productsData.length}\`);
+} else if (skippedCount > 0 && addedCount === 0) {
+    showSuccessMessage(\`📦 All products already exist! Skipped: \${skippedCount} duplicates. Total: \${productsData.length}\`);
+} else {
+    showSuccessMessage(\`📦 Product injection completed with \${errorCount} errors. Check console for details.\`);
+}
+
+// Optional: Show detailed breakdown in a table format
+console.log('\\n📋 DETAILED PRODUCT LIST:');
+console.table(productsData.map(p => ({
+    ID: p.id,
+    Name: p.name,
+    Price: p.price + ' DHS',
+    Category: p.category || 'N/A',
+    Firebase: p.firebaseKey ? 'Synced' : 'Local'
+})));
+
+console.log('\\n🎉 Product injection process completed successfully!');`
             };
             
             document.getElementById('codeInjectionInput').value = templates[templateType] || '';
@@ -4452,6 +5123,123 @@ if (isFirebaseConfigured) {
             }
         }
 
+        // Setup new product form handler
+        function setupNewProductFormHandler() {
+            const newProductForm = document.getElementById('newProductForm');
+            if (newProductForm) {
+                newProductForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const productName = document.getElementById('newProductName').value.trim();
+                    const productPrice = parseFloat(document.getElementById('newProductPrice').value);
+                    const productDescription = document.getElementById('newProductDescription').value.trim();
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    const originalText = submitButton.innerHTML;
+                    
+                    // Validation
+                    if (!productName || productPrice <= 0) {
+                        showCustomAlert('Please enter a valid product name and price.');
+                        return;
+                    }
+                    
+                    // Show loading state
+                    submitButton.innerHTML = '💾 Saving...';
+                    submitButton.disabled = true;
+                    
+                    try {
+                        if (window.editingProductId) {
+                            // Update existing product
+                            const product = productsData.find(p => p.id === window.editingProductId);
+                            if (product) {
+                                product.name = productName;
+                                product.price = productPrice;
+                                product.description = productDescription;
+                                product.lastUpdated = new Date().toISOString();
+                                
+                                // Update in Firebase
+                                await updateInFirebase('products', product.firebaseKey, product);
+                                
+                                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                                
+                                // Reset form
+                                resetProductForm();
+                                updateProductsManagementPage();
+                                
+                                // Show success feedback
+                                submitButton.innerHTML = '✅ Updated!';
+                                submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+                                
+                                showSuccessMessage('Product updated successfully!');
+                            }
+                        } else {
+                            // Create new product
+                            const newProduct = {
+                                id: Date.now(),
+                                name: productName,
+                                price: productPrice,
+                                description: productDescription,
+                                createdAt: new Date().toISOString(),
+                                lastUpdated: new Date().toISOString()
+                            };
+                            
+                            // Save to Firebase first
+                            const firebaseKey = await saveToFirebase('products', newProduct);
+                            if (firebaseKey) {
+                                newProduct.firebaseKey = firebaseKey;
+                            }
+                            
+                            productsData.push(newProduct);
+                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                            
+                            // Reset form
+                            resetProductForm();
+                            updateProductsManagementPage();
+                            
+                            // Show success feedback
+                            submitButton.innerHTML = '✅ Saved!';
+                            submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+                            
+                            showSuccessMessage('Product created successfully!');
+                        }
+                        
+                        // Update dropdowns in sales form if visible
+                        setTimeout(() => {
+                            populateProductDropdown();
+                        }, 100);
+                        
+                    } catch (error) {
+                        console.error('Error saving product:', error);
+                        
+                        // Show error feedback
+                        submitButton.innerHTML = '❌ Error - Try Again';
+                        submitButton.style.background = 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
+                        
+                        showCustomAlert('Error saving product: ' + error.message);
+                    }
+                    
+                    // Reset button after delay
+                    setTimeout(() => {
+                        submitButton.innerHTML = originalText;
+                        submitButton.style.background = '';
+                        submitButton.disabled = false;
+                    }, 2000);
+                });
+            }
+        }
+        
+        function resetProductForm() {
+            document.getElementById('newProductName').value = '';
+            document.getElementById('newProductPrice').value = '';
+            document.getElementById('newProductDescription').value = '';
+            
+            // Reset form title and button
+            document.querySelector('#newProductForm h2').textContent = '📦 ADD NEW PRODUCT';
+            document.querySelector('#newProductForm button[type="submit"]').innerHTML = '💾 SAVE PRODUCT';
+            
+            // Clear editing state
+            window.editingProductId = null;
+        }
+
         // Quick Sync All Data Function
         async function quickSyncAllData() {
             if (!isFirebaseConfigured) {
@@ -4658,5 +5446,5 @@ if (isFirebaseConfigured) {
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e830a8449ef9d3',t:'MTc1NTA4Nzg3My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e897d6b75fde57',t:'MTc1NTA5MjA5OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
