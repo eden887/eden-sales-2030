@@ -517,7 +517,7 @@
                         <label class="block text-sm font-semibold text-white/90 mb-4 tracking-wide">USERNAME</label>
                         <input type="text" id="username" required 
                                class="premium-input w-full px-6 py-5 text-lg rounded-2xl focus:outline-none font-medium"
-                               placeholder="Enter your username">
+                               placeholder="Enter your username" onkeypress="handleLoginKeyPress(event)">
                     </div>
 
                     <!-- Password Input -->
@@ -526,7 +526,7 @@
                         <div class="relative">
                             <input type="password" id="password" required 
                                    class="premium-input w-full px-6 py-5 text-lg rounded-2xl focus:outline-none pr-14 font-medium"
-                                   placeholder="Enter your password">
+                                   placeholder="Enter your password" onkeypress="handleLoginKeyPress(event)">
                             <button type="button" onclick="togglePassword()" 
                                     class="absolute right-5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors">
                                 <svg id="eyeIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -548,7 +548,7 @@
                     </div>
 
                     <!-- Login Button -->
-                    <button type="submit" id="loginBtn" 
+                    <button type="submit" id="loginBtn" onclick="handleLoginClick(event)"
                             class="premium-button w-full text-white py-5 px-8 font-bold text-lg rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed tracking-wide">
                         <span id="loginBtnText">SIGN IN</span>
                         <span id="loginSpinner" class="hidden flex items-center justify-center">
@@ -2098,20 +2098,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 }
             }, 3000); // Auto-refresh every 3 seconds
             
-            // Setup login form handler directly
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                console.log('Login form found, setting up handler...');
-                loginForm.addEventListener('submit', handleLogin);
-            } else {
-                console.error('Login form not found!');
-            }
-            
-            // Setup sales form handler
-            const salesForm = document.getElementById('salesForm');
-            if (salesForm) {
-                salesForm.addEventListener('submit', handleSaleEntry);
-            }
+            // Setup all form handlers with retry mechanism
+            setupFormHandlers();
             
             // Setup modal handlers
             setupModalHandlers();
@@ -2119,6 +2107,113 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             // Setup new product form handler
             setupNewProductFormHandler();
         });
+
+        // Setup form handlers with bulletproof login handling
+        function setupFormHandlers() {
+            console.log('🔧 Setting up form handlers...');
+            
+            // Bulletproof login form setup with multiple methods
+            const setupLoginForm = () => {
+                console.log('🔐 Setting up login form handlers...');
+                
+                const loginForm = document.getElementById('loginForm');
+                const loginButton = document.getElementById('loginBtn');
+                const usernameInput = document.getElementById('username');
+                const passwordInput = document.getElementById('password');
+                
+                if (!loginForm) {
+                    console.error('❌ Login form not found!');
+                    return false;
+                }
+                
+                console.log('✅ Login form elements found:', {
+                    form: !!loginForm,
+                    button: !!loginButton,
+                    username: !!usernameInput,
+                    password: !!passwordInput
+                });
+                
+                // Method 1: Form submit event
+                try {
+                    // Remove any existing listeners
+                    const newForm = loginForm.cloneNode(true);
+                    loginForm.parentNode.replaceChild(newForm, loginForm);
+                    
+                    // Get fresh references after cloning
+                    const freshForm = document.getElementById('loginForm');
+                    const freshButton = document.getElementById('loginBtn');
+                    const freshUsername = document.getElementById('username');
+                    const freshPassword = document.getElementById('password');
+                    
+                    // Add form submit handler
+                    freshForm.addEventListener('submit', function(e) {
+                        console.log('🔐 Form submit event triggered');
+                        e.preventDefault();
+                        handleLogin(e);
+                    });
+                    
+                    // Method 2: Button click handler (backup)
+                    if (freshButton) {
+                        freshButton.addEventListener('click', function(e) {
+                            console.log('🔐 Button click event triggered');
+                            e.preventDefault();
+                            handleLogin(e);
+                        });
+                    }
+                    
+                    // Method 3: Enter key handlers on inputs
+                    if (freshUsername) {
+                        freshUsername.addEventListener('keypress', function(e) {
+                            if (e.key === 'Enter') {
+                                console.log('🔐 Enter key pressed on username');
+                                e.preventDefault();
+                                handleLogin(e);
+                            }
+                        });
+                    }
+                    
+                    if (freshPassword) {
+                        freshPassword.addEventListener('keypress', function(e) {
+                            if (e.key === 'Enter') {
+                                console.log('🔐 Enter key pressed on password');
+                                e.preventDefault();
+                                handleLogin(e);
+                            }
+                        });
+                    }
+                    
+                    console.log('✅ All login handlers attached successfully');
+                    return true;
+                    
+                } catch (error) {
+                    console.error('❌ Error setting up login handlers:', error);
+                    return false;
+                }
+            };
+            
+            // Try to setup login form immediately
+            if (!setupLoginForm()) {
+                console.log('⏳ Retrying login form setup...');
+                // Retry after DOM is fully ready
+                setTimeout(() => {
+                    if (!setupLoginForm()) {
+                        console.error('❌ Failed to setup login form after retry');
+                        
+                        // Last resort: try again after longer delay
+                        setTimeout(() => {
+                            setupLoginForm();
+                        }, 1000);
+                    }
+                }, 100);
+            }
+            
+            // Setup sales form handler
+            const salesForm = document.getElementById('salesForm');
+            if (salesForm) {
+                console.log('✅ Sales form found, setting up handler...');
+                salesForm.addEventListener('submit', handleSaleEntry);
+            }
+        }
 
         function setupDateConstraints() {
             const today = new Date();
@@ -2163,14 +2258,56 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             if (reportsDateTime) reportsDateTime.textContent = dateTimeStr;
         }
 
+        // These functions are now handled by the bulletproof login system above
+        // Keeping them for backward compatibility with HTML onclick attributes
+        function handleLoginKeyPress(event) {
+            if (event.key === 'Enter') {
+                console.log('🔐 Legacy Enter key handler triggered');
+                event.preventDefault();
+                handleLogin(event);
+            }
+        }
+
+        function handleLoginClick(e) {
+            console.log('🔐 Legacy button click handler triggered');
+            e.preventDefault();
+            handleLogin(e);
+        }
+
         async function handleLogin(e) {
             console.log('🔐 Login attempt started');
-            e.preventDefault();
+            console.log('Event type:', e?.type || 'unknown');
+            console.log('Event target:', e?.target?.tagName || 'unknown');
             
-            const usernameInput = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
+            if (e && e.preventDefault) {
+                e.preventDefault();
+            }
             
-            console.log('Login attempt:', usernameInput, password ? 'password provided' : 'no password');
+            // Get input values with error handling
+            const usernameElement = document.getElementById('username');
+            const passwordElement = document.getElementById('password');
+            
+            if (!usernameElement || !passwordElement) {
+                console.error('❌ Login form elements not found!');
+                showError('Login form not properly loaded. Please refresh the page.');
+                return;
+            }
+            
+            const usernameInput = usernameElement.value.trim();
+            const password = passwordElement.value.trim();
+            
+            console.log('Login credentials:', {
+                username: usernameInput,
+                hasPassword: !!password,
+                usernameLength: usernameInput.length,
+                passwordLength: password.length
+            });
+            
+            if (!usernameInput || !password) {
+                console.log('❌ Missing credentials');
+                showError('Please enter both username and password');
+                return;
+            }
             
             showLoading(true);
             hideMessages();
@@ -2772,7 +2909,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
 
-        function deleteEmployee(employeeId) {
+        async function deleteEmployee(employeeId) {
             if (employeeId === 'admin001') {
                 showCustomAlert('Cannot delete the main admin account!');
                 return;
@@ -2781,23 +2918,33 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             const employee = employeesData.find(emp => emp.id === employeeId);
             if (!employee) return;
             
-            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, () => {
-                // Delete from Firebase first
-                if (employee.firebaseKey) {
-                    deleteFromFirebase('employees', employee.firebaseKey);
+            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, async () => {
+                try {
+                    // Direct Firebase deletion first
+                    if (isFirebaseConfigured && employee.firebaseKey) {
+                        await database.ref(`employees/${employee.firebaseKey}`).remove();
+                    }
+                    
+                    // Delete user from Firebase users collection
+                    if (isFirebaseConfigured && employee.username) {
+                        await database.ref(`users/${employee.username}`).remove();
+                    }
+                    
+                    // Remove from local arrays
+                    employeesData = employeesData.filter(emp => emp.id !== employeeId);
+                    delete demoUsers[employee.username];
+                    
+                    // Update localStorage
+                    localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                    
+                    // Update UI
+                    updateEmployeesList();
+                    showSuccessMessage('Employee deleted successfully!');
+                    
+                } catch (error) {
+                    console.error('Delete employee failed:', error);
+                    showCustomAlert('Failed to delete employee: ' + error.message);
                 }
-                
-                // Delete user from Firebase
-                if (demoUsers[employee.username] && demoUsers[employee.username].firebaseKey) {
-                    deleteFromFirebase('users', demoUsers[employee.username].firebaseKey);
-                }
-                
-                employeesData = employeesData.filter(emp => emp.id !== employeeId);
-                // Also remove from demo users
-                delete demoUsers[employee.username];
-                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                updateEmployeesList();
-                showSuccessMessage('Employee deleted successfully!');
             });
         }
 
@@ -2868,20 +3015,32 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
 
-        function deleteStore(storeName) {
+        async function deleteStore(storeName) {
             const store = storesData.find(s => s.name === storeName);
             if (!store) return;
             
-            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, () => {
-                // Delete from Firebase first
-                if (store.firebaseKey) {
-                    deleteFromFirebase('stores', store.firebaseKey);
+            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, async () => {
+                try {
+                    // Direct Firebase deletion first
+                    if (isFirebaseConfigured && store.firebaseKey) {
+                        await database.ref(`stores/${store.firebaseKey}`).remove();
+                    }
+                    
+                    // Remove from local array
+                    storesData = storesData.filter(s => s.name !== storeName);
+                    
+                    // Update localStorage
+                    localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                    
+                    // Update UI
+                    updateStoresList();
+                    populateStoreDropdown(); // Update sales form dropdown
+                    showSuccessMessage('Store deleted successfully!');
+                    
+                } catch (error) {
+                    console.error('Delete store failed:', error);
+                    showCustomAlert('Failed to delete store: ' + error.message);
                 }
-                
-                storesData = storesData.filter(s => s.name !== storeName);
-                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                updateStoresList();
-                showSuccessMessage('Store deleted successfully!');
             });
         }
 
@@ -2955,20 +3114,32 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
 
-        function deleteProduct(productName) {
+        async function deleteProduct(productName) {
             const product = productsData.find(p => p.name === productName);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, () => {
-                // Delete from Firebase first
-                if (product.firebaseKey) {
-                    deleteFromFirebase('products', product.firebaseKey);
+            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, async () => {
+                try {
+                    // Direct Firebase deletion first
+                    if (isFirebaseConfigured && product.firebaseKey) {
+                        await database.ref(`products/${product.firebaseKey}`).remove();
+                    }
+                    
+                    // Remove from local array
+                    productsData = productsData.filter(p => p.name !== productName);
+                    
+                    // Update localStorage
+                    localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                    
+                    // Update UI
+                    updateProductsManagementList();
+                    populateProductDropdown(); // Update sales form dropdown
+                    showSuccessMessage('Product deleted successfully!');
+                    
+                } catch (error) {
+                    console.error('Delete product failed:', error);
+                    showCustomAlert('Failed to delete product: ' + error.message);
                 }
-                
-                productsData = productsData.filter(p => p.name !== productName);
-                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                updateProductsManagementList();
-                showSuccessMessage('Product deleted successfully!');
             });
         }
 
@@ -3004,223 +3175,265 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         let currentEditItem = null;
         let currentEditProductItem = null;
 
-        // Setup modal form handlers
+        // Setup modal form handlers with direct database operations
         function setupModalHandlers() {
             const modalForm = document.getElementById('modalForm');
             if (modalForm) {
-                modalForm.addEventListener('submit', function(e) {
+                modalForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     const formData = new FormData(e.target);
                     const data = Object.fromEntries(formData);
                     
-                    if (currentEditItem) {
-                        // Edit existing item
-                        if (data.username !== undefined) {
-                            // Employee edit
-                            const oldUsername = currentEditItem.username;
-                            currentEditItem.username = data.username;
-                            currentEditItem.name = data.fullName;
-                            currentEditItem.role = data.role;
-                            currentEditItem.lastUpdated = new Date().toISOString();
-                            
-                            if (data.password && data.password.trim()) {
-                                // Update password in both employee record and demo users
-                                currentEditItem.password = data.password;
+                    // Show loading state
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    const originalText = submitButton.textContent;
+                    submitButton.textContent = 'Saving...';
+                    submitButton.disabled = true;
+                    
+                    try {
+                        if (currentEditItem) {
+                            // EDIT OPERATIONS - Direct database updates
+                            if (data.username !== undefined) {
+                                // Employee edit - Direct Firebase update
+                                const oldUsername = currentEditItem.username;
+                                const updatedEmployee = {
+                                    ...currentEditItem,
+                                    username: data.username,
+                                    name: data.fullName,
+                                    role: data.role,
+                                    lastUpdated: new Date().toISOString()
+                                };
                                 
-                                if (demoUsers[oldUsername]) {
-                                    // If username changed, move the user record
+                                if (data.password && data.password.trim()) {
+                                    updatedEmployee.password = data.password;
+                                }
+                                
+                                // Update in Firebase first
+                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
+                                    await database.ref(`employees/${currentEditItem.firebaseKey}`).set(updatedEmployee);
+                                }
+                                
+                                // Update local array
+                                const index = employeesData.findIndex(emp => emp.id === currentEditItem.id);
+                                if (index !== -1) {
+                                    employeesData[index] = updatedEmployee;
+                                }
+                                
+                                // Update users collection
+                                const updatedUser = {
+                                    password: updatedEmployee.password,
+                                    role: updatedEmployee.role,
+                                    name: updatedEmployee.name,
+                                    id: updatedEmployee.id,
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                if (isFirebaseConfigured) {
+                                    // Handle username change
                                     if (oldUsername !== data.username) {
-                                        demoUsers[data.username] = {
-                                            ...demoUsers[oldUsername],
-                                            password: data.password
-                                        };
+                                        await database.ref(`users/${oldUsername}`).remove();
+                                        await database.ref(`users/${data.username}`).set(updatedUser);
                                         delete demoUsers[oldUsername];
-                                        
-                                        // Remove old user from Firebase and add new one
-                                        database.ref(`users/${oldUsername}`).remove();
-                                        database.ref(`users/${data.username}`).set(demoUsers[data.username]);
                                     } else {
-                                        demoUsers[data.username].password = data.password;
-                                        // Update user in Firebase
-                                        database.ref(`users/${data.username}`).update({ password: data.password });
+                                        await database.ref(`users/${data.username}`).set(updatedUser);
                                     }
                                 }
-                            } else if (oldUsername !== data.username) {
-                                // Username changed but no new password - move user record
-                                if (demoUsers[oldUsername]) {
-                                    demoUsers[data.username] = demoUsers[oldUsername];
-                                    delete demoUsers[oldUsername];
-                                    
-                                    // Move user in Firebase
-                                    database.ref(`users/${oldUsername}`).remove();
-                                    database.ref(`users/${data.username}`).set(demoUsers[data.username]);
+                                
+                                demoUsers[data.username] = updatedUser;
+                                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                                
+                            } else if (data.storeName !== undefined) {
+                                // Store edit - Direct Firebase update
+                                const updatedStore = {
+                                    ...currentEditItem,
+                                    name: data.storeName,
+                                    location: data.location,
+                                    description: data.description || '',
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Update in Firebase first
+                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
+                                    await database.ref(`stores/${currentEditItem.firebaseKey}`).set(updatedStore);
                                 }
+                                
+                                // Update local array
+                                const index = storesData.findIndex(store => store.id === currentEditItem.id);
+                                if (index !== -1) {
+                                    storesData[index] = updatedStore;
+                                }
+                                
+                                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                                
+                            } else if (data.productName !== undefined && data.customPrice !== undefined) {
+                                // Pricing edit - Direct Firebase update
+                                const updatedPricing = {
+                                    ...currentEditItem,
+                                    productName: data.productName,
+                                    storeName: data.storeName,
+                                    customPrice: parseFloat(data.customPrice),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Update in Firebase first
+                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
+                                    await database.ref(`storePricing/${currentEditItem.firebaseKey}`).set(updatedPricing);
+                                }
+                                
+                                // Update local array
+                                const index = storePricingData.findIndex(pricing => pricing.id === currentEditItem.id);
+                                if (index !== -1) {
+                                    storePricingData[index] = updatedPricing;
+                                }
+                                
+                                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                                refreshCurrentSalesFormPrice();
+                                
+                            } else if (data.productName !== undefined) {
+                                // Product edit - Direct Firebase update
+                                const updatedProduct = {
+                                    ...currentEditItem,
+                                    name: data.productName,
+                                    price: parseFloat(data.price),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Update in Firebase first
+                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
+                                    await database.ref(`products/${currentEditItem.firebaseKey}`).set(updatedProduct);
+                                }
+                                
+                                // Update local array
+                                const index = productsData.findIndex(product => product.id === currentEditItem.id);
+                                if (index !== -1) {
+                                    productsData[index] = updatedProduct;
+                                }
+                                
+                                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                                refreshCurrentSalesFormPrice();
                             }
                             
-                            // Update employee in Firebase
-                            updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            showSuccessMessage('Updated successfully!');
                             
-                            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                            updateEmployeesList();
-                            showSuccessMessage('Employee updated successfully!');
-                        } else if (data.storeName !== undefined) {
-                            // Store edit
-                            currentEditItem.name = data.storeName;
-                            currentEditItem.location = data.location;
-                            currentEditItem.description = data.description || '';
-                            
-                            // Update in Firebase
-                            updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
-                            
-                            localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                            updateStoresList();
-                            showSuccessMessage('Store updated successfully!');
-                        } else if (data.productName !== undefined && data.customPrice !== undefined) {
-                            // Pricing edit
-                            currentEditItem.productName = data.productName;
-                            currentEditItem.storeName = data.storeName;
-                            currentEditItem.customPrice = parseFloat(data.customPrice);
-                            
-                            // Update in Firebase
-                            updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
-                            
-                            localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                            updatePricingList();
-                            // Refresh unit price if currently viewing sales form with same product/store
-                            setTimeout(() => {
+                        } else {
+                            // ADD OPERATIONS - Direct database inserts
+                            if (data.username !== undefined) {
+                                // Add employee - Direct Firebase insert
+                                const newEmployee = {
+                                    id: 'emp' + Date.now(),
+                                    username: data.username,
+                                    name: data.fullName,
+                                    role: data.role,
+                                    status: 'active',
+                                    lastActive: 'Never',
+                                    password: data.password,
+                                    createdAt: new Date().toISOString(),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Insert to Firebase first
+                                if (isFirebaseConfigured) {
+                                    const employeeRef = await database.ref('employees').push(newEmployee);
+                                    newEmployee.firebaseKey = employeeRef.key;
+                                    
+                                    // Also add to users collection
+                                    const newUser = {
+                                        password: data.password,
+                                        role: data.role,
+                                        name: data.fullName,
+                                        id: newEmployee.id,
+                                        createdAt: new Date().toISOString(),
+                                        lastUpdated: new Date().toISOString()
+                                    };
+                                    await database.ref(`users/${data.username}`).set(newUser);
+                                    demoUsers[data.username] = newUser;
+                                }
+                                
+                                // Add to local array
+                                employeesData.push(newEmployee);
+                                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                                
+                            } else if (data.storeName !== undefined) {
+                                // Add store - Direct Firebase insert
+                                const newStore = {
+                                    id: Date.now(),
+                                    name: data.storeName,
+                                    location: data.location,
+                                    description: data.description || '',
+                                    status: 'active',
+                                    createdAt: new Date().toISOString(),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Insert to Firebase first
+                                if (isFirebaseConfigured) {
+                                    const storeRef = await database.ref('stores').push(newStore);
+                                    newStore.firebaseKey = storeRef.key;
+                                }
+                                
+                                // Add to local array
+                                storesData.push(newStore);
+                                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                                
+                            } else if (data.productName !== undefined && data.customPrice !== undefined) {
+                                // Add pricing - Direct Firebase insert
+                                const newPricing = {
+                                    id: Date.now(),
+                                    productName: data.productName,
+                                    storeName: data.storeName,
+                                    customPrice: parseFloat(data.customPrice),
+                                    createdAt: new Date().toISOString(),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Insert to Firebase first
+                                if (isFirebaseConfigured) {
+                                    const pricingRef = await database.ref('storePricing').push(newPricing);
+                                    newPricing.firebaseKey = pricingRef.key;
+                                }
+                                
+                                // Add to local array
+                                storePricingData.push(newPricing);
+                                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                                 refreshCurrentSalesFormPrice();
-                            }, 100);
-                            showSuccessMessage('Custom pricing updated successfully!');
-                        } else if (data.productName !== undefined) {
-                            // Product edit
-                            currentEditItem.name = data.productName;
-                            currentEditItem.price = parseFloat(data.price);
-                            
-                            // Update in Firebase
-                            updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
-                            
-                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                            updateProductsManagementList();
-                            // Refresh unit price if currently viewing sales form with same product
-                            setTimeout(() => {
+                                
+                            } else if (data.productName !== undefined) {
+                                // Add product - Direct Firebase insert
+                                const newProduct = {
+                                    id: Date.now(),
+                                    name: data.productName,
+                                    price: parseFloat(data.price),
+                                    createdAt: new Date().toISOString(),
+                                    lastUpdated: new Date().toISOString()
+                                };
+                                
+                                // Insert to Firebase first
+                                if (isFirebaseConfigured) {
+                                    const productRef = await database.ref('products').push(newProduct);
+                                    newProduct.firebaseKey = productRef.key;
+                                }
+                                
+                                // Add to local array
+                                productsData.push(newProduct);
+                                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                                 refreshCurrentSalesFormPrice();
-                            }, 100);
-                            showSuccessMessage('Product updated successfully!');
+                            }
+                            
+                            showSuccessMessage('Added successfully!');
                         }
-                    } else {
-                        // Add new item
-                        if (data.username !== undefined) {
-                            // Add employee
-                            const newEmployee = {
-                                id: 'emp' + Date.now(),
-                                username: data.username,
-                                name: data.fullName,
-                                role: data.role,
-                                status: 'active',
-                                lastActive: 'Never',
-                                password: data.password, // Store password in employee record too
-                                createdAt: new Date().toISOString()
-                            };
-                            
-                            // Add to demo users for login first
-                            const newUser = {
-                                password: data.password,
-                                role: data.role,
-                                name: data.fullName,
-                                id: newEmployee.id,
-                                createdAt: new Date().toISOString()
-                            };
-                            demoUsers[data.username] = newUser;
-                            
-                            // Save to Firebase - both collections
-                            Promise.all([
-                                saveToFirebase('employees', newEmployee),
-                                database.ref(`users/${data.username}`).set(newUser)
-                            ]).then(([employeeKey, userResult]) => {
-                                if (employeeKey) {
-                                    newEmployee.firebaseKey = employeeKey;
-                                }
-                                console.log('✅ Employee and user saved to Firebase:', data.username);
-                            }).catch(error => {
-                                console.error('❌ Error saving employee to Firebase:', error);
-                            });
-                            
-                            employeesData.push(newEmployee);
-                            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                            updateEmployeesList();
-                            showSuccessMessage('Employee added successfully!');
-                        } else if (data.storeName !== undefined) {
-                            // Add store
-                            const newStore = {
-                                id: Date.now(),
-                                name: data.storeName,
-                                location: data.location,
-                                description: data.description || '',
-                                status: 'active'
-                            };
-                            
-                            // Save to Firebase first
-                            saveToFirebase('stores', newStore).then(firebaseKey => {
-                                if (firebaseKey) {
-                                    newStore.firebaseKey = firebaseKey;
-                                }
-                            });
-                            
-                            storesData.push(newStore);
-                            localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                            updateStoresList();
-                            showSuccessMessage('Store added successfully!');
-                        } else if (data.productName !== undefined && data.customPrice !== undefined) {
-                            // Add pricing
-                            const newPricing = {
-                                id: Date.now(),
-                                productName: data.productName,
-                                storeName: data.storeName,
-                                customPrice: parseFloat(data.customPrice)
-                            };
-                            
-                            // Save to Firebase first
-                            saveToFirebase('storePricing', newPricing).then(firebaseKey => {
-                                if (firebaseKey) {
-                                    newPricing.firebaseKey = firebaseKey;
-                                }
-                            });
-                            
-                            storePricingData.push(newPricing);
-                            localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                            updatePricingList();
-                            // Refresh unit price if currently viewing sales form with same product/store
-                            setTimeout(() => {
-                                refreshCurrentSalesFormPrice();
-                            }, 100);
-                            showSuccessMessage('Custom pricing added successfully!');
-                        } else if (data.productName !== undefined) {
-                            // Add product
-                            const newProduct = {
-                                id: Date.now(),
-                                name: data.productName,
-                                price: parseFloat(data.price)
-                            };
-                            
-                            // Save to Firebase first
-                            saveToFirebase('products', newProduct).then(firebaseKey => {
-                                if (firebaseKey) {
-                                    newProduct.firebaseKey = firebaseKey;
-                                }
-                            });
-                            
-                            productsData.push(newProduct);
-                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                            updateProductsManagementList();
-                            // Refresh unit price if currently viewing sales form
-                            setTimeout(() => {
-                                refreshCurrentSalesFormPrice();
-                            }, 100);
-                            showSuccessMessage('Product added successfully!');
-                        }
+                        
+                        // Update UI components
+                        updateAllUIComponents();
+                        
+                    } catch (error) {
+                        console.error('Database operation failed:', error);
+                        showCustomAlert('Operation failed: ' + error.message);
+                    } finally {
+                        // Reset button state
+                        submitButton.textContent = originalText;
+                        submitButton.disabled = false;
+                        closeModal();
                     }
-                    
-                    closeModal();
                 });
             }
             
@@ -3717,24 +3930,32 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
         
-        function deletePricing(pricingId) {
+        async function deletePricing(pricingId) {
             const pricing = storePricingData.find(p => p.id === pricingId);
             if (!pricing) return;
             
-            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, () => {
-                // Delete from Firebase first
-                if (pricing.firebaseKey) {
-                    deleteFromFirebase('storePricing', pricing.firebaseKey);
+            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, async () => {
+                try {
+                    // Direct Firebase deletion first
+                    if (isFirebaseConfigured && pricing.firebaseKey) {
+                        await database.ref(`storePricing/${pricing.firebaseKey}`).remove();
+                    }
+                    
+                    // Remove from local array
+                    storePricingData = storePricingData.filter(p => p.id !== pricingId);
+                    
+                    // Update localStorage
+                    localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                    
+                    // Update UI
+                    updatePricingList();
+                    refreshCurrentSalesFormPrice(); // Update sales form pricing
+                    showSuccessMessage('Custom pricing removed successfully!');
+                    
+                } catch (error) {
+                    console.error('Delete pricing failed:', error);
+                    showCustomAlert('Failed to delete pricing: ' + error.message);
                 }
-                
-                storePricingData = storePricingData.filter(p => p.id !== pricingId);
-                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                updatePricingList();
-                // Refresh unit price if currently viewing sales form with same product/store
-                setTimeout(() => {
-                    refreshCurrentSalesFormPrice();
-                }, 100);
-                showSuccessMessage('Custom pricing removed successfully!');
             });
         }
         
@@ -5229,6 +5450,41 @@ console.log('\\n🎉 Product injection process completed successfully!');`
             window.editingProductId = null;
         }
 
+        // Update all UI components after database operations
+        function updateAllUIComponents() {
+            try {
+                // Update admin dashboard if visible
+                if (currentUser && currentUser.role === 'admin' && !document.getElementById('adminPage').classList.contains('hidden')) {
+                    updateAdminStats();
+                    updateEmployeesList();
+                    updateStoresList();
+                    updatePricingList();
+                }
+                
+                // Update sales page if visible
+                if (currentUser && currentUser.role !== 'admin' && !document.getElementById('salesPage').classList.contains('hidden')) {
+                    updateSalesStats();
+                    updateRecentSales();
+                    populateStoreDropdown();
+                    populateProductDropdown();
+                }
+                
+                // Update product management page if visible
+                if (!document.getElementById('productManagementPage').classList.contains('hidden')) {
+                    updateProductManagementPage();
+                }
+                
+                // Update products page if visible
+                if (!document.getElementById('productsPage').classList.contains('hidden')) {
+                    updateProductsList();
+                }
+                
+                console.log('✅ All UI components updated');
+            } catch (error) {
+                console.warn('UI update error:', error);
+            }
+        }
+
         // Quick Sync All Data Function
         async function quickSyncAllData() {
             if (!isFirebaseConfigured) {
@@ -5435,5 +5691,5 @@ console.log('\\n🎉 Product injection process completed successfully!');`
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e8942485f5f9e7',t:'MTc1NTA5MTk0OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e8b21153e8f9d3',t:'MTc1NTA5MzE3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
