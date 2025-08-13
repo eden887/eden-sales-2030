@@ -3057,8 +3057,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 }
                             }
                             
-                            // Update employee in Firebase (no duplicates)
-                            await updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            // Update employee in Firebase
+                            updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
                             updateEmployeesList();
@@ -3069,8 +3069,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             currentEditItem.location = data.location;
                             currentEditItem.description = data.description || '';
                             
-                            // Update in Firebase (no duplicates)
-                            await updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
+                            // Update in Firebase
+                            updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
                             updateStoresList();
@@ -3081,8 +3081,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             currentEditItem.storeName = data.storeName;
                             currentEditItem.customPrice = parseFloat(data.customPrice);
                             
-                            // Update in Firebase (no duplicates)
-                            await updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
+                            // Update in Firebase
+                            updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
                             updatePricingList();
@@ -3096,8 +3096,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             currentEditItem.name = data.productName;
                             currentEditItem.price = parseFloat(data.price);
                             
-                            // Update in Firebase (no duplicates)
-                            await updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
+                            // Update in Firebase
+                            updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
                             
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
                             updateProductsManagementList();
@@ -3132,20 +3132,18 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             };
                             demoUsers[data.username] = newUser;
                             
-                            // Save to Firebase - both collections (no duplicates)
-                            try {
-                                const [employeeKey, userResult] = await Promise.all([
-                                    saveToFirebase('employees', newEmployee),
-                                    database.ref(`users/${data.username}`).set(newUser)
-                                ]);
-                                
+                            // Save to Firebase - both collections
+                            Promise.all([
+                                saveToFirebase('employees', newEmployee),
+                                database.ref(`users/${data.username}`).set(newUser)
+                            ]).then(([employeeKey, userResult]) => {
                                 if (employeeKey) {
                                     newEmployee.firebaseKey = employeeKey;
                                 }
                                 console.log('✅ Employee and user saved to Firebase:', data.username);
-                            } catch (error) {
+                            }).catch(error => {
                                 console.error('❌ Error saving employee to Firebase:', error);
-                            }
+                            });
                             
                             employeesData.push(newEmployee);
                             localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
@@ -3161,15 +3159,12 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 status: 'active'
                             };
                             
-                            // Save to Firebase first (no duplicates)
-                            try {
-                                const firebaseKey = await saveToFirebase('stores', newStore);
+                            // Save to Firebase first
+                            saveToFirebase('stores', newStore).then(firebaseKey => {
                                 if (firebaseKey) {
                                     newStore.firebaseKey = firebaseKey;
                                 }
-                            } catch (error) {
-                                console.error('❌ Error saving store to Firebase:', error);
-                            }
+                            });
                             
                             storesData.push(newStore);
                             localStorage.setItem('edenStoresData', JSON.stringify(storesData));
@@ -3184,15 +3179,12 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 customPrice: parseFloat(data.customPrice)
                             };
                             
-                            // Save to Firebase first (no duplicates)
-                            try {
-                                const firebaseKey = await saveToFirebase('storePricing', newPricing);
+                            // Save to Firebase first
+                            saveToFirebase('storePricing', newPricing).then(firebaseKey => {
                                 if (firebaseKey) {
                                     newPricing.firebaseKey = firebaseKey;
                                 }
-                            } catch (error) {
-                                console.error('❌ Error saving pricing to Firebase:', error);
-                            }
+                            });
                             
                             storePricingData.push(newPricing);
                             localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
@@ -3210,15 +3202,12 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 price: parseFloat(data.price)
                             };
                             
-                            // Save to Firebase first (no duplicates)
-                            try {
-                                const firebaseKey = await saveToFirebase('products', newProduct);
+                            // Save to Firebase first
+                            saveToFirebase('products', newProduct).then(firebaseKey => {
                                 if (firebaseKey) {
                                     newProduct.firebaseKey = firebaseKey;
                                 }
-                            } catch (error) {
-                                console.error('❌ Error saving product to Firebase:', error);
-                            }
+                            });
                             
                             productsData.push(newProduct);
                             localStorage.setItem('edenProductsData', JSON.stringify(productsData));
@@ -5446,5 +5435,5 @@ console.log('\\n🎉 Product injection process completed successfully!');`
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e897d6b75fde57',t:'MTc1NTA5MjA5OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e8942485f5f9e7',t:'MTc1NTA5MTk0OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
