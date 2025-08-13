@@ -630,14 +630,7 @@
                         <select id="storeName" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
                             <option value="">Select store</option>
-                            <option value="Mall of Emirates">Mall of Emirates</option>
-                            <option value="Dubai Mall">Dubai Mall</option>
-                            <option value="City Centre Deira">City Centre Deira</option>
-                            <option value="Ibn Battuta Mall">Ibn Battuta Mall</option>
-                            <option value="Marina Mall">Marina Mall</option>
-                            <option value="Mercato Mall">Mercato Mall</option>
-                            <option value="BurJuman Centre">BurJuman Centre</option>
-                            <option value="Al Ghurair Centre">Al Ghurair Centre</option>
+                            <!-- Store options will be populated dynamically -->
                         </select>
                     </div>
                     
@@ -646,16 +639,7 @@
                         <select id="product" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
                             <option value="">Select product</option>
-                            <option value="iPhone 15 Pro">iPhone 15 Pro</option>
-                            <option value="iPhone 15">iPhone 15</option>
-                            <option value="Samsung Galaxy S24">Samsung Galaxy S24</option>
-                            <option value="iPad Pro">iPad Pro</option>
-                            <option value="MacBook Air">MacBook Air</option>
-                            <option value="AirPods Pro">AirPods Pro</option>
-                            <option value="Apple Watch">Apple Watch</option>
-                            <option value="Samsung Tab">Samsung Tab</option>
-                            <option value="Accessories">Accessories</option>
-                            <option value="Cases & Covers">Cases & Covers</option>
+                            <!-- Product options will be populated dynamically -->
                         </select>
                     </div>
                     
@@ -803,28 +787,7 @@
                         <button onclick="showAddEmployeeModal()" class="premium-button px-4 py-2 text-white font-bold rounded-xl text-sm">+ ADD EMPLOYEE</button>
                     </div>
                     <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar">
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">john_doe</div>
-                                <div class="text-sm text-white/60">Employee • Last active: Today</div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
-                                <button onclick="editEmployee('john_doe')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                                <button onclick="deleteEmployee('john_doe')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">admin_user</div>
-                                <div class="text-sm text-white/60">Admin • Last active: Now</div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-full text-sm font-bold border border-blue-500/30">ONLINE</span>
-                                <button onclick="editEmployee('admin_user')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                                <button onclick="deleteEmployee('admin_user')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
+                        <!-- Employee list will be populated dynamically -->
                     </div>
                 </div>
 
@@ -835,28 +798,7 @@
                         <button onclick="showAddStoreModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ ADD STORE</button>
                     </div>
                     <div id="storesList" class="space-y-4">
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">Mall of Emirates</div>
-                                <div class="text-sm text-white/60">Dubai • Premium Location</div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
-                                <button onclick="editStore('Mall of Emirates')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                                <button onclick="deleteStore('Mall of Emirates')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                            <div>
-                                <div class="font-bold text-white text-lg">Dubai Mall</div>
-                                <div class="text-sm text-white/60">Dubai • Flagship Store</div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
-                                <button onclick="editStore('Dubai Mall')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                                <button onclick="deleteStore('Dubai Mall')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
+                        <!-- Store list will be populated dynamically -->
                     </div>
                 </div>
 
@@ -1495,7 +1437,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                         
                         isFirebaseConfigured = false;
                         updateSyncStatus('local');
-                        initializeDemoData();
+                        initializeFreshSystem();
                     });
                 } else {
                     logFirebaseDebug('connectionError', 'Firebase reports disconnected', { 
@@ -1533,7 +1475,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             
             isFirebaseConfigured = false;
             updateSyncStatus('local');
-            initializeDemoData();
+            initializeFreshSystem();
         }
         
         // Debug info display function
@@ -1778,26 +1720,33 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             });
         }
         
-        // Initialize demo data if Firebase is not available
-        function initializeDemoData() {
-            console.log("📝 Initializing fresh system...");
+        // Initialize completely fresh system
+        function initializeFreshSystem() {
+            console.log("📝 Initializing completely fresh system...");
             
-            // Clear existing localStorage and start fresh
+            // Clear all existing localStorage
             localStorage.removeItem('edenSalesData');
             localStorage.removeItem('edenProductsData');
             localStorage.removeItem('edenStoresData');
             localStorage.removeItem('edenEmployeesData');
             localStorage.removeItem('edenStorePricingData');
             
-            // Set empty arrays for fresh start
+            // Initialize all arrays as completely empty
+            salesData = [];
+            productsData = [];
+            storesData = [];
+            employeesData = [];
+            storePricingData = [];
+            
+            // Save empty arrays to localStorage
             localStorage.setItem('edenSalesData', JSON.stringify([]));
             localStorage.setItem('edenProductsData', JSON.stringify([]));
             localStorage.setItem('edenStoresData', JSON.stringify([]));
-            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData)); // Keep only admin
+            localStorage.setItem('edenEmployeesData', JSON.stringify([]));
             localStorage.setItem('edenStorePricingData', JSON.stringify([]));
             
             updateSyncStatus('local');
-            console.log("✅ Fresh system initialized - Only admin user remains");
+            console.log("✅ Completely fresh system initialized - No demo data");
         }
         
         // Save data to Firebase (for new records)
@@ -1866,25 +1815,21 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             }
         }
 
-        // Demo users - keeping only admin user for fresh start
+        // Only essential admin user - completely fresh system
         const demoUsers = {
-            'admin_user': {
+            'admin': {
                 password: 'admin123',
                 role: 'admin',
-                name: 'Admin User',
+                name: 'System Administrator',
                 id: 'admin001'
             }
         };
 
-        // Sales data - starting fresh with empty array
-        let salesData = JSON.parse(localStorage.getItem('edenSalesData')) || [];
+        // All data arrays start completely empty
+        let salesData = [];
         let currentUser = null;
-        
-        // Products data - starting fresh with empty array
-        let productsData = JSON.parse(localStorage.getItem('edenProductsData')) || [];
-        
-        // Store-specific pricing data - starting fresh with empty array
-        let storePricingData = JSON.parse(localStorage.getItem('edenStorePricingData')) || [];
+        let productsData = [];
+        let storePricingData = [];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -2215,6 +2160,10 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 document.getElementById('salesPage').classList.remove('hidden');
                 document.getElementById('employeeName').textContent = `Welcome, ${currentUser.name}`;
                 
+                // Populate dropdowns with current data
+                populateStoreDropdown();
+                populateProductDropdown();
+                
                 // Load user defaults
                 const userDefaults = JSON.parse(sessionStorage.getItem('edenUserDefaults')) || {};
                 const defaults = userDefaults[currentUser.id];
@@ -2473,12 +2422,9 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             });
         }
 
-        // Data storage for management - keeping only admin user
-        let employeesData = JSON.parse(localStorage.getItem('edenEmployeesData')) || [
-            { id: 'admin001', username: 'admin_user', name: 'Admin User', role: 'admin', status: 'online', lastActive: 'Now' }
-        ];
-        
-        let storesData = JSON.parse(localStorage.getItem('edenStoresData')) || [];
+        // Data storage for management - completely empty
+        let employeesData = [];
+        let storesData = [];
 
         // Management Functions
         function showManagementTab(tab) {
@@ -4232,6 +4178,39 @@ if (isFirebaseConfigured) {
             }
         }
 
+        // Dropdown Population Functions
+        function populateStoreDropdown() {
+            const storeSelect = document.getElementById('storeName');
+            if (!storeSelect) return;
+            
+            // Clear existing options except the first one
+            storeSelect.innerHTML = '<option value="">Select store</option>';
+            
+            // Add stores from data
+            storesData.forEach(store => {
+                const option = document.createElement('option');
+                option.value = store.name;
+                option.textContent = store.name;
+                storeSelect.appendChild(option);
+            });
+        }
+        
+        function populateProductDropdown() {
+            const productSelect = document.getElementById('product');
+            if (!productSelect) return;
+            
+            // Clear existing options except the first one
+            productSelect.innerHTML = '<option value="">Select product</option>';
+            
+            // Add products from data
+            productsData.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.name;
+                option.textContent = product.name;
+                productSelect.appendChild(option);
+            });
+        }
+
         // Quick Sync All Data Function
         async function quickSyncAllData() {
             if (!isFirebaseConfigured) {
@@ -4438,5 +4417,5 @@ if (isFirebaseConfigured) {
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e81cbca03bd1e0',t:'MTc1NTA4NzA1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e82a6b5538f9d3',t:'MTc1NTA4NzYxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
