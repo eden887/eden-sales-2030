@@ -769,6 +769,9 @@
                     <button onclick="showCodeInjectionModal()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         💻 Code Injection
                     </button>
+                    <button onclick="showClearAllDataModal()" class="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 py-6 text-red-300 font-bold rounded-xl text-lg transition-all">
+                        🗑️ Clear All Data
+                    </button>
                 </div>
             </div>
 
@@ -833,6 +836,94 @@
                             <button type="button" onclick="closeModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">CANCEL</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Clear All Data Modal -->
+            <div id="clearAllDataModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                <div class="premium-card rounded-3xl p-8 max-w-md w-full">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold text-red-300">🗑️ Clear All Data</h3>
+                            <p class="text-white/60 text-sm mt-1">This action will permanently delete ALL system data</p>
+                        </div>
+                        <button onclick="closeClearAllDataModal()" class="text-white/60 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <!-- Warning -->
+                        <div class="bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-sm">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                <div>
+                                    <div class="font-bold">⚠️ DANGER ZONE</div>
+                                    <div class="text-xs opacity-80 mt-1">This will delete all sales, products, stores, employees, and pricing data. This action cannot be undone!</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- What will be deleted -->
+                        <div>
+                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">WHAT WILL BE DELETED:</label>
+                            <div class="bg-white/5 rounded-xl p-4 space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-white/70">Sales Records:</span>
+                                    <span class="text-red-300 font-bold" id="clearDataSalesCount">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-white/70">Products:</span>
+                                    <span class="text-red-300 font-bold" id="clearDataProductsCount">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-white/70">Stores:</span>
+                                    <span class="text-red-300 font-bold" id="clearDataStoresCount">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-white/70">Employees:</span>
+                                    <span class="text-red-300 font-bold" id="clearDataEmployeesCount">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-white/70">Custom Pricing:</span>
+                                    <span class="text-red-300 font-bold" id="clearDataPricingCount">0</span>
+                                </div>
+                                <div class="border-t border-white/10 pt-2 mt-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-white font-bold">Total Revenue:</span>
+                                        <span class="text-red-300 font-bold" id="clearDataTotalRevenue">0 DHS</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Password Input -->
+                        <div>
+                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">ADMIN PASSWORD</label>
+                            <input type="password" id="clearDataPassword" 
+                                   class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium"
+                                   placeholder="Enter admin password to confirm">
+                            <div class="text-xs text-white/40 mt-2">Required password: eden@123</div>
+                        </div>
+                        
+                        <!-- Confirmation Checkbox -->
+                        <div class="flex items-start space-x-3">
+                            <input type="checkbox" id="clearDataConfirm" class="mt-1 w-4 h-4 text-red-500 bg-transparent border-2 border-red-500/50 rounded focus:ring-red-500 focus:ring-2">
+                            <label for="clearDataConfirm" class="text-sm text-white/80">
+                                I understand that this action will permanently delete all data and cannot be undone. I have backed up any important data.
+                            </label>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex space-x-4">
+                            <button type="button" onclick="executeClearAllData()" class="flex-1 py-3 bg-red-500/20 text-red-300 font-bold rounded-xl hover:bg-red-500/30 transition-all border border-red-500/30">
+                                🗑️ CLEAR ALL DATA
+                            </button>
+                            <button type="button" onclick="closeClearAllDataModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">
+                                ❌ CANCEL
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -4211,6 +4302,156 @@ if (isFirebaseConfigured) {
             });
         }
 
+        // Clear All Data Functions
+        function showClearAllDataModal() {
+            // Update the data counts in the modal
+            document.getElementById('clearDataSalesCount').textContent = salesData.length;
+            document.getElementById('clearDataProductsCount').textContent = productsData.length;
+            document.getElementById('clearDataStoresCount').textContent = storesData.length;
+            document.getElementById('clearDataEmployeesCount').textContent = employeesData.length;
+            document.getElementById('clearDataPricingCount').textContent = storePricingData.length;
+            
+            const totalRevenue = salesData.reduce((sum, sale) => sum + sale.amount, 0);
+            document.getElementById('clearDataTotalRevenue').textContent = `${totalRevenue.toFixed(2)} DHS`;
+            
+            // Reset form
+            document.getElementById('clearDataPassword').value = '';
+            document.getElementById('clearDataConfirm').checked = false;
+            
+            document.getElementById('clearAllDataModal').classList.remove('hidden');
+        }
+        
+        function closeClearAllDataModal() {
+            document.getElementById('clearAllDataModal').classList.add('hidden');
+        }
+        
+        async function executeClearAllData() {
+            const password = document.getElementById('clearDataPassword').value;
+            const confirmed = document.getElementById('clearDataConfirm').checked;
+            
+            // Validate password
+            if (password !== 'eden@123') {
+                showCustomAlert('❌ Incorrect password! Please enter the correct admin password.');
+                return;
+            }
+            
+            // Validate confirmation
+            if (!confirmed) {
+                showCustomAlert('❌ Please check the confirmation checkbox to proceed.');
+                return;
+            }
+            
+            // Final confirmation
+            const finalConfirm = confirm(`🚨 FINAL WARNING 🚨\n\nThis will permanently delete:\n• ${salesData.length} sales records\n• ${productsData.length} products\n• ${storesData.length} stores\n• ${employeesData.length} employees\n• ${storePricingData.length} custom prices\n\nTotal revenue to be deleted: ${salesData.reduce((sum, sale) => sum + sale.amount, 0).toFixed(2)} DHS\n\nThis action CANNOT be undone!\n\nClick OK to proceed or Cancel to abort.`);
+            
+            if (!finalConfirm) {
+                return;
+            }
+            
+            // Show clearing progress
+            const clearButton = document.querySelector('#clearAllDataModal button[onclick="executeClearAllData()"]');
+            const originalText = clearButton.innerHTML;
+            clearButton.innerHTML = '🗑️ CLEARING DATA...';
+            clearButton.disabled = true;
+            
+            updateSyncStatus('syncing');
+            
+            try {
+                console.log('🗑️ Starting complete data clear...');
+                
+                // Clear Firebase data if connected
+                if (isFirebaseConfigured) {
+                    console.log('🔥 Clearing Firebase data...');
+                    await Promise.all([
+                        database.ref('sales').remove(),
+                        database.ref('products').remove(),
+                        database.ref('stores').remove(),
+                        database.ref('employees').remove(),
+                        database.ref('storePricing').remove(),
+                        database.ref('users/admin').set({
+                            password: 'admin123',
+                            role: 'admin',
+                            name: 'System Administrator',
+                            id: 'admin001',
+                            createdAt: new Date().toISOString()
+                        }) // Keep only the admin user
+                    ]);
+                    console.log('✅ Firebase data cleared successfully');
+                }
+                
+                // Clear local data arrays
+                console.log('💾 Clearing local data...');
+                salesData = [];
+                productsData = [];
+                storesData = [];
+                employeesData = [];
+                storePricingData = [];
+                
+                // Reset demo users to only admin
+                const adminUser = demoUsers['admin'];
+                demoUsers = {
+                    'admin': adminUser
+                };
+                
+                // Clear localStorage
+                localStorage.removeItem('edenSalesData');
+                localStorage.removeItem('edenProductsData');
+                localStorage.removeItem('edenStoresData');
+                localStorage.removeItem('edenEmployeesData');
+                localStorage.removeItem('edenStorePricingData');
+                
+                // Save empty arrays to localStorage
+                localStorage.setItem('edenSalesData', JSON.stringify([]));
+                localStorage.setItem('edenProductsData', JSON.stringify([]));
+                localStorage.setItem('edenStoresData', JSON.stringify([]));
+                localStorage.setItem('edenEmployeesData', JSON.stringify([]));
+                localStorage.setItem('edenStorePricingData', JSON.stringify([]));
+                
+                console.log('✅ All data cleared successfully');
+                
+                // Update UI
+                if (currentUser && currentUser.role === 'admin') {
+                    updateAdminStats();
+                    updateEmployeesList();
+                    updateStoresList();
+                    updatePricingList();
+                }
+                
+                updateSyncStatus('synced');
+                
+                // Show success message
+                clearButton.innerHTML = '✅ DATA CLEARED!';
+                clearButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+                clearButton.style.color = 'white';
+                
+                setTimeout(() => {
+                    closeClearAllDataModal();
+                    showSuccessMessage('🗑️ All data has been cleared successfully! System reset to fresh state.');
+                    
+                    // Reset button
+                    clearButton.innerHTML = originalText;
+                    clearButton.style.background = '';
+                    clearButton.style.color = '';
+                    clearButton.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Error clearing data:', error);
+                
+                clearButton.innerHTML = '❌ CLEAR FAILED';
+                clearButton.style.background = 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
+                
+                setTimeout(() => {
+                    clearButton.innerHTML = originalText;
+                    clearButton.style.background = '';
+                    clearButton.disabled = false;
+                }, 3000);
+                
+                updateSyncStatus('error');
+                showCustomAlert('❌ Failed to clear data: ' + error.message);
+            }
+        }
+
         // Quick Sync All Data Function
         async function quickSyncAllData() {
             if (!isFirebaseConfigured) {
@@ -4417,5 +4658,5 @@ if (isFirebaseConfigured) {
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e82a6b5538f9d3',t:'MTc1NTA4NzYxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e830a8449ef9d3',t:'MTc1NTA4Nzg3My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
