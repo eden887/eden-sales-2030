@@ -1377,7 +1377,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             authDomain: "eden-sales-9600.firebaseapp.com",
             databaseURL: "https://eden-sales-9600-default-rtdb.asia-southeast1.firebasedatabase.app/",
             projectId: "eden-sales-9600",
-            storageBucket: "eden-sales-9600.firebasestorage.app",
+            storageBucket: "eden-sales-9600.appspot.com",
             messagingSenderId: "631716537385",
             appId: "1:631716537385:web:ee3267b050bcf5d42fa838",
             measurementId: "G-XKZQ34V9TC"
@@ -3196,7 +3196,25 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             if (data.username !== undefined) {
                                 // Employee edit - Direct Firebase update
                                 const oldUsername = currentEditItem.username;
-                                const updatedEmployee = {
+                                // Prevent duplicate username on edit
+                                const unameLowerEdit = (data.username || '').trim().toLowerCase();
+                                const duplicateUserEdit = employeesData.some(e => e.username && e.username.trim().toLowerCase() === unameLowerEdit && e.id !== currentEditItem.id);
+                                if (duplicateUserEdit) {
+                                    showCustomAlert('Username already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+                                // Prevent duplicate username on edit
+                                const unameLowerEdit = (data.username || '').trim().toLowerCase();
+                                const duplicateUserEdit = employeesData.some(e => e.username && e.username.trim().toLowerCase() === unameLowerEdit && e.id !== currentEditItem.id);
+                                if (duplicateUserEdit) {
+                                    showCustomAlert('Username already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+    
                                     ...currentEditItem,
                                     username: data.username,
                                     name: data.fullName,
@@ -3244,7 +3262,16 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 
                             } else if (data.storeName !== undefined) {
                                 // Store edit - Direct Firebase update
-                                const updatedStore = {
+                                // Prevent duplicate store name on edit
+                                const storeLowerEdit = (data.storeName || '').trim().toLowerCase();
+                                const duplicateStoreEdit = storesData.some(s => s.name && s.name.trim().toLowerCase() === storeLowerEdit && s.id !== currentEditItem.id);
+                                if (duplicateStoreEdit) {
+                                    showCustomAlert('Store name already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+    
                                     ...currentEditItem,
                                     name: data.storeName,
                                     location: data.location,
@@ -3291,7 +3318,17 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 
                             } else if (data.productName !== undefined) {
                                 // Product edit - Direct Firebase update
-                                const updatedProduct = {
+                                
+                                // Prevent duplicate product name on edit
+                                const prodLowerEdit = (data.productName || '').trim().toLowerCase();
+                                const duplicateProdEdit = productsData.some(p => p.name && p.name.trim().toLowerCase() === prodLowerEdit && p.id !== currentEditItem.id);
+                                if (duplicateProdEdit) {
+                                    showCustomAlert('A product with this name already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+    const updatedProduct = {
                                     ...currentEditItem,
                                     name: data.productName,
                                     price: parseFloat(data.price),
@@ -3320,6 +3357,17 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             if (data.username !== undefined) {
                                 // Add employee - Direct Firebase insert
                                 const newEmployee = {
+                                // Prevent duplicate usernames (case-insensitive) across employees and users
+                                const unameLower = (data.username || '').trim().toLowerCase();
+                                const existsInEmployees = employeesData.some(e => e.username && e.username.trim().toLowerCase() === unameLower);
+                                const existsInUsers = Object.keys(demoUsers || {}).some(u => (u || '').toLowerCase() === unameLower);
+                                if (existsInEmployees || existsInUsers) {
+                                    showCustomAlert('Username already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+    
                                     id: 'emp' + Date.now(),
                                     username: data.username,
                                     name: data.fullName,
@@ -3350,12 +3398,20 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 }
                                 
                                 // Add to local array
-                                employeesData.push(newEmployee);
-                                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                                
-                            } else if (data.storeName !== undefined) {
+                                // (sync via Firebase listener; no local push)
+} else if (data.storeName !== undefined) {
                                 // Add store - Direct Firebase insert
                                 const newStore = {
+                                // Prevent duplicate stores by name (case-insensitive)
+                                const storeLower = (data.storeName || '').trim().toLowerCase();
+                                const storeExists = storesData.some(s => s.name && s.name.trim().toLowerCase() === storeLower);
+                                if (storeExists) {
+                                    showCustomAlert('Store name already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+    
                                     id: Date.now(),
                                     name: data.storeName,
                                     location: data.location,
@@ -3372,10 +3428,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 }
                                 
                                 // Add to local array
-                                storesData.push(newStore);
-                                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                                
-                            } else if (data.productName !== undefined && data.customPrice !== undefined) {
+                                // (sync via Firebase listener; no local push)
+} else if (data.productName !== undefined && data.customPrice !== undefined) {
                                 // Add pricing - Direct Firebase insert
                                 const newPricing = {
                                     id: Date.now(),
@@ -3400,6 +3454,16 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             } else if (data.productName !== undefined) {
                                 // Add product - Direct Firebase insert
                                 const newProduct = {
+                                // Prevent duplicate products by name (case-insensitive)
+                                const pLower = (data.productName || '').trim().toLowerCase();
+                                const prodExists = productsData.some(p => p.name && p.name.trim().toLowerCase() === pLower);
+                                if (prodExists) {
+                                    showCustomAlert('A product with this name already exists.');
+                                    submitButton.textContent = originalText;
+                                    submitButton.disabled = false;
+                                    return;
+                                }
+    
                                     id: Date.now(),
                                     name: data.productName,
                                     price: parseFloat(data.price),
@@ -3414,9 +3478,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                                 }
                                 
                                 // Add to local array
-                                productsData.push(newProduct);
-                                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                                refreshCurrentSalesFormPrice();
+                            // (sync via Firebase listener; no local push)
+refreshCurrentSalesFormPrice();
                             }
                             
                             showSuccessMessage('Added successfully!');
@@ -3478,11 +3541,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                             if (firebaseKey) {
                                 newProduct.firebaseKey = firebaseKey;
                             }
-                            
-                            productsData.push(newProduct);
-                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                            
-                            // Update all relevant UI components
+                            // (sync via Firebase listener; no local push)
+// Update all relevant UI components
                             updateProductsList();
                             updateProductCatalog();
                             updateProductStats();
@@ -5345,6 +5405,22 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                     const productDescription = document.getElementById('newProductDescription').value.trim();
                     const submitButton = e.target.querySelector('button[type="submit"]');
                     const originalText = submitButton.innerHTML;
+                    // Duplicate checks to prevent repeated saving
+                    const nameLower = productName.toLowerCase();
+                    if (window.editingProductId) {
+                        const duplicate = productsData.some(p => p.name && p.name.trim().toLowerCase() === nameLower && p.id !== window.editingProductId);
+                        if (duplicate) {
+                            showCustomAlert('A product with this name already exists.');
+                            return;
+                        }
+                    } else {
+                        const duplicate = productsData.some(p => p.name && p.name.trim().toLowerCase() === nameLower);
+                        if (duplicate) {
+                            showCustomAlert('A product with this name already exists.');
+                            return;
+                        }
+                    }
+    
                     
                     // Validation
                     if (!productName || productPrice <= 0) {
@@ -5397,11 +5473,8 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                             if (firebaseKey) {
                                 newProduct.firebaseKey = firebaseKey;
                             }
-                            
-                            productsData.push(newProduct);
-                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                            
-                            // Reset form
+                            // (sync via Firebase listener; no local push)
+// Reset form
                             resetProductForm();
                             updateProductsManagementPage();
                             
