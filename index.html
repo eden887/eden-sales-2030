@@ -25,9 +25,11 @@ function populateSelectsRealtime(){
     });
   });
 
-  window.database.ref('products').on('value', snap => {
+    window.database.ref('products').on('value', snap => {
     if (!prodSel) return;
     prodSel.length = 1; // keep placeholder
+    // reset index
+    window.productIndex = {};
     if (!snap.exists()) return;
     snap.forEach(child => {
       const p = child.val() || {};
@@ -35,9 +37,12 @@ function populateSelectsRealtime(){
       opt.value = p.name || p.productName || child.key;
       opt.textContent = p.name || p.productName || child.key;
       prodSel.appendChild(opt);
+      const price = typeof p.price === 'string' ? parseFloat(p.price) : (p.price || 0);
+      window.productIndex[opt.value] = { key: child.key, price };
     });
   });
 }
+
 </script>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -810,6 +815,9 @@ function populateSelectsRealtime(){
                     <button onclick="downloadSystemBackup()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         🔄 System Backup
                     </button>
+<button onclick="showProductsPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
+    📦 Products
+</button>
                 </div>
             </div>
 
@@ -4345,3 +4353,146 @@ async function mirrorSyncAllData() {
 </script>
 </body>
 </html>
+
+<script>
+// ===== Products CRUD (name + price) =====
+
+// Simple router helpers (these likely already exist; if so, this won't harm)
+function showProductsPage(){
+  hideAllPages();
+  document.getElementById('productsPage').classList.remove('hidden');
+  loadProductsList();
+}
+function hideAllPages(){
+  ['loginPage','salesPage','adminPage','salesReportPage','productsPage'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+}
+
+// Open/close modal
+function showAddProductModal(){
+  const overlay = document.getElementById('productModalOverlay');
+  const form = document.getElementById('productModalForm');
+  document.getElementById('productModalTitle').textContent = 'Add Product';
+  form.reset();
+  form.onsubmit = async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    const name = (fd.get('productName')||'').trim();
+    const price = parseFloat(fd.get('price')||'0');
+    if (!name || isNaN(price)) return;
+    await addProduct({name, price});
+    closeProductModal();
+  };
+  overlay.classList.remove('hidden');
+}
+function showEditProductModal(key, data){
+  const overlay = document.getElementById('productModalOverlay');
+  const form = document.getElementById('productModalForm');
+  document.getElementById('productModalTitle').textContent = 'Edit Product';
+  form.productName.value = data.name || '';
+  form.price.value = data.price || 0;
+  form.onsubmit = async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    const name = (fd.get('productName')||'').trim();
+    const price = parseFloat(fd.get('price')||'0');
+    if (!name || isNaN(price)) return;
+    await updateProduct(key, {name, price});
+    closeProductModal();
+  };
+  overlay.classList.remove('hidden');
+}
+function closeProductModal(){
+  const overlay = document.getElementById('productModalOverlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+// CRUD ops
+async function addProduct(p){
+  if (!window.database) throw new Error('DB not ready');
+  const ref = await window.database.ref('products').push({
+    name: p.name,
+    price: p.price,
+    createdAt: Date.now()
+  });
+  // refresh dropdown index and list
+  if (window.productIndex) window.productIndex[p.name] = { key: ref.key, price: p.price };
+  await loadProductsList();
+}
+async function updateProduct(key, p){
+  await window.database.ref('products/'+key).set({
+    name: p.name,
+    price: p.price,
+    updatedAt: Date.now()
+  });
+  await loadProductsList();
+}
+async function deleteProduct(key){
+  if (!confirm('Delete this product?')) return;
+  await window.database.ref('products/'+key).remove();
+  await loadProductsList();
+}
+
+function renderProductsList(products){
+  const list = document.getElementById('productsPageList');
+  if (!list) return;
+  if (!products.length){
+    list.innerHTML = '<div class="text-white/50 text-center py-8 font-medium">No products yet</div>';
+    return;
+  }
+  list.innerHTML = products.map(p=>{
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+    return `
+      <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+        <div>
+          <div class="font-bold text-white text-lg">${p.name}</div>
+          <div class="text-sm text-white/60">Price: ${Number(p.price||0).toFixed(2)} DHS</div>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button class="text-blue-400 hover:text-blue-300 font-medium" onclick="(function(){const d=JSON.parse(decodeURIComponent(escape(atob('${encoded}')))); showEditProductModal(d.firebaseKey||d.key, d);})()">Edit</button>
+          <button class="text-red-400 hover:text-red-300 font-medium" onclick="deleteProduct('${p.firebaseKey||p.key}')">Delete</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Subscribe to list changes (live)
+let _productsListenerAttached = false;
+function loadProductsList(){
+  if (!window.database) return;
+  const ref = window.database.ref('products');
+  if (!_productsListenerAttached){
+    ref.on('value', snap=>{
+      const arr = [];
+      if (snap.exists()){
+        const obj = snap.val();
+        for (const [k,v] of Object.entries(obj)){
+          arr.push({ ...(v||{}), firebaseKey: k });
+        }
+      }
+      renderProductsList(arr);
+    });
+    _productsListenerAttached = true;
+  } else {
+    ref.once('value').then(snap=>{
+      const arr = [];
+      if (snap.exists()){
+        const obj = snap.val();
+        for (const [k,v] of Object.entries(obj)){
+          arr.push({ ...(v||{}), firebaseKey: k });
+        }
+      }
+      renderProductsList(arr);
+    });
+  }
+}
+
+// Hook product list load after initial Firebase sync too
+window.addEventListener('load', ()=>{
+  if (document.getElementById('productsPage')){
+    // optional preload
+  }
+});
+</script>
