@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EDEN - Sales Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
+<script>
+// Real-time: populate Stores and Products selects directly from Firebase
+function populateSelectsRealtime(){
+  const storeSel = document.getElementById('storeName');
+  const prodSel = document.getElementById('product');
+  if (!window.database || !storeSel || !prodSel) return;
+
+  window.database.ref('stores').on('value', snap => {
+    if (!storeSel) return;
+    storeSel.length = 1; // keep placeholder
+    if (!snap.exists()) return;
+    snap.forEach(child => {
+      const s = child.val() || {};
+      const opt = document.createElement('option');
+      opt.value = s.name || s.storeName || child.key;
+      opt.textContent = s.name || s.storeName || child.key;
+      storeSel.appendChild(opt);
+    });
+  });
+
+  window.database.ref('products').on('value', snap => {
+    if (!prodSel) return;
+    prodSel.length = 1; // keep placeholder
+    if (!snap.exists()) return;
+    snap.forEach(child => {
+      const p = child.val() || {};
+      const opt = document.createElement('option');
+      opt.value = p.name || p.productName || child.key;
+      opt.textContent = p.name || p.productName || child.key;
+      prodSel.appendChild(opt);
+    });
+  });
+}
+</script>
+
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -476,9 +511,20 @@
                 padding: 16px;
             }
         }
-    </style>
+    
+/* Hide any status chips inside Employee Management action area */
+#employeesManagement .space-x-3 > span { display: none !important; }
+</style>
 </head>
-<body class="premium-bg min-h-screen">
+
+<script>
+    // --- Eden: single-run guard to prevent duplicate event listeners ---
+    (function(){
+      if (window.__edenInitDone) return;
+      window.__edenInitDone = true;
+    })();
+    </script>
+
     <!-- Floating Particles -->
     <div class="floating-particles">
         <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
@@ -517,7 +563,7 @@
                         <label class="block text-sm font-semibold text-white/90 mb-4 tracking-wide">USERNAME</label>
                         <input type="text" id="username" required 
                                class="premium-input w-full px-6 py-5 text-lg rounded-2xl focus:outline-none font-medium"
-                               placeholder="Enter your username" onkeypress="handleLoginKeyPress(event)">
+                               placeholder="Enter your username">
                     </div>
 
                     <!-- Password Input -->
@@ -526,7 +572,7 @@
                         <div class="relative">
                             <input type="password" id="password" required 
                                    class="premium-input w-full px-6 py-5 text-lg rounded-2xl focus:outline-none pr-14 font-medium"
-                                   placeholder="Enter your password" onkeypress="handleLoginKeyPress(event)">
+                                   placeholder="Enter your password">
                             <button type="button" onclick="togglePassword()" 
                                     class="absolute right-5 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors">
                                 <svg id="eyeIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -548,7 +594,7 @@
                     </div>
 
                     <!-- Login Button -->
-                    <button type="submit" id="loginBtn" onclick="handleLoginClick(event)"
+                    <button type="submit" id="loginBtn" 
                             class="premium-button w-full text-white py-5 px-8 font-bold text-lg rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed tracking-wide">
                         <span id="loginBtnText">SIGN IN</span>
                         <span id="loginSpinner" class="hidden flex items-center justify-center">
@@ -629,18 +675,16 @@
                         <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">STORE NAME</label>
                         <select id="storeName" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
-                            <option value="">Select store</option>
-                            <!-- Store options will be populated dynamically -->
-                        </select>
+    <option value="">Select store</option>
+</select>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">PRODUCT</label>
                         <select id="product" required onchange="updateProductPrice()"
                                 class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium">
-                            <option value="">Select product</option>
-                            <!-- Product options will be populated dynamically -->
-                        </select>
+    <option value="">Select product</option>
+</select>
                     </div>
                     
                     <div class="grid grid-cols-3 gap-4">
@@ -754,13 +798,10 @@
             <div class="premium-card rounded-3xl p-8 mb-10">
                 <h2 class="text-2xl font-bold text-white mb-8 tracking-wide">QUICK ACTIONS</h2>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <button onclick="showProductManagementPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
-                        📦 Product Management
-                    </button>
                     <button onclick="showSalesReportPage()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         📊 Sales Reports
                     </button>
-                    <button onclick="quickStoreData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
+                    <button onclick="mirrorSyncAllData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         🔄 Smart Sync Data
                     </button>
                     <button onclick="downloadMasterData()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
@@ -768,12 +809,6 @@
                     </button>
                     <button onclick="downloadSystemBackup()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
                         🔄 System Backup
-                    </button>
-                    <button onclick="showCodeInjectionModal()" class="premium-button py-6 text-white font-bold rounded-xl text-lg">
-                        💻 Code Injection
-                    </button>
-                    <button onclick="showClearAllDataModal()" class="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 py-6 text-red-300 font-bold rounded-xl text-lg transition-all">
-                        🗑️ Clear All Data
                     </button>
                 </div>
             </div>
@@ -787,24 +822,48 @@
                 </div>
 
                 <!-- Employees Management -->
-                <div id="employeesManagement" class="management-section">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-bold text-white tracking-wide">EMPLOYEE MANAGEMENT</h2>
-                        <button onclick="showAddEmployeeModal()" class="premium-button px-4 py-2 text-white font-bold rounded-xl text-sm">+ ADD EMPLOYEE</button>
-                    </div>
-                    <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar">
-                        <!-- Employee list will be populated dynamically -->
-                    </div>
-                </div>
+<div id="employeesManagement" class="management-section">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-xl font-bold text-white tracking-wide">EMPLOYEE MANAGEMENT</h2>
+    <button onclick="showAddEmployeeModal()" class="premium-button px-4 py-2 text-white font-bold rounded-xl text-sm">
+      + ADD EMPLOYEE
+    </button>
+  </div>
 
-                <!-- Stores Management -->
+  <!-- Dynamic list (populated by your scripts/Firebase). Keep it clean: Name, Role, Edit/Delete only -->
+  <div id="employeesList" class="space-y-3 max-h-80 overflow-y-auto premium-scrollbar">
+    <div class="text-white/50 text-center py-8 font-medium">Loading employees...</div>
+  </div>
+</div>
+<!-- Stores Management -->
                 <div id="storesManagement" class="management-section hidden">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold text-white tracking-wide">STORE MANAGEMENT</h2>
                         <button onclick="showAddStoreModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ ADD STORE</button>
                     </div>
                     <div id="storesList" class="space-y-4">
-                        <!-- Store list will be populated dynamically -->
+                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                            <div>
+                                <div class="font-bold text-white text-lg">Mall of Emirates</div>
+                                <div class="text-sm text-white/60">Dubai • Premium Location</div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
+                                <button onclick="editStore('Mall of Emirates')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
+                                <button onclick="deleteStore('Mall of Emirates')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                            <div>
+                                <div class="font-bold text-white text-lg">Dubai Mall</div>
+                                <div class="text-sm text-white/60">Dubai • Flagship Store</div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
+                                <button onclick="editStore('Dubai Mall')" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
+                                <button onclick="deleteStore('Dubai Mall')" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -839,192 +898,6 @@
                             <button type="button" onclick="closeModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">CANCEL</button>
                         </div>
                     </form>
-                </div>
-            </div>
-
-            <!-- Clear All Data Modal -->
-            <div id="clearAllDataModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-                <div class="premium-card rounded-3xl p-8 max-w-md w-full">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-red-300">🗑️ Clear All Data</h3>
-                            <p class="text-white/60 text-sm mt-1">This action will permanently delete ALL system data</p>
-                        </div>
-                        <button onclick="closeClearAllDataModal()" class="text-white/60 hover:text-white text-2xl">&times;</button>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <!-- Warning -->
-                        <div class="bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl text-sm">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                </svg>
-                                <div>
-                                    <div class="font-bold">⚠️ DANGER ZONE</div>
-                                    <div class="text-xs opacity-80 mt-1">This will delete all sales, products, stores, employees, and pricing data. This action cannot be undone!</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- What will be deleted -->
-                        <div>
-                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">WHAT WILL BE DELETED:</label>
-                            <div class="bg-white/5 rounded-xl p-4 space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-white/70">Sales Records:</span>
-                                    <span class="text-red-300 font-bold" id="clearDataSalesCount">0</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-white/70">Products:</span>
-                                    <span class="text-red-300 font-bold" id="clearDataProductsCount">0</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-white/70">Stores:</span>
-                                    <span class="text-red-300 font-bold" id="clearDataStoresCount">0</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-white/70">Employees:</span>
-                                    <span class="text-red-300 font-bold" id="clearDataEmployeesCount">0</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-white/70">Custom Pricing:</span>
-                                    <span class="text-red-300 font-bold" id="clearDataPricingCount">0</span>
-                                </div>
-                                <div class="border-t border-white/10 pt-2 mt-2">
-                                    <div class="flex justify-between">
-                                        <span class="text-white font-bold">Total Revenue:</span>
-                                        <span class="text-red-300 font-bold" id="clearDataTotalRevenue">0 DHS</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Password Input -->
-                        <div>
-                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">ADMIN PASSWORD</label>
-                            <input type="password" id="clearDataPassword" 
-                                   class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium"
-                                   placeholder="Enter admin password to confirm">
-                            <div class="text-xs text-white/40 mt-2">Required password: eden@123</div>
-                        </div>
-                        
-                        <!-- Confirmation Checkbox -->
-                        <div class="flex items-start space-x-3">
-                            <input type="checkbox" id="clearDataConfirm" class="mt-1 w-4 h-4 text-red-500 bg-transparent border-2 border-red-500/50 rounded focus:ring-red-500 focus:ring-2">
-                            <label for="clearDataConfirm" class="text-sm text-white/80">
-                                I understand that this action will permanently delete all data and cannot be undone. I have backed up any important data.
-                            </label>
-                        </div>
-                        
-                        <!-- Action Buttons -->
-                        <div class="flex space-x-4">
-                            <button type="button" onclick="executeClearAllData()" class="flex-1 py-3 bg-red-500/20 text-red-300 font-bold rounded-xl hover:bg-red-500/30 transition-all border border-red-500/30">
-                                🗑️ CLEAR ALL DATA
-                            </button>
-                            <button type="button" onclick="closeClearAllDataModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">
-                                ❌ CANCEL
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Code Injection Modal -->
-            <div id="codeInjectionModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-                <div class="premium-card rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-2xl font-bold text-white">💻 Code Injection Panel</h3>
-                            <p class="text-white/60 text-sm mt-1">Inject and execute custom JavaScript code in the current page</p>
-                        </div>
-                        <button onclick="closeCodeInjectionModal()" class="text-white/60 hover:text-white text-2xl">&times;</button>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <!-- Code Editor -->
-                        <div>
-                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">JAVASCRIPT CODE</label>
-                            <textarea id="codeInjectionInput" 
-                                      class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-mono text-sm h-64 resize-none"
-                                      placeholder="// Enter your JavaScript code here
-// Example:
-console.log('Hello from code injection!');
-
-// Access current user data
-console.log('Current user:', currentUser);
-
-// Access sales data
-console.log('Total sales:', salesData.length);
-
-// Show custom alert
-showSuccessMessage('Code executed successfully!');
-
-// Update UI elements
-document.getElementById('totalSalesCount').textContent = '999';"></textarea>
-                        </div>
-                        
-                        <!-- Execution Log -->
-                        <div>
-                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">EXECUTION LOG</label>
-                            <div id="codeExecutionLog" class="bg-black/30 border border-white/10 rounded-xl p-4 h-32 overflow-y-auto premium-scrollbar font-mono text-xs text-green-400">
-                                <div class="text-white/50">Ready to execute code...</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Quick Code Templates -->
-                        <div>
-                            <label class="block text-sm font-semibold text-white/90 mb-3 tracking-wide">QUICK TEMPLATES</label>
-                            <div class="grid grid-cols-3 gap-3">
-                                <button type="button" onclick="loadCodeTemplate('console')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
-                                    <div class="font-bold text-white text-sm">Console Debug</div>
-                                    <div class="text-xs text-white/60">Log system data to console</div>
-                                </button>
-                                <button type="button" onclick="loadCodeTemplate('ui')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
-                                    <div class="font-bold text-white text-sm">UI Update</div>
-                                    <div class="text-xs text-white/60">Update dashboard elements</div>
-                                </button>
-                                <button type="button" onclick="loadCodeTemplate('data')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
-                                    <div class="font-bold text-white text-sm">Data Analysis</div>
-                                    <div class="text-xs text-white/60">Analyze sales data</div>
-                                </button>
-                                <button type="button" onclick="loadCodeTemplate('firebase')" class="text-left p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
-                                    <div class="font-bold text-white text-sm">Firebase Test</div>
-                                    <div class="text-xs text-white/60">Test Firebase connection</div>
-                                </button>
-                                <button type="button" onclick="loadCodeTemplate('products')" class="text-left p-3 bg-green-500/10 rounded-xl hover:bg-green-500/20 transition-all border border-green-500/20">
-                                    <div class="font-bold text-green-300 text-sm">📦 Add Products</div>
-                                    <div class="text-xs text-green-400/80">Bulk add sample products</div>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Action Buttons -->
-                        <div class="flex space-x-4">
-                            <button type="button" onclick="executeInjectedCode()" class="premium-button flex-1 py-3 text-white font-bold rounded-xl">
-                                ▶️ EXECUTE CODE
-                            </button>
-                            <button type="button" onclick="clearCodeInjection()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">
-                                🗑️ CLEAR
-                            </button>
-                            <button type="button" onclick="closeCodeInjectionModal()" class="flex-1 py-3 bg-red-500/20 text-red-300 font-bold rounded-xl hover:bg-red-500/30 transition-all">
-                                ❌ CLOSE
-                            </button>
-                        </div>
-                        
-                        <!-- Warning -->
-                        <div class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 px-4 py-3 rounded-xl text-sm">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                </svg>
-                                <div>
-                                    <div class="font-bold">⚠️ Admin Only Feature</div>
-                                    <div class="text-xs opacity-80 mt-1">This feature allows direct code execution. Use with caution and only inject trusted code.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1168,121 +1041,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         </div>
     </div>
 
-    <!-- Product Management Page -->
-    <div id="productManagementPage" class="hidden min-h-screen premium-bg">
-        <!-- Header -->
-        <header class="luxury-header sticky top-0 z-50">
-            <div class="max-w-6xl mx-auto px-6 py-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <div class="eden-logo w-12 h-12 rounded-xl flex items-center justify-center">
-                            <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM4 8h16v11H4V8z"/>
-                                <path d="M15 10H9v2h6v-2zM15 13H9v2h6v-2z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="flex items-center space-x-3">
-                                <h1 class="text-2xl font-bold text-white tracking-wide">PRODUCT MANAGEMENT</h1>
-                                <div class="flex flex-col items-start">
-                                    <div class="flex items-center space-x-1" id="productMgmtSyncStatus">
-                                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                        <span class="text-xs text-green-400 font-medium">SYNCED</span>
-                                    </div>
-                                    <div class="text-xs text-white/40" id="productMgmtLastSync">Last sync: Never</div>
-                                </div>
-                            </div>
-                            <p class="text-sm text-white/60">Complete Product Catalog Management</p>
-                            <p class="text-xs text-white/40" id="productMgmtDateTime">Loading...</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <button onclick="quickSyncAllData()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center space-x-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            <span>Quick Sync</span>
-                        </button>
-                        <button onclick="goBackToDashboard()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
-                            Back to Dashboard
-                        </button>
-                        <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors">
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <div class="max-w-6xl mx-auto p-6 premium-scrollbar">
-            <!-- Product Stats Overview -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="stat-card rounded-3xl p-6">
-                    <div class="text-sm text-white/60 font-medium tracking-wide">TOTAL PRODUCTS</div>
-                    <div class="text-3xl font-black text-premium mt-2" id="totalProductsCount">0</div>
-                </div>
-                <div class="stat-card rounded-3xl p-6">
-                    <div class="text-sm text-white/60 font-medium tracking-wide">AVG PRICE</div>
-                    <div class="text-3xl font-black text-premium mt-2" id="avgProductPrice">0 DHS</div>
-                </div>
-                <div class="stat-card rounded-3xl p-6">
-                    <div class="text-sm text-white/60 font-medium tracking-wide">HIGHEST PRICE</div>
-                    <div class="text-3xl font-black text-premium mt-2" id="highestPrice">0 DHS</div>
-                </div>
-                <div class="stat-card rounded-3xl p-6">
-                    <div class="text-sm text-white/60 font-medium tracking-wide">CATEGORIES</div>
-                    <div class="text-3xl font-black text-premium mt-2" id="totalCategories">0</div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="premium-card rounded-3xl p-8 mb-8">
-                <h2 class="text-2xl font-bold text-white mb-6 tracking-wide">PRODUCT MANAGEMENT</h2>
-                <div class="flex justify-center">
-                    <button onclick="showAddProductModal()" class="premium-button py-4 px-8 text-white font-bold rounded-xl">
-                        ➕ Add New Product
-                    </button>
-                </div>
-            </div>
-
-            <!-- Product List -->
-            <div class="premium-card rounded-3xl p-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white tracking-wide">ALL PRODUCTS</h2>
-                    <div class="text-sm text-white/60">Total: <span id="productCount">0</span> products</div>
-                </div>
-                <div id="productCatalogList" class="space-y-4">
-                    <!-- Products will be loaded here -->
-                </div>
-            </div>
-
-            <!-- Product Modal -->
-            <div id="productModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-                <div class="premium-card rounded-3xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 id="productModalTitle" class="text-2xl font-bold text-white">Add Product</h3>
-                        <button onclick="closeProductManagementModal()" class="text-white/60 hover:text-white text-2xl">&times;</button>
-                    </div>
-                    <form id="productModalForm" class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium text-white/90 mb-3">Product Name</label>
-                            <input type="text" name="productName" required class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium" placeholder="Enter product name">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-white/90 mb-3">Price (DHS)</label>
-                            <input type="number" name="price" required step="0.01" min="0" class="premium-input w-full px-5 py-4 rounded-xl focus:outline-none font-medium" placeholder="0.00">
-                        </div>
-                        <div class="flex space-x-4">
-                            <button type="submit" class="premium-button flex-1 py-3 text-white font-bold rounded-xl">Save</button>
-                            <button type="button" onclick="closeProductManagementModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Products Page (Legacy - kept for compatibility) -->
+    <!-- Products Page -->
     <div id="productsPage" class="hidden min-h-screen premium-bg">
         <!-- Header -->
         <header class="luxury-header sticky top-0 z-50">
@@ -1334,10 +1093,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             <div class="premium-card rounded-3xl p-8">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white tracking-wide">Product Catalog</h2>
-                    <div class="flex space-x-4">
-                        <button onclick="showAddProductModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ Add Product</button>
-                        <button onclick="showProductsManagementPage()" class="premium-button px-6 py-3 text-white font-bold rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30">📦 Manage Products</button>
-                    </div>
+                    <button onclick="showAddProductModal()" class="premium-button px-6 py-3 text-white font-bold rounded-xl">+ Add Product</button>
                 </div>
                 <div id="productsPageList" class="space-y-4">
                     <!-- Products will be loaded here -->
@@ -1362,7 +1118,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                         </div>
                         <div class="flex space-x-4">
                             <button type="submit" class="premium-button flex-1 py-3 text-white font-bold rounded-xl">Save</button>
-                            <button type="button" onclick="closeProductManagementModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">Cancel</button>
+                            <button type="button" onclick="closeProductModal()" class="flex-1 py-3 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -1373,15 +1129,15 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
     <script>
         // Firebase Configuration - REAL-TIME ENABLED
         const firebaseConfig = {
-            apiKey: "AIzaSyDSBfcSjzYyhrVR3SNcf18UAqS4r_AcbMs",
-            authDomain: "eden-sales-9600.firebaseapp.com",
-            databaseURL: "https://eden-sales-9600-default-rtdb.asia-southeast1.firebasedatabase.app/",
-            projectId: "eden-sales-9600",
-            storageBucket: "eden-sales-9600.appspot.com",
-            messagingSenderId: "631716537385",
-            appId: "1:631716537385:web:ee3267b050bcf5d42fa838",
-            measurementId: "G-XKZQ34V9TC"
-        };
+  apiKey: "AIzaSyDSBfcSjzYyhrVR3SNcf18UAqS4r_AcbMs",
+  authDomain: "eden-sales-9600.firebaseapp.com",
+  databaseURL: "https://eden-sales-9600-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "eden-sales-9600",
+  storageBucket: "eden-sales-9600.firebasestorage.app",
+  messagingSenderId: "631716537385",
+  appId: "1:631716537385:web:ee3267b050bcf5d42fa838",
+  measurementId: "G-XKZQ34V9TC"
+};
 
         // Real-time Firebase Status
         console.log("🔥 Firebase Real-time Database Configuration:");
@@ -1626,6 +1382,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                         
                         // Load existing data from Firebase
                         loadFirebaseData();
+                        populateSelectsRealtime();
                         
                         // Firebase connection successful - no UI notification needed
                         // All connection details are logged to console for debugging
@@ -1651,8 +1408,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                         showFirebaseError(error);
                         
                         isFirebaseConfigured = false;
-                        updateSyncStatus('local');
-                        initializeFreshSystem();
+                        updateSyncStatus('error');
+                        // initializeDemoData() disabled for cloud-only mode;
                     });
                 } else {
                     logFirebaseDebug('connectionError', 'Firebase reports disconnected', { 
@@ -1689,8 +1446,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             showFirebaseError(error);
             
             isFirebaseConfigured = false;
-            updateSyncStatus('local');
-            initializeFreshSystem();
+            updateSyncStatus('error');
+            // initializeDemoData() disabled for cloud-only mode;
         }
         
         // Debug info display function
@@ -1815,37 +1572,29 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         }
 
         // Real-time Firebase Functions
-        let listenersInitialized = false;
-        
         function initializeRealtimeListeners() {
-            if (!isFirebaseConfigured || listenersInitialized) return;
+            if (!isFirebaseConfigured) return;
             
             console.log("🔄 Setting up real-time listeners...");
-            listenersInitialized = true;
             
             // Listen for sales data changes
             database.ref('sales').on('value', (snapshot) => {
                 const firebaseSales = snapshot.val();
                 if (firebaseSales) {
-                    const newSalesData = Object.keys(firebaseSales).map(key => ({
+                    salesData = Object.keys(firebaseSales).map(key => ({
                         ...firebaseSales[key],
                         firebaseKey: key
                     }));
+                    localStorage.setItem('edenSalesData', JSON.stringify(salesData));
+                    console.log(`📊 Sales data updated: ${salesData.length} records`);
                     
-                    // Only update if data actually changed
-                    if (JSON.stringify(newSalesData) !== JSON.stringify(salesData)) {
-                        salesData = newSalesData;
-                        localStorage.setItem('edenSalesData', JSON.stringify(salesData));
-                        console.log(`📊 Sales data updated: ${salesData.length} records`);
-                        
-                        // Update UI if on sales or admin page
-                        if (currentUser) {
-                            if (currentUser.role === 'admin') {
-                                updateAdminStats();
-                            } else {
-                                updateSalesStats();
-                                updateRecentSales();
-                            }
+                    // Update UI if on sales or admin page
+                    if (currentUser) {
+                        if (currentUser.role === 'admin') {
+                            updateAdminStats();
+                        } else {
+                            updateSalesStats();
+                            updateRecentSales();
                         }
                     }
                 }
@@ -1855,19 +1604,14 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('products').on('value', (snapshot) => {
                 const firebaseProducts = snapshot.val();
                 if (firebaseProducts) {
-                    const newProductsData = Object.keys(firebaseProducts).map(key => ({
+                    productsData = Object.keys(firebaseProducts).map(key => ({
                         ...firebaseProducts[key],
                         firebaseKey: key
                     }));
-                    
-                    // Only update if data actually changed
-                    if (JSON.stringify(newProductsData) !== JSON.stringify(productsData)) {
-                        productsData = newProductsData;
-                        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                        console.log(`📦 Products data updated: ${productsData.length} products`);
-                        updateProductsList();
-                        refreshCurrentSalesFormPrice();
-                    }
+                    localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                    console.log(`📦 Products data updated: ${productsData.length} products`);
+                    updateProductsList();
+                    refreshCurrentSalesFormPrice();
                 }
             });
             
@@ -1875,18 +1619,13 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('stores').on('value', (snapshot) => {
                 const firebaseStores = snapshot.val();
                 if (firebaseStores) {
-                    const newStoresData = Object.keys(firebaseStores).map(key => ({
+                    storesData = Object.keys(firebaseStores).map(key => ({
                         ...firebaseStores[key],
                         firebaseKey: key
                     }));
-                    
-                    // Only update if data actually changed
-                    if (JSON.stringify(newStoresData) !== JSON.stringify(storesData)) {
-                        storesData = newStoresData;
-                        localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                        console.log(`🏪 Stores data updated: ${storesData.length} stores`);
-                        updateStoresList();
-                    }
+                    localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                    console.log(`🏪 Stores data updated: ${storesData.length} stores`);
+                    updateStoresList();
                 }
             });
             
@@ -1894,18 +1633,13 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('employees').on('value', (snapshot) => {
                 const firebaseEmployees = snapshot.val();
                 if (firebaseEmployees) {
-                    const newEmployeesData = Object.keys(firebaseEmployees).map(key => ({
+                    employeesData = Object.keys(firebaseEmployees).map(key => ({
                         ...firebaseEmployees[key],
                         firebaseKey: key
                     }));
-                    
-                    // Only update if data actually changed
-                    if (JSON.stringify(newEmployeesData) !== JSON.stringify(employeesData)) {
-                        employeesData = newEmployeesData;
-                        localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                        console.log(`👥 Employees data updated: ${employeesData.length} employees`);
-                        updateEmployeesList();
-                    }
+                    localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                    console.log(`👥 Employees data updated: ${employeesData.length} employees`);
+                    updateEmployeesList();
                 }
             });
             
@@ -1913,19 +1647,14 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('storePricing').on('value', (snapshot) => {
                 const firebasePricing = snapshot.val();
                 if (firebasePricing) {
-                    const newPricingData = Object.keys(firebasePricing).map(key => ({
+                    storePricingData = Object.keys(firebasePricing).map(key => ({
                         ...firebasePricing[key],
                         firebaseKey: key
                     }));
-                    
-                    // Only update if data actually changed
-                    if (JSON.stringify(newPricingData) !== JSON.stringify(storePricingData)) {
-                        storePricingData = newPricingData;
-                        localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                        console.log(`💰 Pricing data updated: ${storePricingData.length} custom prices`);
-                        updatePricingList();
-                        refreshCurrentSalesFormPrice();
-                    }
+                    localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                    console.log(`💰 Pricing data updated: ${storePricingData.length} custom prices`);
+                    updatePricingList();
+                    refreshCurrentSalesFormPrice();
                 }
             });
             
@@ -1933,21 +1662,14 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             database.ref('users').on('value', (snapshot) => {
                 const firebaseUsers = snapshot.val();
                 if (firebaseUsers) {
-                    // Check if users data actually changed
-                    const currentUsersString = JSON.stringify(demoUsers);
-                    const newUsersData = {};
-                    
+                    // Update demo users with Firebase data, preserving keys
                     Object.keys(firebaseUsers).forEach(username => {
-                        newUsersData[username] = {
+                        demoUsers[username] = {
                             ...firebaseUsers[username],
                             firebaseKey: username
                         };
                     });
-                    
-                    if (JSON.stringify(newUsersData) !== currentUsersString) {
-                        demoUsers = newUsersData;
-                        console.log(`👤 Users data updated: ${Object.keys(firebaseUsers).length} users`);
-                    }
+                    console.log(`👤 Users data updated: ${Object.keys(firebaseUsers).length} users`);
                 }
             });
             
@@ -1970,33 +1692,26 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             });
         }
         
-        // Initialize completely fresh system
-        function initializeFreshSystem() {
-            console.log("📝 Initializing completely fresh system...");
+        // Initialize demo data if Firebase is not available
+        function initializeDemoData() {
+            console.log("📝 Initializing fresh system...");
             
-            // Clear all existing localStorage
+            // Clear existing localStorage and start fresh
             localStorage.removeItem('edenSalesData');
             localStorage.removeItem('edenProductsData');
             localStorage.removeItem('edenStoresData');
             localStorage.removeItem('edenEmployeesData');
             localStorage.removeItem('edenStorePricingData');
             
-            // Initialize all arrays as completely empty
-            salesData = [];
-            productsData = [];
-            storesData = [];
-            employeesData = [];
-            storePricingData = [];
-            
-            // Save empty arrays to localStorage
+            // Set empty arrays for fresh start
             localStorage.setItem('edenSalesData', JSON.stringify([]));
             localStorage.setItem('edenProductsData', JSON.stringify([]));
             localStorage.setItem('edenStoresData', JSON.stringify([]));
-            localStorage.setItem('edenEmployeesData', JSON.stringify([]));
+            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData)); // Keep only admin
             localStorage.setItem('edenStorePricingData', JSON.stringify([]));
             
-            updateSyncStatus('local');
-            console.log("✅ Completely fresh system initialized - No demo data");
+            updateSyncStatus('error');
+            console.log("✅ Fresh system initialized - Only admin user remains");
         }
         
         // Save data to Firebase (for new records)
@@ -2015,7 +1730,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 return ref.key;
             } catch (error) {
                 console.warn("⚠️ Firebase save failed, falling back to local:", error.message);
-                updateSyncStatus('local');
+                updateSyncStatus('error');
                 return false;
             }
         }
@@ -2032,16 +1747,15 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 if (firebaseKey) {
                     // Update existing record
                     await database.ref(`${path}/${firebaseKey}`).set(data);
-                } else {
-                    // Create new record if no key exists
-                    const ref = await database.ref(path).push(data);
-                    data.firebaseKey = ref.key;
                 }
-                updateSyncStatus('synced');
+else {
+  throw new Error("Cloud save failed");
+}
+updateSyncStatus('synced');
                 return true;
             } catch (error) {
                 console.warn("⚠️ Firebase update failed, falling back to local:", error.message);
-                updateSyncStatus('local');
+                updateSyncStatus('error');
                 return false;
             }
         }
@@ -2060,26 +1774,30 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 return true;
             } catch (error) {
                 console.warn("⚠️ Firebase delete failed:", error.message);
-                updateSyncStatus('local');
+                updateSyncStatus('error');
                 return false;
             }
         }
 
-        // Only essential admin user - completely fresh system
+        // Demo users - keeping only admin user for fresh start
         const demoUsers = {
-            'admin': {
+            'admin_user': {
                 password: 'admin123',
                 role: 'admin',
-                name: 'System Administrator',
+                name: 'Admin User',
                 id: 'admin001'
             }
         };
 
-        // All data arrays start completely empty
-        let salesData = [];
+        // Sales data - starting fresh with empty array
+        let salesData = JSON.parse(localStorage.getItem('edenSalesData')) || [];
         let currentUser = null;
-        let productsData = [];
-        let storePricingData = [];
+        
+        // Products data - starting fresh with empty array
+        let productsData = JSON.parse(localStorage.getItem('edenProductsData')) || [];
+        
+        // Store-specific pricing data - starting fresh with empty array
+        let storePricingData = JSON.parse(localStorage.getItem('edenStorePricingData')) || [];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -2098,122 +1816,24 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 }
             }, 3000); // Auto-refresh every 3 seconds
             
-            // Setup all form handlers with retry mechanism
-            setupFormHandlers();
-            
-            // Setup modal handlers
-            setupModalHandlers();
-            
-            // Setup new product form handler
-            setupNewProductFormHandler();
-        });
-
-        // Setup form handlers with bulletproof login handling
-        function setupFormHandlers() {
-            console.log('🔧 Setting up form handlers...');
-            
-            // Bulletproof login form setup with multiple methods
-            const setupLoginForm = () => {
-                console.log('🔐 Setting up login form handlers...');
-                
-                const loginForm = document.getElementById('loginForm');
-                const loginButton = document.getElementById('loginBtn');
-                const usernameInput = document.getElementById('username');
-                const passwordInput = document.getElementById('password');
-                
-                if (!loginForm) {
-                    console.error('❌ Login form not found!');
-                    return false;
-                }
-                
-                console.log('✅ Login form elements found:', {
-                    form: !!loginForm,
-                    button: !!loginButton,
-                    username: !!usernameInput,
-                    password: !!passwordInput
-                });
-                
-                // Method 1: Form submit event
-                try {
-                    // Remove any existing listeners
-                    const newForm = loginForm.cloneNode(true);
-                    loginForm.parentNode.replaceChild(newForm, loginForm);
-                    
-                    // Get fresh references after cloning
-                    const freshForm = document.getElementById('loginForm');
-                    const freshButton = document.getElementById('loginBtn');
-                    const freshUsername = document.getElementById('username');
-                    const freshPassword = document.getElementById('password');
-                    
-                    // Add form submit handler
-                    freshForm.addEventListener('submit', function(e) {
-                        console.log('🔐 Form submit event triggered');
-                        e.preventDefault();
-                        handleLogin(e);
-                    });
-                    
-                    // Method 2: Button click handler (backup)
-                    if (freshButton) {
-                        freshButton.addEventListener('click', function(e) {
-                            console.log('🔐 Button click event triggered');
-                            e.preventDefault();
-                            handleLogin(e);
-                        });
-                    }
-                    
-                    // Method 3: Enter key handlers on inputs
-                    if (freshUsername) {
-                        freshUsername.addEventListener('keypress', function(e) {
-                            if (e.key === 'Enter') {
-                                console.log('🔐 Enter key pressed on username');
-                                e.preventDefault();
-                                handleLogin(e);
-                            }
-                        });
-                    }
-                    
-                    if (freshPassword) {
-                        freshPassword.addEventListener('keypress', function(e) {
-                            if (e.key === 'Enter') {
-                                console.log('🔐 Enter key pressed on password');
-                                e.preventDefault();
-                                handleLogin(e);
-                            }
-                        });
-                    }
-                    
-                    console.log('✅ All login handlers attached successfully');
-                    return true;
-                    
-                } catch (error) {
-                    console.error('❌ Error setting up login handlers:', error);
-                    return false;
-                }
-            };
-            
-            // Try to setup login form immediately
-            if (!setupLoginForm()) {
-                console.log('⏳ Retrying login form setup...');
-                // Retry after DOM is fully ready
-                setTimeout(() => {
-                    if (!setupLoginForm()) {
-                        console.error('❌ Failed to setup login form after retry');
-                        
-                        // Last resort: try again after longer delay
-                        setTimeout(() => {
-                            setupLoginForm();
-                        }, 1000);
-                    }
-                }, 100);
+            // Setup login form handler directly
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                console.log('Login form found, setting up handler...');
+                loginForm.addEventListener('submit', handleLogin);
+            } else {
+                console.error('Login form not found!');
             }
             
             // Setup sales form handler
             const salesForm = document.getElementById('salesForm');
             if (salesForm) {
-                console.log('✅ Sales form found, setting up handler...');
-                salesForm.addEventListener('submit', handleSaleEntry);
+                salesForm.addEventListener('submit', handleSaleEntry, { once: true });
             }
-        }
+            
+            // Setup modal handlers
+            setupModalHandlers();
+        });
 
         function setupDateConstraints() {
             const today = new Date();
@@ -2258,81 +1878,28 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             if (reportsDateTime) reportsDateTime.textContent = dateTimeStr;
         }
 
-        // These functions are now handled by the bulletproof login system above
-        // Keeping them for backward compatibility with HTML onclick attributes
-        function handleLoginKeyPress(event) {
-            if (event.key === 'Enter') {
-                console.log('🔐 Legacy Enter key handler triggered');
-                event.preventDefault();
-                handleLogin(event);
-            }
-        }
-
-        function handleLoginClick(e) {
-            console.log('🔐 Legacy button click handler triggered');
-            e.preventDefault();
-            handleLogin(e);
-        }
-
         async function handleLogin(e) {
             console.log('🔐 Login attempt started');
-            console.log('Event type:', e?.type || 'unknown');
-            console.log('Event target:', e?.target?.tagName || 'unknown');
+            e.preventDefault();
             
-            if (e && e.preventDefault) {
-                e.preventDefault();
-            }
+            const username = document.getElementById('username').value.trim().toLowerCase();
+            const password = document.getElementById('password').value.trim();
             
-            // Get input values with error handling
-            const usernameElement = document.getElementById('username');
-            const passwordElement = document.getElementById('password');
-            
-            if (!usernameElement || !passwordElement) {
-                console.error('❌ Login form elements not found!');
-                showError('Login form not properly loaded. Please refresh the page.');
-                return;
-            }
-            
-            const usernameInput = usernameElement.value.trim();
-            const password = passwordElement.value.trim();
-            
-            console.log('Login credentials:', {
-                username: usernameInput,
-                hasPassword: !!password,
-                usernameLength: usernameInput.length,
-                passwordLength: password.length
-            });
-            
-            if (!usernameInput || !password) {
-                console.log('❌ Missing credentials');
-                showError('Please enter both username and password');
-                return;
-            }
+            console.log('Login attempt:', username, password ? 'password provided' : 'no password');
             
             showLoading(true);
             hideMessages();
             
             try {
-                // Check demo users with case-insensitive username matching
-                let foundUser = null;
-                let foundUsername = null;
-                
-                // Search for user with case-insensitive comparison
-                for (const [storedUsername, userData] of Object.entries(demoUsers)) {
-                    if (storedUsername.toLowerCase() === usernameInput.toLowerCase()) {
-                        foundUser = userData;
-                        foundUsername = storedUsername; // Use original stored username
-                        break;
-                    }
-                }
-                
-                if (!foundUser || foundUser.password !== password) {
+                // Check demo users first (for fresh database)
+                const demoUser = demoUsers[username];
+                if (!demoUser || demoUser.password !== password) {
                     throw new Error('Invalid username or password');
                 }
                 
                 currentUser = {
-                    ...foundUser,
-                    username: foundUsername
+                    ...demoUser,
+                    username: username
                 };
                 console.log('✅ Login successful for:', currentUser.name);
                 
@@ -2351,31 +1918,40 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                     console.log('🔥 Firebase is configured, migrating user data in background...');
                     
                     // Don't await this - let it run in background
-                    database.ref(`users/${foundUsername}`).set(foundUser).then(() => {
+                    database.ref(`users/${username}`).set(demoUser).then(() => {
                         console.log('✅ User migrated to Firebase successfully');
                         
                         // Also migrate to employees collection
                         const employeeData = {
-                            id: foundUser.id,
-                            username: foundUsername,
-                            name: foundUser.name,
-                            role: foundUser.role,
+                            id: demoUser.id,
+                            username: username,
+                            name: demoUser.name,
+                            role: demoUser.role,
                             status: 'active',
                             lastActive: new Date().toISOString(),
                             createdAt: new Date().toISOString(),
-                            password: foundUser.password
+                            password: demoUser.password
                         };
-                        return database.ref('employees').push(employeeData);
+                        return (async function() {
+  try {
+    const snap = await database.ref('employees')
+      .orderByChild('username').equalTo(username).once('value');
+    if (!snap.exists()) {
+      await database.ref('employees').child((employeeData.username || `emp_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_')).set(employeeData);
+    }
+  } catch (e) {
+    console.error('Employee write failed (dedup check):', e);
+  }
+})();
                     }).then(() => {
                         console.log('✅ Employee data migrated to Firebase successfully');
                         updateSyncStatus('synced');
                     }).catch(migrationError => {
                         console.error('❌ Firebase migration failed:', migrationError);
-                        updateSyncStatus('local');
+                        updateSyncStatus('error');
                     });
                 } else {
-                    console.log('⚠️ Running in local mode');
-                    updateSyncStatus('local');
+                    throw new Error('Cloud not configured. Please set Firebase config.');
                 }
                 
             } catch (error) {
@@ -2405,7 +1981,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 if (!salesSnapshot.exists() && salesData.length > 0) {
                     console.log('📊 Populating initial sales data...');
                     for (const sale of salesData) {
-                        await database.ref('sales').push(sale);
+                        await database.ref('sales').child(`${sale.employeeId}_${sale.date}_${sale.product}_${Math.floor(Date.now()/5000)}`).set(sale);
                     }
                 }
                 
@@ -2413,7 +1989,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 if (!productsSnapshot.exists() && productsData.length > 0) {
                     console.log('📦 Populating initial products data...');
                     for (const product of productsData) {
-                        await database.ref('products').push(product);
+                        await database.ref('products').child((((product.name || product.productName) || `prod_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_'))).set(product);
                     }
                 }
                 
@@ -2421,7 +1997,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 if (!storesSnapshot.exists() && storesData.length > 0) {
                     console.log('🏪 Populating initial stores data...');
                     for (const store of storesData) {
-                        await database.ref('stores').push(store);
+                        await database.ref('stores').child((((store.name || store.storeName) || `store_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_'))).set(store);
                     }
                 }
                 
@@ -2429,7 +2005,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 if (!pricingSnapshot.exists() && storePricingData.length > 0) {
                     console.log('💰 Populating initial pricing data...');
                     for (const pricing of storePricingData) {
-                        await database.ref('storePricing').push(pricing);
+                        await database.ref('storePricing').child(`${(pricing.storeName||'store').replace(/[.#$\[\]]/g,'_')}__${(pricing.productName||'product').replace(/[.#$\[\]]/g,'_')}`).set(pricing);
                     }
                 }
                 
@@ -2448,11 +2024,6 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             const submitButton = e.target.querySelector('button[type="submit"]');
             const originalText = submitButton.innerHTML;
             
-            // Prevent double submission
-            if (submitButton.disabled) {
-                return;
-            }
-            
             // Show loading state
             submitButton.innerHTML = '💾 Saving...';
             submitButton.disabled = true;
@@ -2469,7 +2040,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                 }
                 
                 const sale = {
-                    id: Date.now() + Math.random(), // Ensure unique ID
+                    id: Date.now(),
                     employeeId: currentUser.id,
                     employeeName: currentUser.name,
                     storeName: storeName,
@@ -2484,25 +2055,23 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
 
                 console.log('💾 Saving sale entry:', sale);
 
-                if (isFirebaseConfigured) {
-                    // Save to Firebase only - let real-time listener handle local update
-                    const firebaseKey = await saveToFirebase('sales', sale);
+                // Save to Firebase first, then update local data
+                const firebaseKey = await saveToFirebase('sales', sale);
+                
+                if (firebaseKey) {
+                    // Firebase will trigger the real-time listener to update salesData
+                    console.log('✅ Sale saved to Firebase successfully with key:', firebaseKey);
                     
-                    if (firebaseKey) {
-                        console.log('✅ Sale saved to Firebase successfully with key:', firebaseKey);
-                        
-                        // Show success feedback
-                        submitButton.innerHTML = '✅ Saved to Cloud!';
-                        submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
-                    } else {
-                        throw new Error('Firebase save failed');
-                    }
+                    // Show success feedback
+                    submitButton.innerHTML = '✅ Saved to Cloud!';
+                    submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+                    
                 } else {
-                    // Fallback to local storage only
+                    // Fallback to local storage
                     sale.syncStatus = 'local';
                     salesData.push(sale);
                     localStorage.setItem('edenSalesData', JSON.stringify(salesData));
-                    updateSyncStatus('local');
+                    updateSyncStatus('error');
                     
                     console.log('⚠️ Sale saved locally (Firebase unavailable)');
                     
@@ -2510,7 +2079,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                     submitButton.innerHTML = '💾 Saved Locally';
                     submitButton.style.background = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
                     
-                    // Update displays immediately for local saves only
+                    // Update displays immediately for local saves
                     updateSalesStats();
                     updateRecentSales();
                 }
@@ -2556,10 +2125,6 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             } else {
                 document.getElementById('salesPage').classList.remove('hidden');
                 document.getElementById('employeeName').textContent = `Welcome, ${currentUser.name}`;
-                
-                // Populate dropdowns with current data
-                populateStoreDropdown();
-                populateProductDropdown();
                 
                 // Load user defaults
                 const userDefaults = JSON.parse(sessionStorage.getItem('edenUserDefaults')) || {};
@@ -2754,8 +2319,8 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
                     break;
                 case 'local':
                     statusHTML = `
-                        <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span class="text-xs text-blue-400 font-medium">LOCAL</span>
+                        <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                        <span class="text-xs text-red-400 font-medium">ERROR</span>
                     `;
                     break;
             }
@@ -2819,9 +2384,12 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             });
         }
 
-        // Data storage for management - completely empty
-        let employeesData = [];
-        let storesData = [];
+        // Data storage for management - keeping only admin user
+        let employeesData = JSON.parse(localStorage.getItem('edenEmployeesData')) || [
+            { id: 'admin001', username: 'admin_user', name: 'Admin User', role: 'admin', status: 'online', lastActive: 'Now' }
+        ];
+        
+        let storesData = JSON.parse(localStorage.getItem('edenStoresData')) || [];
 
         // Management Functions
         function showManagementTab(tab) {
@@ -2909,7 +2477,7 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
 
-        async function deleteEmployee(employeeId) {
+        function deleteEmployee(employeeId) {
             if (employeeId === 'admin001') {
                 showCustomAlert('Cannot delete the main admin account!');
                 return;
@@ -2918,33 +2486,23 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             const employee = employeesData.find(emp => emp.id === employeeId);
             if (!employee) return;
             
-            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, async () => {
-                try {
-                    // Direct Firebase deletion first
-                    if (isFirebaseConfigured && employee.firebaseKey) {
-                        await database.ref(`employees/${employee.firebaseKey}`).remove();
-                    }
-                    
-                    // Delete user from Firebase users collection
-                    if (isFirebaseConfigured && employee.username) {
-                        await database.ref(`users/${employee.username}`).remove();
-                    }
-                    
-                    // Remove from local arrays
-                    employeesData = employeesData.filter(emp => emp.id !== employeeId);
-                    delete demoUsers[employee.username];
-                    
-                    // Update localStorage
-                    localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                    
-                    // Update UI
-                    updateEmployeesList();
-                    showSuccessMessage('Employee deleted successfully!');
-                    
-                } catch (error) {
-                    console.error('Delete employee failed:', error);
-                    showCustomAlert('Failed to delete employee: ' + error.message);
+            showCustomConfirm(`Are you sure you want to delete employee: ${employee.name}?`, () => {
+                // Delete from Firebase first
+                if (employee.firebaseKey) {
+                    deleteFromFirebase('employees', employee.firebaseKey);
                 }
+                
+                // Delete user from Firebase
+                if (demoUsers[employee.username] && demoUsers[employee.username].firebaseKey) {
+                    deleteFromFirebase('users', demoUsers[employee.username].firebaseKey);
+                }
+                
+                employeesData = employeesData.filter(emp => emp.id !== employeeId);
+                // Also remove from demo users
+                delete demoUsers[employee.username];
+                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                updateEmployeesList();
+                showSuccessMessage('Employee deleted successfully!');
             });
         }
 
@@ -3015,32 +2573,20 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
 
-        async function deleteStore(storeName) {
+        function deleteStore(storeName) {
             const store = storesData.find(s => s.name === storeName);
             if (!store) return;
             
-            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, async () => {
-                try {
-                    // Direct Firebase deletion first
-                    if (isFirebaseConfigured && store.firebaseKey) {
-                        await database.ref(`stores/${store.firebaseKey}`).remove();
-                    }
-                    
-                    // Remove from local array
-                    storesData = storesData.filter(s => s.name !== storeName);
-                    
-                    // Update localStorage
-                    localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                    
-                    // Update UI
-                    updateStoresList();
-                    populateStoreDropdown(); // Update sales form dropdown
-                    showSuccessMessage('Store deleted successfully!');
-                    
-                } catch (error) {
-                    console.error('Delete store failed:', error);
-                    showCustomAlert('Failed to delete store: ' + error.message);
+            showCustomConfirm(`Are you sure you want to delete store: ${store.name}?`, () => {
+                // Delete from Firebase first
+                if (store.firebaseKey) {
+                    deleteFromFirebase('stores', store.firebaseKey);
                 }
+                
+                storesData = storesData.filter(s => s.name !== storeName);
+                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                updateStoresList();
+                showSuccessMessage('Store deleted successfully!');
             });
         }
 
@@ -3114,32 +2660,20 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
 
-        async function deleteProduct(productName) {
+        function deleteProduct(productName) {
             const product = productsData.find(p => p.name === productName);
             if (!product) return;
             
-            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, async () => {
-                try {
-                    // Direct Firebase deletion first
-                    if (isFirebaseConfigured && product.firebaseKey) {
-                        await database.ref(`products/${product.firebaseKey}`).remove();
-                    }
-                    
-                    // Remove from local array
-                    productsData = productsData.filter(p => p.name !== productName);
-                    
-                    // Update localStorage
-                    localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                    
-                    // Update UI
-                    updateProductsManagementList();
-                    populateProductDropdown(); // Update sales form dropdown
-                    showSuccessMessage('Product deleted successfully!');
-                    
-                } catch (error) {
-                    console.error('Delete product failed:', error);
-                    showCustomAlert('Failed to delete product: ' + error.message);
+            showCustomConfirm(`Are you sure you want to delete product: ${product.name}?`, () => {
+                // Delete from Firebase first
+                if (product.firebaseKey) {
+                    deleteFromFirebase('products', product.firebaseKey);
                 }
+                
+                productsData = productsData.filter(p => p.name !== productName);
+                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                updateProductsManagementList();
+                showSuccessMessage('Product deleted successfully!');
             });
         }
 
@@ -3175,387 +2709,266 @@ document.getElementById('totalSalesCount').textContent = '999';"></textarea>
         let currentEditItem = null;
         let currentEditProductItem = null;
 
-        // Setup modal form handlers with direct database operations
+        // Setup modal form handlers
         function setupModalHandlers() {
             const modalForm = document.getElementById('modalForm');
             if (modalForm) {
-                modalForm.addEventListener('submit', async function(e) {
+                modalForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const formData = new FormData(e.target);
                     const data = Object.fromEntries(formData);
                     
-                    // Show loading state
-                    const submitButton = e.target.querySelector('button[type="submit"]');
-                    const originalText = submitButton.textContent;
-                    submitButton.textContent = 'Saving...';
-                    submitButton.disabled = true;
-                    
-                    try {
-                        if (currentEditItem) {
-                            // EDIT OPERATIONS - Direct database updates
-                            if (data.username !== undefined) {
-                                // Employee edit - Direct Firebase update
-                                const oldUsername = currentEditItem.username;
-                                // Prevent duplicate username on edit
-                                const unameLowerEdit = (data.username || '').trim().toLowerCase();
-                                const duplicateUserEdit = employeesData.some(e => e.username && e.username.trim().toLowerCase() === unameLowerEdit && e.id !== currentEditItem.id);
-                                if (duplicateUserEdit) {
-                                    showCustomAlert('Username already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-                                // Prevent duplicate username on edit
-                                const unameLowerEdit = (data.username || '').trim().toLowerCase();
-                                const duplicateUserEdit = employeesData.some(e => e.username && e.username.trim().toLowerCase() === unameLowerEdit && e.id !== currentEditItem.id);
-                                if (duplicateUserEdit) {
-                                    showCustomAlert('Username already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-    
-                                    ...currentEditItem,
-                                    username: data.username,
-                                    name: data.fullName,
-                                    role: data.role,
-                                    lastUpdated: new Date().toISOString()
-                                };
+                    if (currentEditItem) {
+                        // Edit existing item
+                        if (data.username !== undefined) {
+                            // Employee edit
+                            const oldUsername = currentEditItem.username;
+                            currentEditItem.username = data.username;
+                            currentEditItem.name = data.fullName;
+                            currentEditItem.role = data.role;
+                            currentEditItem.lastUpdated = new Date().toISOString();
+                            
+                            if (data.password && data.password.trim()) {
+                                // Update password in both employee record and demo users
+                                currentEditItem.password = data.password;
                                 
-                                if (data.password && data.password.trim()) {
-                                    updatedEmployee.password = data.password;
-                                }
-                                
-                                // Update in Firebase first
-                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
-                                    await database.ref(`employees/${currentEditItem.firebaseKey}`).set(updatedEmployee);
-                                }
-                                
-                                // Update local array
-                                const index = employeesData.findIndex(emp => emp.id === currentEditItem.id);
-                                if (index !== -1) {
-                                    employeesData[index] = updatedEmployee;
-                                }
-                                
-                                // Update users collection
-                                const updatedUser = {
-                                    password: updatedEmployee.password,
-                                    role: updatedEmployee.role,
-                                    name: updatedEmployee.name,
-                                    id: updatedEmployee.id,
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                if (isFirebaseConfigured) {
-                                    // Handle username change
+                                if (demoUsers[oldUsername]) {
+                                    // If username changed, move the user record
                                     if (oldUsername !== data.username) {
-                                        await database.ref(`users/${oldUsername}`).remove();
-                                        await database.ref(`users/${data.username}`).set(updatedUser);
+                                        demoUsers[data.username] = {
+                                            ...demoUsers[oldUsername],
+                                            password: data.password
+                                        };
                                         delete demoUsers[oldUsername];
+                                        
+                                        // Remove old user from Firebase and add new one
+                                        database.ref(`users/${oldUsername}`).remove();
+                                        database.ref(`users/${data.username}`).set(demoUsers[data.username]);
                                     } else {
-                                        await database.ref(`users/${data.username}`).set(updatedUser);
+                                        demoUsers[data.username].password = data.password;
+                                        // Update user in Firebase
+                                        database.ref(`users/${data.username}`).update({ password: data.password });
                                     }
                                 }
-                                
-                                demoUsers[data.username] = updatedUser;
-                                localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
-                                
-                            } else if (data.storeName !== undefined) {
-                                // Store edit - Direct Firebase update
-                                // Prevent duplicate store name on edit
-                                const storeLowerEdit = (data.storeName || '').trim().toLowerCase();
-                                const duplicateStoreEdit = storesData.some(s => s.name && s.name.trim().toLowerCase() === storeLowerEdit && s.id !== currentEditItem.id);
-                                if (duplicateStoreEdit) {
-                                    showCustomAlert('Store name already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-    
-                                    ...currentEditItem,
-                                    name: data.storeName,
-                                    location: data.location,
-                                    description: data.description || '',
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Update in Firebase first
-                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
-                                    await database.ref(`stores/${currentEditItem.firebaseKey}`).set(updatedStore);
-                                }
-                                
-                                // Update local array
-                                const index = storesData.findIndex(store => store.id === currentEditItem.id);
-                                if (index !== -1) {
-                                    storesData[index] = updatedStore;
-                                }
-                                
-                                localStorage.setItem('edenStoresData', JSON.stringify(storesData));
-                                
-                            } else if (data.productName !== undefined && data.customPrice !== undefined) {
-                                // Pricing edit - Direct Firebase update
-                                const updatedPricing = {
-                                    ...currentEditItem,
-                                    productName: data.productName,
-                                    storeName: data.storeName,
-                                    customPrice: parseFloat(data.customPrice),
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Update in Firebase first
-                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
-                                    await database.ref(`storePricing/${currentEditItem.firebaseKey}`).set(updatedPricing);
-                                }
-                                
-                                // Update local array
-                                const index = storePricingData.findIndex(pricing => pricing.id === currentEditItem.id);
-                                if (index !== -1) {
-                                    storePricingData[index] = updatedPricing;
-                                }
-                                
-                                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                                refreshCurrentSalesFormPrice();
-                                
-                            } else if (data.productName !== undefined) {
-                                // Product edit - Direct Firebase update
-                                
-                                // Prevent duplicate product name on edit
-                                const prodLowerEdit = (data.productName || '').trim().toLowerCase();
-                                const duplicateProdEdit = productsData.some(p => p.name && p.name.trim().toLowerCase() === prodLowerEdit && p.id !== currentEditItem.id);
-                                if (duplicateProdEdit) {
-                                    showCustomAlert('A product with this name already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-    const updatedProduct = {
-                                    ...currentEditItem,
-                                    name: data.productName,
-                                    price: parseFloat(data.price),
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Update in Firebase first
-                                if (isFirebaseConfigured && currentEditItem.firebaseKey) {
-                                    await database.ref(`products/${currentEditItem.firebaseKey}`).set(updatedProduct);
-                                }
-                                
-                                // Update local array
-                                const index = productsData.findIndex(product => product.id === currentEditItem.id);
-                                if (index !== -1) {
-                                    productsData[index] = updatedProduct;
-                                }
-                                
-                                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                                refreshCurrentSalesFormPrice();
-                            }
-                            
-                            showSuccessMessage('Updated successfully!');
-                            
-                        } else {
-                            // ADD OPERATIONS - Direct database inserts
-                            if (data.username !== undefined) {
-                                // Add employee - Direct Firebase insert
-                                const newEmployee = {
-                                // Prevent duplicate usernames (case-insensitive) across employees and users
-                                const unameLower = (data.username || '').trim().toLowerCase();
-                                const existsInEmployees = employeesData.some(e => e.username && e.username.trim().toLowerCase() === unameLower);
-                                const existsInUsers = Object.keys(demoUsers || {}).some(u => (u || '').toLowerCase() === unameLower);
-                                if (existsInEmployees || existsInUsers) {
-                                    showCustomAlert('Username already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-    
-                                    id: 'emp' + Date.now(),
-                                    username: data.username,
-                                    name: data.fullName,
-                                    role: data.role,
-                                    status: 'active',
-                                    lastActive: 'Never',
-                                    password: data.password,
-                                    createdAt: new Date().toISOString(),
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Insert to Firebase first
-                                if (isFirebaseConfigured) {
-                                    const employeeRef = await database.ref('employees').push(newEmployee);
-                                    newEmployee.firebaseKey = employeeRef.key;
+                            } else if (oldUsername !== data.username) {
+                                // Username changed but no new password - move user record
+                                if (demoUsers[oldUsername]) {
+                                    demoUsers[data.username] = demoUsers[oldUsername];
+                                    delete demoUsers[oldUsername];
                                     
-                                    // Also add to users collection
-                                    const newUser = {
-                                        password: data.password,
-                                        role: data.role,
-                                        name: data.fullName,
-                                        id: newEmployee.id,
-                                        createdAt: new Date().toISOString(),
-                                        lastUpdated: new Date().toISOString()
-                                    };
-                                    await database.ref(`users/${data.username}`).set(newUser);
-                                    demoUsers[data.username] = newUser;
+                                    // Move user in Firebase
+                                    database.ref(`users/${oldUsername}`).remove();
+                                    database.ref(`users/${data.username}`).set(demoUsers[data.username]);
                                 }
-                                
-                                // Add to local array
-                                // (sync via Firebase listener; no local push)
-} else if (data.storeName !== undefined) {
-                                // Add store - Direct Firebase insert
-                                const newStore = {
-                                // Prevent duplicate stores by name (case-insensitive)
-                                const storeLower = (data.storeName || '').trim().toLowerCase();
-                                const storeExists = storesData.some(s => s.name && s.name.trim().toLowerCase() === storeLower);
-                                if (storeExists) {
-                                    showCustomAlert('Store name already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-    
-                                    id: Date.now(),
-                                    name: data.storeName,
-                                    location: data.location,
-                                    description: data.description || '',
-                                    status: 'active',
-                                    createdAt: new Date().toISOString(),
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Insert to Firebase first
-                                if (isFirebaseConfigured) {
-                                    const storeRef = await database.ref('stores').push(newStore);
-                                    newStore.firebaseKey = storeRef.key;
-                                }
-                                
-                                // Add to local array
-                                // (sync via Firebase listener; no local push)
-} else if (data.productName !== undefined && data.customPrice !== undefined) {
-                                // Add pricing - Direct Firebase insert
-                                const newPricing = {
-                                    id: Date.now(),
-                                    productName: data.productName,
-                                    storeName: data.storeName,
-                                    customPrice: parseFloat(data.customPrice),
-                                    createdAt: new Date().toISOString(),
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Insert to Firebase first
-                                if (isFirebaseConfigured) {
-                                    const pricingRef = await database.ref('storePricing').push(newPricing);
-                                    newPricing.firebaseKey = pricingRef.key;
-                                }
-                                
-                                // Add to local array
-                                storePricingData.push(newPricing);
-                                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                                refreshCurrentSalesFormPrice();
-                                
-                            } else if (data.productName !== undefined) {
-                                // Add product - Direct Firebase insert
-                                const newProduct = {
-                                // Prevent duplicate products by name (case-insensitive)
-                                const pLower = (data.productName || '').trim().toLowerCase();
-                                const prodExists = productsData.some(p => p.name && p.name.trim().toLowerCase() === pLower);
-                                if (prodExists) {
-                                    showCustomAlert('A product with this name already exists.');
-                                    submitButton.textContent = originalText;
-                                    submitButton.disabled = false;
-                                    return;
-                                }
-    
-                                    id: Date.now(),
-                                    name: data.productName,
-                                    price: parseFloat(data.price),
-                                    createdAt: new Date().toISOString(),
-                                    lastUpdated: new Date().toISOString()
-                                };
-                                
-                                // Insert to Firebase first
-                                if (isFirebaseConfigured) {
-                                    const productRef = await database.ref('products').push(newProduct);
-                                    newProduct.firebaseKey = productRef.key;
-                                }
-                                
-                                // Add to local array
-                            // (sync via Firebase listener; no local push)
-refreshCurrentSalesFormPrice();
                             }
                             
-                            showSuccessMessage('Added successfully!');
+                            // Update employee in Firebase
+                            updateInFirebase('employees', currentEditItem.firebaseKey, currentEditItem);
+                            
+                            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                            updateEmployeesList();
+                            showSuccessMessage('Employee updated successfully!');
+                        } else if (data.storeName !== undefined) {
+                            // Store edit
+                            currentEditItem.name = data.storeName;
+                            currentEditItem.location = data.location;
+                            currentEditItem.description = data.description || '';
+                            
+                            // Update in Firebase
+                            updateInFirebase('stores', currentEditItem.firebaseKey, currentEditItem);
+                            
+                            localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                            updateStoresList();
+                            showSuccessMessage('Store updated successfully!');
+                        } else if (data.productName !== undefined && data.customPrice !== undefined) {
+                            // Pricing edit
+                            currentEditItem.productName = data.productName;
+                            currentEditItem.storeName = data.storeName;
+                            currentEditItem.customPrice = parseFloat(data.customPrice);
+                            
+                            // Update in Firebase
+                            updateInFirebase('storePricing', currentEditItem.firebaseKey, currentEditItem);
+                            
+                            localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                            updatePricingList();
+                            // Refresh unit price if currently viewing sales form with same product/store
+                            setTimeout(() => {
+                                refreshCurrentSalesFormPrice();
+                            }, 100);
+                            showSuccessMessage('Custom pricing updated successfully!');
+                        } else if (data.productName !== undefined) {
+                            // Product edit
+                            currentEditItem.name = data.productName;
+                            currentEditItem.price = parseFloat(data.price);
+                            
+                            // Update in Firebase
+                            updateInFirebase('products', currentEditItem.firebaseKey, currentEditItem);
+                            
+                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                            updateProductsManagementList();
+                            // Refresh unit price if currently viewing sales form with same product
+                            setTimeout(() => {
+                                refreshCurrentSalesFormPrice();
+                            }, 100);
+                            showSuccessMessage('Product updated successfully!');
                         }
-                        
-                        // Update UI components
-                        updateAllUIComponents();
-                        
-                    } catch (error) {
-                        console.error('Database operation failed:', error);
-                        showCustomAlert('Operation failed: ' + error.message);
-                    } finally {
-                        // Reset button state
-                        submitButton.textContent = originalText;
-                        submitButton.disabled = false;
-                        closeModal();
+                    } else {
+                        // Add new item
+                        if (data.username !== undefined) {
+                            // Add employee
+                            const newEmployee = {
+                                id: 'emp' + Date.now(),
+                                username: data.username,
+                                name: data.fullName,
+                                role: data.role,
+                                status: 'active',
+                                lastActive: 'Never',
+                                password: data.password, // Store password in employee record too
+                                createdAt: new Date().toISOString()
+                            };
+                            
+                            // Add to demo users for login first
+                            const newUser = {
+                                password: data.password,
+                                role: data.role,
+                                name: data.fullName,
+                                id: newEmployee.id,
+                                createdAt: new Date().toISOString()
+                            };
+                            demoUsers[data.username] = newUser;
+                            
+                            // Save to Firebase - both collections
+                            Promise.all([
+                                saveToFirebase('employees', newEmployee),
+                                database.ref(`users/${data.username}`).set(newUser)
+                            ]).then(([employeeKey, userResult]) => {
+                                if (employeeKey) {
+                                    newEmployee.firebaseKey = employeeKey;
+                                }
+                                console.log('✅ Employee and user saved to Firebase:', data.username);
+                            }).catch(error => {
+                                console.error('❌ Error saving employee to Firebase:', error);
+                            });
+                            
+                            employeesData.push(newEmployee);
+                            localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+                            updateEmployeesList();
+                            showSuccessMessage('Employee added successfully!');
+                        } else if (data.storeName !== undefined) {
+                            // Add store
+                            const newStore = {
+                                id: Date.now(),
+                                name: data.storeName,
+                                location: data.location,
+                                description: data.description || '',
+                                status: 'active'
+                            };
+                            
+                            // Save to Firebase first
+                            saveToFirebase('stores', newStore).then(firebaseKey => {
+                                if (firebaseKey) {
+                                    newStore.firebaseKey = firebaseKey;
+                                }
+                            });
+                            
+                            storesData.push(newStore);
+                            localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+                            updateStoresList();
+                            showSuccessMessage('Store added successfully!');
+                        } else if (data.productName !== undefined && data.customPrice !== undefined) {
+                            // Add pricing
+                            const newPricing = {
+                                id: Date.now(),
+                                productName: data.productName,
+                                storeName: data.storeName,
+                                customPrice: parseFloat(data.customPrice)
+                            };
+                            
+                            // Save to Firebase first
+                            saveToFirebase('storePricing', newPricing).then(firebaseKey => {
+                                if (firebaseKey) {
+                                    newPricing.firebaseKey = firebaseKey;
+                                }
+                            });
+                            
+                            storePricingData.push(newPricing);
+                            localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                            updatePricingList();
+                            // Refresh unit price if currently viewing sales form with same product/store
+                            setTimeout(() => {
+                                refreshCurrentSalesFormPrice();
+                            }, 100);
+                            showSuccessMessage('Custom pricing added successfully!');
+                        } else if (data.productName !== undefined) {
+                            // Add product
+                            const newProduct = {
+                                id: Date.now(),
+                                name: data.productName,
+                                price: parseFloat(data.price)
+                            };
+                            
+                            // Save to Firebase first
+                            saveToFirebase('products', newProduct).then(firebaseKey => {
+                                if (firebaseKey) {
+                                    newProduct.firebaseKey = firebaseKey;
+                                }
+                            });
+                            
+                            productsData.push(newProduct);
+                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                            updateProductsManagementList();
+                            // Refresh unit price if currently viewing sales form
+                            setTimeout(() => {
+                                refreshCurrentSalesFormPrice();
+                            }, 100);
+                            showSuccessMessage('Product added successfully!');
+                        }
                     }
+                    
+                    closeModal();
                 });
             }
             
             const productModalForm = document.getElementById('productModalForm');
             if (productModalForm) {
-                productModalForm.addEventListener('submit', async function(e) {
+                productModalForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const formData = new FormData(e.target);
                     const data = Object.fromEntries(formData);
                     
-                    try {
-                        if (currentEditProductItem) {
-                            // Edit existing product
-                            currentEditProductItem.name = data.productName;
-                            currentEditProductItem.price = parseFloat(data.price);
-                            currentEditProductItem.lastUpdated = new Date().toISOString();
-                            
-                            // Update in Firebase
-                            await updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
-                            
-                            localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                            
-                            // Update all relevant UI components
-                            updateProductsList();
-                            updateProductCatalog();
-                            updateProductStats();
-                            populateProductDropdown();
-                            
-                            showSuccessMessage('Product updated successfully!');
-                        } else {
-                            // Add new product
-                            const newProduct = {
-                                id: Date.now(),
-                                name: data.productName,
-                                price: parseFloat(data.price),
-                                createdAt: new Date().toISOString(),
-                                lastUpdated: new Date().toISOString()
-                            };
-                            
-                            // Save to Firebase first
-                            const firebaseKey = await saveToFirebase('products', newProduct);
+                    if (currentEditProductItem) {
+                        // Edit existing product
+                        currentEditProductItem.name = data.productName;
+                        currentEditProductItem.price = parseFloat(data.price);
+                        
+                        // Update in Firebase
+                        updateInFirebase('products', currentEditProductItem.firebaseKey, currentEditProductItem);
+                        
+                        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                        updateProductsList();
+                        showSuccessMessage('Product updated successfully!');
+                    } else {
+                        // Add new product
+                        const newProduct = {
+                            id: Date.now(),
+                            name: data.productName,
+                            price: parseFloat(data.price)
+                        };
+                        
+                        // Save to Firebase first
+                        saveToFirebase('products', newProduct).then(firebaseKey => {
                             if (firebaseKey) {
                                 newProduct.firebaseKey = firebaseKey;
                             }
-                            // (sync via Firebase listener; no local push)
-// Update all relevant UI components
-                            updateProductsList();
-                            updateProductCatalog();
-                            updateProductStats();
-                            populateProductDropdown();
-                            
-                            showSuccessMessage('Product added successfully!');
-                        }
+                        });
                         
-                        closeProductModal();
-                    } catch (error) {
-                        console.error('Error saving product:', error);
-                        showCustomAlert('Error saving product: ' + error.message);
+                        productsData.push(newProduct);
+                        localStorage.setItem('edenProductsData', JSON.stringify(productsData));
+                        updateProductsList();
+                        showSuccessMessage('Product added successfully!');
                     }
+                    
+                    closeProductModal();
                 });
             }
         }
@@ -3618,8 +3031,6 @@ refreshCurrentSalesFormPrice();
         function goBackToDashboard() {
             // Hide all secondary pages
             document.getElementById('productsPage').classList.add('hidden');
-            document.getElementById('productsManagementPage').classList.add('hidden');
-            document.getElementById('productManagementPage').classList.add('hidden');
             document.getElementById('salesReportPage').classList.add('hidden');
             
             // Show appropriate dashboard
@@ -3628,256 +3039,6 @@ refreshCurrentSalesFormPrice();
             } else {
                 document.getElementById('salesPage').classList.remove('hidden');
             }
-        }
-
-        // Product Management Functions
-        function showProductManagementPage() {
-            // Hide all other pages
-            document.getElementById('adminPage').classList.add('hidden');
-            document.getElementById('productsPage').classList.add('hidden');
-            document.getElementById('salesReportPage').classList.add('hidden');
-            
-            // Show product management page
-            document.getElementById('productManagementPage').classList.remove('hidden');
-            
-            // Update the page
-            updateProductManagementPage();
-        }
-
-        function updateProductManagementPage() {
-            // Update sync status
-            updateSyncStatus(isFirebaseConfigured ? 'synced' : 'local');
-            
-            // Update date/time
-            updateDateTime();
-            
-            // Update product stats
-            updateProductStats();
-            
-            // Update product catalog
-            updateProductCatalog();
-            
-            // Update categories
-            updateCategoriesList();
-            
-            // Update analytics
-            updateProductAnalytics();
-        }
-
-        function updateProductStats() {
-            const totalProducts = productsData.length;
-            const avgPrice = totalProducts > 0 ? productsData.reduce((sum, p) => sum + p.price, 0) / totalProducts : 0;
-            const highestPrice = totalProducts > 0 ? Math.max(...productsData.map(p => p.price)) : 0;
-            const categories = [...new Set(productsData.map(p => p.category).filter(c => c))];
-            
-            document.getElementById('totalProductsCount').textContent = totalProducts;
-            document.getElementById('avgProductPrice').textContent = `${avgPrice.toFixed(2)} DHS`;
-            document.getElementById('highestPrice').textContent = `${highestPrice.toFixed(2)} DHS`;
-            document.getElementById('totalCategories').textContent = categories.length;
-        }
-
-
-
-        function updateProductCatalog() {
-            const listDiv = document.getElementById('productCatalogList');
-            const countSpan = document.getElementById('productCount');
-            
-            if (countSpan) {
-                countSpan.textContent = productsData.length;
-            }
-            
-            if (productsData.length === 0) {
-                listDiv.innerHTML = '<div class="text-white/50 text-center py-12 font-medium">No products in catalog. Add your first product to get started!</div>';
-                return;
-            }
-
-            // Sort products by name
-            const sortedProducts = [...productsData].sort((a, b) => a.name.localeCompare(b.name));
-
-            listDiv.innerHTML = sortedProducts.map(product => `
-                <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-white/10">
-                            <span class="text-xl">📦</span>
-                        </div>
-                        <div>
-                            <div class="font-bold text-white text-lg">${product.name}</div>
-                            <div class="text-sm text-white/60">ID: ${product.id}</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-6">
-                        <div class="text-right">
-                            <div class="text-2xl font-black text-premium">${product.price.toFixed(2)} DHS</div>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <button onclick="editProductInCatalog(${product.id})" class="text-blue-400 hover:text-blue-300 font-medium transition-colors px-3 py-1 rounded-lg hover:bg-blue-500/10">Edit</button>
-                            <button onclick="deleteProductFromCatalog(${product.id})" class="text-red-400 hover:text-red-300 font-medium transition-colors px-3 py-1 rounded-lg hover:bg-red-500/10">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-
-
-        function editProductInCatalog(productId) {
-            const product = productsData.find(p => p.id === productId);
-            if (!product) return;
-            
-            currentEditProductItem = product;
-            document.getElementById('productModalTitle').textContent = 'Edit Product';
-            
-            // Fill form with existing data
-            const form = document.getElementById('productModalForm');
-            form.productName.value = product.name;
-            form.price.value = product.price;
-            
-            document.getElementById('productModal').classList.remove('hidden');
-        }
-
-        function deleteProductFromCatalog(productId) {
-            const product = productsData.find(p => p.id === productId);
-            if (!product) return;
-            
-            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, async () => {
-                try {
-                    // Delete from Firebase first
-                    if (product.firebaseKey) {
-                        await deleteFromFirebase('products', product.firebaseKey);
-                    }
-                    
-                    // Remove from local array
-                    productsData = productsData.filter(p => p.id !== productId);
-                    localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                    
-                    // Update UI
-                    updateProductManagementPage();
-                    populateProductDropdown(); // Update sales form dropdown
-                    
-                    showSuccessMessage('Product deleted successfully!');
-                } catch (error) {
-                    console.error('Error deleting product:', error);
-                    showCustomAlert('Error deleting product: ' + error.message);
-                }
-            });
-        }
-
-        function showAddProductModal() {
-            currentEditProductItem = null;
-            document.getElementById('productModalTitle').textContent = 'Add Product';
-            
-            // Clear form
-            const form = document.getElementById('productModalForm');
-            form.productName.value = '';
-            form.price.value = '';
-            
-            document.getElementById('productModal').classList.remove('hidden');
-        }
-
-        function closeProductModal() {
-            document.getElementById('productModal').classList.add('hidden');
-            currentEditProductItem = null;
-        }
-
-        function closeProductManagementModal() {
-            document.getElementById('productModal').classList.add('hidden');
-            currentEditProductItem = null;
-        }
-
-
-        
-        function showProductsManagementPage() {
-            // Hide all other pages
-            document.getElementById('adminPage').classList.add('hidden');
-            document.getElementById('productsPage').classList.add('hidden');
-            document.getElementById('salesReportPage').classList.add('hidden');
-            
-            // Show products management page
-            document.getElementById('productsManagementPage').classList.remove('hidden');
-            
-            // Update the page
-            updateProductsManagementPage();
-        }
-        
-        function updateProductsManagementPage() {
-            // Update sync status
-            updateSyncStatus(isFirebaseConfigured ? 'synced' : 'local');
-            
-            // Update date/time
-            updateDateTime();
-            
-            // Update products count
-            document.getElementById('totalProductsCount').textContent = productsData.length;
-            
-            // Update existing products list
-            updateExistingProductsList();
-        }
-        
-        function updateExistingProductsList() {
-            const listDiv = document.getElementById('existingProductsList');
-            
-            if (productsData.length === 0) {
-                listDiv.innerHTML = '<div class="text-white/50 text-center py-8 font-medium">No products created yet. Add your first product above!</div>';
-                return;
-            }
-
-            listDiv.innerHTML = productsData.map(product => `
-                <div class="flex items-center justify-between p-6 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                    <div class="flex-1">
-                        <div class="font-bold text-white text-lg">${product.name}</div>
-                        <div class="text-sm text-white/60">Price: ${product.price.toFixed(2)} DHS</div>
-                        ${product.description ? `<div class="text-xs text-white/40 mt-1">${product.description}</div>` : ''}
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="text-right">
-                            <div class="text-2xl font-black text-premium">${product.price.toFixed(2)} DHS</div>
-                            <div class="text-xs text-white/40">ID: ${product.id}</div>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <span class="px-4 py-2 bg-green-500/20 text-green-300 rounded-full text-sm font-bold border border-green-500/30">ACTIVE</span>
-                            <button onclick="editExistingProduct(${product.id})" class="text-blue-400 hover:text-blue-300 font-medium">Edit</button>
-                            <button onclick="deleteExistingProduct(${product.id})" class="text-red-400 hover:text-red-300 font-medium">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function editExistingProduct(productId) {
-            const product = productsData.find(p => p.id === productId);
-            if (!product) return;
-            
-            // Fill the form with existing data
-            document.getElementById('newProductName').value = product.name;
-            document.getElementById('newProductPrice').value = product.price;
-            document.getElementById('newProductDescription').value = product.description || '';
-            
-            // Change form title and button
-            document.querySelector('#newProductForm h2').textContent = '✏️ EDIT PRODUCT';
-            document.querySelector('#newProductForm button[type="submit"]').innerHTML = '💾 UPDATE PRODUCT';
-            
-            // Store the product being edited
-            window.editingProductId = productId;
-            
-            // Scroll to form
-            document.querySelector('#newProductForm').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function deleteExistingProduct(productId) {
-            const product = productsData.find(p => p.id === productId);
-            if (!product) return;
-            
-            showCustomConfirm(`Are you sure you want to delete "${product.name}"?`, () => {
-                // Delete from Firebase first
-                if (product.firebaseKey) {
-                    deleteFromFirebase('products', product.firebaseKey);
-                }
-                
-                productsData = productsData.filter(p => p.id !== productId);
-                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                updateProductsManagementPage();
-                showSuccessMessage('Product deleted successfully!');
-            });
         }
         
         function updateProductsList() {
@@ -3990,32 +3151,24 @@ refreshCurrentSalesFormPrice();
             document.getElementById('modalOverlay').classList.remove('hidden');
         }
         
-        async function deletePricing(pricingId) {
+        function deletePricing(pricingId) {
             const pricing = storePricingData.find(p => p.id === pricingId);
             if (!pricing) return;
             
-            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, async () => {
-                try {
-                    // Direct Firebase deletion first
-                    if (isFirebaseConfigured && pricing.firebaseKey) {
-                        await database.ref(`storePricing/${pricing.firebaseKey}`).remove();
-                    }
-                    
-                    // Remove from local array
-                    storePricingData = storePricingData.filter(p => p.id !== pricingId);
-                    
-                    // Update localStorage
-                    localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
-                    
-                    // Update UI
-                    updatePricingList();
-                    refreshCurrentSalesFormPrice(); // Update sales form pricing
-                    showSuccessMessage('Custom pricing removed successfully!');
-                    
-                } catch (error) {
-                    console.error('Delete pricing failed:', error);
-                    showCustomAlert('Failed to delete pricing: ' + error.message);
+            showCustomConfirm(`Remove custom pricing for ${pricing.productName} at ${pricing.storeName}?`, () => {
+                // Delete from Firebase first
+                if (pricing.firebaseKey) {
+                    deleteFromFirebase('storePricing', pricing.firebaseKey);
                 }
+                
+                storePricingData = storePricingData.filter(p => p.id !== pricingId);
+                localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+                updatePricingList();
+                // Refresh unit price if currently viewing sales form with same product/store
+                setTimeout(() => {
+                    refreshCurrentSalesFormPrice();
+                }, 100);
+                showSuccessMessage('Custom pricing removed successfully!');
             });
         }
         
@@ -4740,6 +3893,7 @@ refreshCurrentSalesFormPrice();
                 // Refresh data from Firebase to ensure UI is up-to-date
                 updateProgress('Refreshing data...');
                 await loadFirebaseData();
+                        populateSelectsRealtime();
                 
                 // Update UI components
                 if (currentUser) {
@@ -4822,743 +3976,121 @@ refreshCurrentSalesFormPrice();
             }
         }
 
-        // Code Injection Functions
-        function showCodeInjectionModal() {
-            document.getElementById('codeInjectionModal').classList.remove('hidden');
-            // Focus on the code input
-            setTimeout(() => {
-                document.getElementById('codeInjectionInput').focus();
-            }, 100);
-        }
         
-        function closeCodeInjectionModal() {
-            document.getElementById('codeInjectionModal').classList.add('hidden');
-        }
-        
-        function clearCodeInjection() {
-            document.getElementById('codeInjectionInput').value = '';
-            document.getElementById('codeExecutionLog').innerHTML = '<div class="text-white/50">Ready to execute code...</div>';
-        }
-        
-        function loadCodeTemplate(templateType) {
-            const templates = {
-                console: `// Console Debug Template
-console.log('=== EDEN SYSTEM DEBUG ===');
-console.log('Current User:', currentUser);
-console.log('Sales Data Count:', salesData.length);
-console.log('Products Count:', productsData.length);
-console.log('Stores Count:', storesData.length);
-console.log('Firebase Status:', isFirebaseConfigured ? 'Connected' : 'Offline');
-console.log('Last 5 Sales:', salesData.slice(-5));
-console.log('=== END DEBUG ===');`,
-
-                ui: `// UI Update Template
-// Update dashboard stats
-document.getElementById('totalSalesCount').textContent = salesData.length;
-document.getElementById('totalRevenue').textContent = salesData.reduce((sum, sale) => sum + sale.amount, 0).toFixed(2) + ' DHS';
-
-// Show success message
-showSuccessMessage('Dashboard updated successfully!');
-
-// Update sync status
-updateSyncStatus('synced');
-
-// Refresh current page data
-refreshCurrentPageData();`,
-
-                data: `// Data Analysis Template
-const today = new Date().toISOString().split('T')[0];
-const todaySales = salesData.filter(sale => sale.date === today);
-const totalRevenue = salesData.reduce((sum, sale) => sum + sale.amount, 0);
-const avgSale = salesData.length > 0 ? totalRevenue / salesData.length : 0;
-
-// Product performance
-const productStats = {};
-salesData.forEach(sale => {
-    if (!productStats[sale.product]) {
-        productStats[sale.product] = { count: 0, revenue: 0 };
+async function mirrorSyncAllData() {
+    if (!isFirebaseConfigured) {
+        showCustomAlert('Firebase is not configured. Cannot sync data to cloud.');
+        return;
     }
-    productStats[sale.product].count++;
-    productStats[sale.product].revenue += sale.amount;
-});
+    updateSyncStatus('syncing');
+    const notify = document.createElement('div');
+    notify.id = 'mirrorSyncNote';
+    notify.className = 'fixed top-6 right-6 bg-blue-500/20 border border-blue-500/30 text-blue-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+    notify.innerHTML = '<div class="font-bold">Mirror Sync</div><div class="text-xs opacity-80">Fetching from DB...</div>';
+    document.body.appendChild(notify);
+    const setMsg = (m)=>{ const d = notify.querySelector('div:nth-child(2)'); if(d) d.textContent = m; };
 
-console.log('📊 Sales Analysis:');
-console.log('Today Sales:', todaySales.length);
-console.log('Total Revenue:', totalRevenue.toFixed(2), 'DHS');
-console.log('Average Sale:', avgSale.toFixed(2), 'DHS');
-console.log('Product Performance:', productStats);
-
-showSuccessMessage('Data analysis completed! Check console for details.');`,
-
-                firebase: `// Firebase Test Template
-console.log('🔥 Firebase Connection Test');
-console.log('Firebase Configured:', isFirebaseConfigured);
-console.log('Database URL:', firebaseConfig?.databaseURL);
-
-if (isFirebaseConfigured) {
-    // Test Firebase connection
-    database.ref('.info/connected').once('value').then((snapshot) => {
-        const connected = snapshot.val();
-        console.log('Firebase Connected:', connected);
-        showSuccessMessage('Firebase connection: ' + (connected ? 'ONLINE' : 'OFFLINE'));
-    }).catch((error) => {
-        console.error('Firebase test failed:', error);
-        showSuccessMessage('Firebase test failed: ' + error.message);
-    });
-    
-    // Test data read
-    database.ref('sales').limitToLast(1).once('value').then((snapshot) => {
-        console.log('Firebase data accessible:', snapshot.exists());
-        console.log('Last sale:', snapshot.val());
-    });
-} else {
-    showSuccessMessage('Firebase not configured - running in local mode');
-}`,
-
-                products: `// 📦 PRODUCT INJECTION CODE - Bulk Add Sample Products
-console.log('📦 Starting bulk product addition...');
-
-// Define sample products to add (you can customize these)
-const newProducts = [
-    {
-        id: Date.now() + 1,
-        name: 'iPhone 15 Pro',
-        price: 4999.00,
-        description: 'Latest iPhone with Pro features and titanium design',
-        category: 'Electronics',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 2,
-        name: 'Samsung Galaxy S24',
-        price: 3999.00,
-        description: 'Premium Android smartphone with AI features',
-        category: 'Electronics',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 3,
-        name: 'MacBook Air M3',
-        price: 8999.00,
-        description: 'Apple laptop with M3 chip - 13 inch',
-        category: 'Computers',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 4,
-        name: 'iPad Pro 12.9',
-        price: 3499.00,
-        description: 'Professional tablet for creative work',
-        category: 'Tablets',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 5,
-        name: 'AirPods Pro 2',
-        price: 899.00,
-        description: 'Wireless earbuds with active noise cancellation',
-        category: 'Audio',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 6,
-        name: 'Dell XPS 13',
-        price: 7499.00,
-        description: 'Premium Windows laptop with InfinityEdge display',
-        category: 'Computers',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 7,
-        name: 'Sony WH-1000XM5',
-        price: 1299.00,
-        description: 'Industry-leading noise canceling headphones',
-        category: 'Audio',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    },
-    {
-        id: Date.now() + 8,
-        name: 'Apple Watch Series 9',
-        price: 1599.00,
-        description: 'Advanced smartwatch with health monitoring',
-        category: 'Wearables',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-    }
-];
-
-// Function to check if product already exists (case-insensitive)
-const productExists = (productName) => {
-    return productsData.some(product => 
-        product.name.toLowerCase().trim() === productName.toLowerCase().trim()
-    );
-};
-
-// Function to validate product data
-const validateProduct = (product) => {
-    if (!product.name || product.name.trim().length === 0) {
-        console.error('❌ Product missing name:', product);
-        return false;
-    }
-    if (!product.price || product.price <= 0) {
-        console.error('❌ Product has invalid price:', product);
-        return false;
-    }
-    return true;
-};
-
-// Add products with validation and duplicate checking
-let addedCount = 0;
-let skippedCount = 0;
-let errorCount = 0;
-
-console.log('🔍 Checking for existing products and validating new ones...');
-
-for (const product of newProducts) {
-    // Validate product data
-    if (!validateProduct(product)) {
-        errorCount++;
-        console.error('❌ Invalid product data, skipped:', product.name || 'Unknown');
-        continue;
-    }
-    
-    // Check for duplicates
-    if (!productExists(product.name)) {
-        try {
-            // Add to local array
-            productsData.push(product);
-            
-            // Save to Firebase if configured (async - don't wait)
-            if (isFirebaseConfigured) {
-                saveToFirebase('products', product).then(firebaseKey => {
-                    if (firebaseKey) {
-                        product.firebaseKey = firebaseKey;
-                        console.log('✅ Product synced to Firebase:', product.name);
-                    }
-                }).catch(error => {
-                    console.error('❌ Firebase sync failed for:', product.name, error.message);
-                });
-            }
-            
-            addedCount++;
-            console.log(\`✅ Added: "\${product.name}" - \${product.price.toFixed(2)} DHS (\${product.category || 'No Category'})\`);
-            
-        } catch (error) {
-            errorCount++;
-            console.error('❌ Error adding product:', product.name, error.message);
-        }
-    } else {
-        skippedCount++;
-        console.log(\`⚠️ Already exists, skipped: "\${product.name}"\`);
-    }
-}
-
-// Update local storage with new products
-if (addedCount > 0) {
     try {
+        // 1) Pull all remote data -> replace local
+        const [salesSnap, productsSnap, storesSnap, employeesSnap, pricingSnap, usersSnap] = await Promise.all([
+            database.ref('sales').once('value'),
+            database.ref('products').once('value'),
+            database.ref('stores').once('value'),
+            database.ref('employees').once('value'),
+            database.ref('storePricing').once('value'),
+            database.ref('users').once('value')
+        ]);
+
+        const valOrEmpty = s => s && s.exists() ? s.val() : {};
+        const remoteSales = valOrEmpty(salesSnap);
+        const remoteProducts = valOrEmpty(productsSnap);
+        const remoteStores = valOrEmpty(storesSnap);
+        const remoteEmployees = valOrEmpty(employeesSnap);
+        const remotePricing = valOrEmpty(pricingSnap);
+        const remoteUsers = valOrEmpty(usersSnap);
+
+        // Normalize into arrays with firebaseKey
+        const mapObj = (obj) => Object.keys(obj).map(k => ({ ...obj[k], firebaseKey: k }));
+
+        salesData = mapObj(remoteSales);
+        productsData = mapObj(remoteProducts);
+        storesData = mapObj(remoteStores);
+        employeesData = mapObj(remoteEmployees);
+        storePricingData = mapObj(remotePricing);
+        // Users remain keyed by username
+        Object.keys(remoteUsers).forEach(u => { demoUsers[u] = { ...remoteUsers[u], firebaseKey: u }; });
+
+        // Persist
+        localStorage.setItem('edenSalesData', JSON.stringify(salesData));
         localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-        console.log('💾 Local storage updated successfully');
-    } catch (error) {
-        console.error('❌ Failed to update local storage:', error.message);
+        localStorage.setItem('edenStoresData', JSON.stringify(storesData));
+        localStorage.setItem('edenEmployeesData', JSON.stringify(employeesData));
+        localStorage.setItem('edenStorePricingData', JSON.stringify(storePricingData));
+
+        // Update UI
+        refreshCurrentPageData();
+
+        setMsg('Pushing app data back to DB (mirror)...');
+
+        // 2) Push back to DB using deterministic keys (so DB == App)
+        // Sales: keep existing deterministic key if present; else make one
+        await database.ref('sales').set({}); // clear
+        for (const sale of salesData) {
+            const key = sale.firebaseKey || `${sale.employeeId || 'emp'}_${sale.date || 'date'}_${sale.product || 'prod'}_${Math.floor(Date.now()/5000)}`;
+            await database.ref('sales').child(key).set(sale);
+        }
+
+        // Products: use product name as key
+        await database.ref('products').set({});
+        for (const p of productsData) {
+            const key = (p.name || p.productName || `prod_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_');
+            await database.ref('products').child(((product.name || product.productName) || `prod_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_')).set(product);
+        }
+
+        // Stores: use store name as key
+        await database.ref('stores').set({});
+        for (const s of storesData) {
+            const key = (s.name || s.storeName || `store_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_');
+            await database.ref('stores').child(((store.name || store.storeName) || `store_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_')).set(store);
+        }
+
+        // Employees: use username as key
+        await database.ref('employees').set({});
+        for (const e of employeesData) {
+            const key = (e.username || `emp_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_');
+            await database.ref('employees').child((employee.username || `emp_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_')).set(employee);
+        }
+
+        // Store Pricing: composite key store_product
+        await database.ref('storePricing').set({});
+        for (const pr of storePricingData) {
+            const key = `${(pr.storeName||'store').replace(/[.#$\[\]]/g,'_')}__${(pr.productName||'product').replace(/[.#$\[\]]/g,'_')}`;
+            await database.ref('storePricing').child(`${(pricing.storeName||'store').replace(/[.#$\[\]]/g,'_')}__${(pricing.productName||'product').replace(/[.#$\[\]]/g,'_')}`).set(pricing);
+        }
+
+        // Users: stay keyed by username
+        await database.ref('users').set({});
+        for (const [username, userData] of Object.entries(demoUsers)) {
+            const safe = username.replace(/[.#$\[\]]/g,'_');
+            await database.ref('users').child(safe).set(userData);
+        }
+
+        notify.className = 'fixed top-6 right-6 bg-green-500/20 border border-green-500/30 text-green-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+        setMsg('Mirror sync completed. DB and App are identical now.');
+        setTimeout(()=> notify.remove(), 4000);
+        updateSyncStatus('synced');
+        refreshCurrentPageData();
+    } catch (e) {
+        console.error('Mirror sync failed:', e);
+        notify.className = 'fixed top-6 right-6 bg-red-500/20 border border-red-500/30 text-red-300 px-6 py-4 rounded-2xl text-sm backdrop-blur-sm z-50 fade-in';
+        const d = notify.querySelector('div:nth-child(2)'); if (d) d.textContent = e.message || 'Failed';
+        updateSyncStatus('error');
+        setTimeout(()=> notify.remove(), 7000);
     }
 }
 
-// Update all UI components that display products
-console.log('🔄 Updating UI components...');
 
-// Update products management page if visible
-if (typeof updateProductsManagementPage === 'function') {
-    updateProductsManagementPage();
-    console.log('✅ Products management page updated');
-}
-
-// Update product dropdowns in sales form
-if (typeof populateProductDropdown === 'function') {
-    populateProductDropdown();
-    console.log('✅ Sales form product dropdown updated');
-}
-
-// Update product lists on admin page
-if (typeof updateProductsList === 'function') {
-    updateProductsList();
-    console.log('✅ Admin product list updated');
-}
-
-// Update existing products list if on products management page
-if (typeof updateExistingProductsList === 'function') {
-    updateExistingProductsList();
-    console.log('✅ Existing products list updated');
-}
-
-// Update product count display
-const totalProductsCountElement = document.getElementById('totalProductsCount');
-if (totalProductsCountElement) {
-    totalProductsCountElement.textContent = productsData.length;
-    console.log('✅ Product count display updated');
-}
-
-// Show comprehensive results
-console.log('\\n📊 PRODUCT INJECTION RESULTS:');
-console.log('=====================================');
-console.log(\`✅ Products successfully added: \${addedCount}\`);
-console.log(\`⚠️ Products skipped (duplicates): \${skippedCount}\`);
-console.log(\`❌ Products failed (errors): \${errorCount}\`);
-console.log(\`📦 Total products in system: \${productsData.length}\`);
-console.log(\`🔥 Firebase sync: \${isFirebaseConfigured ? 'ENABLED' : 'DISABLED (Local only)'}\`);
-console.log('=====================================');
-
-// Show success message to user
-if (addedCount > 0) {
-    showSuccessMessage(\`📦 Product injection completed! Added: \${addedCount} products. Total: \${productsData.length}\`);
-} else if (skippedCount > 0 && addedCount === 0) {
-    showSuccessMessage(\`📦 All products already exist! Skipped: \${skippedCount} duplicates. Total: \${productsData.length}\`);
-} else {
-    showSuccessMessage(\`📦 Product injection completed with \${errorCount} errors. Check console for details.\`);
-}
-
-// Optional: Show detailed breakdown in a table format
-console.log('\\n📋 DETAILED PRODUCT LIST:');
-console.table(productsData.map(p => ({
-    ID: p.id,
-    Name: p.name,
-    Price: p.price + ' DHS',
-    Category: p.category || 'N/A',
-    Firebase: p.firebaseKey ? 'Synced' : 'Local'
-})));
-
-console.log('\\n🎉 Product injection process completed successfully!');`
-            };
-            
-            document.getElementById('codeInjectionInput').value = templates[templateType] || '';
-        }
-        
-        function executeInjectedCode() {
-            const code = document.getElementById('codeInjectionInput').value.trim();
-            const logDiv = document.getElementById('codeExecutionLog');
-            
-            if (!code) {
-                logDiv.innerHTML = '<div class="text-red-400">❌ No code to execute</div>';
-                return;
-            }
-            
-            // Clear previous log
-            logDiv.innerHTML = '';
-            
-            // Capture console output
-            const originalLog = console.log;
-            const originalError = console.error;
-            const originalWarn = console.warn;
-            
-            const logToDiv = (message, type = 'log') => {
-                const timestamp = new Date().toLocaleTimeString();
-                const colors = {
-                    log: 'text-green-400',
-                    error: 'text-red-400',
-                    warn: 'text-yellow-400'
-                };
-                
-                const logEntry = document.createElement('div');
-                logEntry.className = colors[type];
-                logEntry.innerHTML = `<span class="text-white/40">[${timestamp}]</span> ${message}`;
-                logDiv.appendChild(logEntry);
-                logDiv.scrollTop = logDiv.scrollHeight;
-            };
-            
-            // Override console methods
-            console.log = (...args) => {
-                originalLog(...args);
-                logToDiv(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' '), 'log');
-            };
-            
-            console.error = (...args) => {
-                originalError(...args);
-                logToDiv(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' '), 'error');
-            };
-            
-            console.warn = (...args) => {
-                originalWarn(...args);
-                logToDiv(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' '), 'warn');
-            };
-            
-            try {
-                logToDiv('🚀 Executing injected code...', 'log');
-                
-                // Execute the code
-                const result = eval(code);
-                
-                if (result !== undefined) {
-                    logToDiv('✅ Execution completed. Result: ' + (typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result)), 'log');
-                } else {
-                    logToDiv('✅ Code executed successfully', 'log');
-                }
-                
-            } catch (error) {
-                logToDiv('❌ Execution failed: ' + error.message, 'error');
-                console.error('Code injection error:', error);
-            } finally {
-                // Restore original console methods
-                console.log = originalLog;
-                console.error = originalError;
-                console.warn = originalWarn;
-            }
-        }
-
-        // Dropdown Population Functions
-        function populateStoreDropdown() {
-            const storeSelect = document.getElementById('storeName');
-            if (!storeSelect) return;
-            
-            // Clear existing options except the first one
-            storeSelect.innerHTML = '<option value="">Select store</option>';
-            
-            // Add stores from data
-            storesData.forEach(store => {
-                const option = document.createElement('option');
-                option.value = store.name;
-                option.textContent = store.name;
-                storeSelect.appendChild(option);
-            });
-        }
-        
-        function populateProductDropdown() {
-            const productSelect = document.getElementById('product');
-            if (!productSelect) return;
-            
-            // Clear existing options except the first one
-            productSelect.innerHTML = '<option value="">Select product</option>';
-            
-            // Add products from data
-            productsData.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product.name;
-                option.textContent = product.name;
-                productSelect.appendChild(option);
-            });
-        }
-
-        // Clear All Data Functions
-        function showClearAllDataModal() {
-            // Update the data counts in the modal
-            document.getElementById('clearDataSalesCount').textContent = salesData.length;
-            document.getElementById('clearDataProductsCount').textContent = productsData.length;
-            document.getElementById('clearDataStoresCount').textContent = storesData.length;
-            document.getElementById('clearDataEmployeesCount').textContent = employeesData.length;
-            document.getElementById('clearDataPricingCount').textContent = storePricingData.length;
-            
-            const totalRevenue = salesData.reduce((sum, sale) => sum + sale.amount, 0);
-            document.getElementById('clearDataTotalRevenue').textContent = `${totalRevenue.toFixed(2)} DHS`;
-            
-            // Reset form
-            document.getElementById('clearDataPassword').value = '';
-            document.getElementById('clearDataConfirm').checked = false;
-            
-            document.getElementById('clearAllDataModal').classList.remove('hidden');
-        }
-        
-        function closeClearAllDataModal() {
-            document.getElementById('clearAllDataModal').classList.add('hidden');
-        }
-        
-        async function executeClearAllData() {
-            const password = document.getElementById('clearDataPassword').value;
-            const confirmed = document.getElementById('clearDataConfirm').checked;
-            
-            // Validate password
-            if (password !== 'eden@123') {
-                showCustomAlert('❌ Incorrect password! Please enter the correct admin password.');
-                return;
-            }
-            
-            // Validate confirmation
-            if (!confirmed) {
-                showCustomAlert('❌ Please check the confirmation checkbox to proceed.');
-                return;
-            }
-            
-            // Final confirmation
-            const finalConfirm = confirm(`🚨 FINAL WARNING 🚨\n\nThis will permanently delete:\n• ${salesData.length} sales records\n• ${productsData.length} products\n• ${storesData.length} stores\n• ${employeesData.length} employees\n• ${storePricingData.length} custom prices\n\nTotal revenue to be deleted: ${salesData.reduce((sum, sale) => sum + sale.amount, 0).toFixed(2)} DHS\n\nThis action CANNOT be undone!\n\nClick OK to proceed or Cancel to abort.`);
-            
-            if (!finalConfirm) {
-                return;
-            }
-            
-            // Show clearing progress
-            const clearButton = document.querySelector('#clearAllDataModal button[onclick="executeClearAllData()"]');
-            const originalText = clearButton.innerHTML;
-            clearButton.innerHTML = '🗑️ CLEARING DATA...';
-            clearButton.disabled = true;
-            
-            updateSyncStatus('syncing');
-            
-            try {
-                console.log('🗑️ Starting complete data clear...');
-                
-                // Clear Firebase data if connected
-                if (isFirebaseConfigured) {
-                    console.log('🔥 Clearing Firebase data...');
-                    await Promise.all([
-                        database.ref('sales').remove(),
-                        database.ref('products').remove(),
-                        database.ref('stores').remove(),
-                        database.ref('employees').remove(),
-                        database.ref('storePricing').remove(),
-                        database.ref('users/admin').set({
-                            password: 'admin123',
-                            role: 'admin',
-                            name: 'System Administrator',
-                            id: 'admin001',
-                            createdAt: new Date().toISOString()
-                        }) // Keep only the admin user
-                    ]);
-                    console.log('✅ Firebase data cleared successfully');
-                }
-                
-                // Clear local data arrays
-                console.log('💾 Clearing local data...');
-                salesData = [];
-                productsData = [];
-                storesData = [];
-                employeesData = [];
-                storePricingData = [];
-                
-                // Reset demo users to only admin
-                const adminUser = demoUsers['admin'];
-                demoUsers = {
-                    'admin': adminUser
-                };
-                
-                // Clear localStorage
-                localStorage.removeItem('edenSalesData');
-                localStorage.removeItem('edenProductsData');
-                localStorage.removeItem('edenStoresData');
-                localStorage.removeItem('edenEmployeesData');
-                localStorage.removeItem('edenStorePricingData');
-                
-                // Save empty arrays to localStorage
-                localStorage.setItem('edenSalesData', JSON.stringify([]));
-                localStorage.setItem('edenProductsData', JSON.stringify([]));
-                localStorage.setItem('edenStoresData', JSON.stringify([]));
-                localStorage.setItem('edenEmployeesData', JSON.stringify([]));
-                localStorage.setItem('edenStorePricingData', JSON.stringify([]));
-                
-                console.log('✅ All data cleared successfully');
-                
-                // Update UI
-                if (currentUser && currentUser.role === 'admin') {
-                    updateAdminStats();
-                    updateEmployeesList();
-                    updateStoresList();
-                    updatePricingList();
-                }
-                
-                updateSyncStatus('synced');
-                
-                // Show success message
-                clearButton.innerHTML = '✅ DATA CLEARED!';
-                clearButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
-                clearButton.style.color = 'white';
-                
-                setTimeout(() => {
-                    closeClearAllDataModal();
-                    showSuccessMessage('🗑️ All data has been cleared successfully! System reset to fresh state.');
-                    
-                    // Reset button
-                    clearButton.innerHTML = originalText;
-                    clearButton.style.background = '';
-                    clearButton.style.color = '';
-                    clearButton.disabled = false;
-                }, 2000);
-                
-            } catch (error) {
-                console.error('❌ Error clearing data:', error);
-                
-                clearButton.innerHTML = '❌ CLEAR FAILED';
-                clearButton.style.background = 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
-                
-                setTimeout(() => {
-                    clearButton.innerHTML = originalText;
-                    clearButton.style.background = '';
-                    clearButton.disabled = false;
-                }, 3000);
-                
-                updateSyncStatus('error');
-                showCustomAlert('❌ Failed to clear data: ' + error.message);
-            }
-        }
-
-        // Setup new product form handler
-        function setupNewProductFormHandler() {
-            const newProductForm = document.getElementById('newProductForm');
-            if (newProductForm) {
-                newProductForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const productName = document.getElementById('newProductName').value.trim();
-                    const productPrice = parseFloat(document.getElementById('newProductPrice').value);
-                    const productDescription = document.getElementById('newProductDescription').value.trim();
-                    const submitButton = e.target.querySelector('button[type="submit"]');
-                    const originalText = submitButton.innerHTML;
-                    // Duplicate checks to prevent repeated saving
-                    const nameLower = productName.toLowerCase();
-                    if (window.editingProductId) {
-                        const duplicate = productsData.some(p => p.name && p.name.trim().toLowerCase() === nameLower && p.id !== window.editingProductId);
-                        if (duplicate) {
-                            showCustomAlert('A product with this name already exists.');
-                            return;
-                        }
-                    } else {
-                        const duplicate = productsData.some(p => p.name && p.name.trim().toLowerCase() === nameLower);
-                        if (duplicate) {
-                            showCustomAlert('A product with this name already exists.');
-                            return;
-                        }
-                    }
-    
-                    
-                    // Validation
-                    if (!productName || productPrice <= 0) {
-                        showCustomAlert('Please enter a valid product name and price.');
-                        return;
-                    }
-                    
-                    // Show loading state
-                    submitButton.innerHTML = '💾 Saving...';
-                    submitButton.disabled = true;
-                    
-                    try {
-                        if (window.editingProductId) {
-                            // Update existing product
-                            const product = productsData.find(p => p.id === window.editingProductId);
-                            if (product) {
-                                product.name = productName;
-                                product.price = productPrice;
-                                product.description = productDescription;
-                                product.lastUpdated = new Date().toISOString();
-                                
-                                // Update in Firebase
-                                await updateInFirebase('products', product.firebaseKey, product);
-                                
-                                localStorage.setItem('edenProductsData', JSON.stringify(productsData));
-                                
-                                // Reset form
-                                resetProductForm();
-                                updateProductsManagementPage();
-                                
-                                // Show success feedback
-                                submitButton.innerHTML = '✅ Updated!';
-                                submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
-                                
-                                showSuccessMessage('Product updated successfully!');
-                            }
-                        } else {
-                            // Create new product
-                            const newProduct = {
-                                id: Date.now(),
-                                name: productName,
-                                price: productPrice,
-                                description: productDescription,
-                                createdAt: new Date().toISOString(),
-                                lastUpdated: new Date().toISOString()
-                            };
-                            
-                            // Save to Firebase first
-                            const firebaseKey = await saveToFirebase('products', newProduct);
-                            if (firebaseKey) {
-                                newProduct.firebaseKey = firebaseKey;
-                            }
-                            // (sync via Firebase listener; no local push)
-// Reset form
-                            resetProductForm();
-                            updateProductsManagementPage();
-                            
-                            // Show success feedback
-                            submitButton.innerHTML = '✅ Saved!';
-                            submitButton.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
-                            
-                            showSuccessMessage('Product created successfully!');
-                        }
-                        
-                        // Update dropdowns in sales form if visible
-                        setTimeout(() => {
-                            populateProductDropdown();
-                        }, 100);
-                        
-                    } catch (error) {
-                        console.error('Error saving product:', error);
-                        
-                        // Show error feedback
-                        submitButton.innerHTML = '❌ Error - Try Again';
-                        submitButton.style.background = 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
-                        
-                        showCustomAlert('Error saving product: ' + error.message);
-                    }
-                    
-                    // Reset button after delay
-                    setTimeout(() => {
-                        submitButton.innerHTML = originalText;
-                        submitButton.style.background = '';
-                        submitButton.disabled = false;
-                    }, 2000);
-                });
-            }
-        }
-        
-        function resetProductForm() {
-            document.getElementById('newProductName').value = '';
-            document.getElementById('newProductPrice').value = '';
-            document.getElementById('newProductDescription').value = '';
-            
-            // Reset form title and button
-            document.querySelector('#newProductForm h2').textContent = '📦 ADD NEW PRODUCT';
-            document.querySelector('#newProductForm button[type="submit"]').innerHTML = '💾 SAVE PRODUCT';
-            
-            // Clear editing state
-            window.editingProductId = null;
-        }
-
-        // Update all UI components after database operations
-        function updateAllUIComponents() {
-            try {
-                // Update admin dashboard if visible
-                if (currentUser && currentUser.role === 'admin' && !document.getElementById('adminPage').classList.contains('hidden')) {
-                    updateAdminStats();
-                    updateEmployeesList();
-                    updateStoresList();
-                    updatePricingList();
-                }
-                
-                // Update sales page if visible
-                if (currentUser && currentUser.role !== 'admin' && !document.getElementById('salesPage').classList.contains('hidden')) {
-                    updateSalesStats();
-                    updateRecentSales();
-                    populateStoreDropdown();
-                    populateProductDropdown();
-                }
-                
-                // Update product management page if visible
-                if (!document.getElementById('productManagementPage').classList.contains('hidden')) {
-                    updateProductManagementPage();
-                }
-                
-                // Update products page if visible
-                if (!document.getElementById('productsPage').classList.contains('hidden')) {
-                    updateProductsList();
-                }
-                
-                console.log('✅ All UI components updated');
-            } catch (error) {
-                console.warn('UI update error:', error);
-            }
-        }
-
-        // Quick Sync All Data Function
+// Quick Sync All Data Function
         async function quickSyncAllData() {
             if (!isFirebaseConfigured) {
                 showCustomAlert('Firebase is not configured. Cannot sync data to cloud.');
@@ -5608,7 +4140,7 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                 await database.ref('sales').remove();
                 for (const sale of salesData) {
                     try {
-                        await database.ref('sales').push(sale);
+                        await database.ref('sales').child(`${sale.employeeId}_${sale.date}_${sale.product}_${Math.floor(Date.now()/5000)}`).set(sale);
                         syncResults.sales.success++;
                     } catch (error) {
                         console.error('Failed to sync sale:', sale.id, error);
@@ -5623,7 +4155,7 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                 await database.ref('products').remove();
                 for (const product of productsData) {
                     try {
-                        await database.ref('products').push(product);
+                        await database.ref('products').child((((product.name || product.productName) || `prod_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_'))).set(product);
                         syncResults.products.success++;
                     } catch (error) {
                         console.error('Failed to sync product:', product.id, error);
@@ -5638,7 +4170,7 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                 await database.ref('stores').remove();
                 for (const store of storesData) {
                     try {
-                        await database.ref('stores').push(store);
+                        await database.ref('stores').child((((store.name || store.storeName) || `store_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_'))).set(store);
                         syncResults.stores.success++;
                     } catch (error) {
                         console.error('Failed to sync store:', store.id, error);
@@ -5653,7 +4185,7 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                 await database.ref('employees').remove();
                 for (const employee of employeesData) {
                     try {
-                        await database.ref('employees').push(employee);
+                        await database.ref('employees').child(((employee.username || `emp_${Math.random().toString(36).slice(2,8)}`).replace(/[.#$\[\]]/g,'_'))).set(employee);
                         syncResults.employees.success++;
                     } catch (error) {
                         console.error('Failed to sync employee:', employee.id, error);
@@ -5668,7 +4200,7 @@ console.log('\\n🎉 Product injection process completed successfully!');`
                 await database.ref('storePricing').remove();
                 for (const pricing of storePricingData) {
                     try {
-                        await database.ref('storePricing').push(pricing);
+                        await database.ref('storePricing').child(`${(pricing.storeName||'store').replace(/[.#$\[\]]/g,'_')}__${(pricing.productName||'product').replace(/[.#$\[\]]/g,'_')}`).set(pricing);
                         syncResults.pricing.success++;
                     } catch (error) {
                         console.error('Failed to sync pricing:', pricing.id, error);
@@ -5764,5 +4296,52 @@ console.log('\\n🎉 Product injection process completed successfully!');`
             }
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e8b21153e8f9d3',t:'MTc1NTA5MzE3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e81000921dd1e0',t:'MTc1NTA4NjUzNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>
+(function () {
+  var isSimplifying = false;
+  var observer = null;
+
+  function simplifyEmployeeCard(card) {
+    if (!card) return;
+    // Remove any status chips if present
+    card.querySelectorAll('.space-x-3 > span').forEach(function(s){ s.remove(); });
+    // Keep only role (strip anything like "• Last active: ...")
+    var roleDiv = card.querySelector('div > .text-sm.text-white\\/60');
+    if (roleDiv) {
+      var raw = roleDiv.textContent || '';
+      if (raw.indexOf('•') !== -1) { // only modify when needed
+        roleDiv.textContent = raw.split('•')[0].trim();
+      }
+    }
+  }
+
+  function simplifyAll() {
+    if (isSimplifying) return;
+    isSimplifying = true;
+    if (observer) observer.disconnect();
+
+    var list = document.getElementById('employeesList');
+    if (list) {
+      list.querySelectorAll('.flex.items-center.justify-between').forEach(simplifyEmployeeCard);
+    }
+
+    // reconnect observer after changes
+    if (list) {
+      if (!observer) {
+        observer = new MutationObserver(function(){ simplifyAll(); });
+      }
+      observer.observe(list, { childList: true, subtree: true });
+    }
+
+    isSimplifying = false;
+  }
+
+  // Initial run and observe
+  document.addEventListener('DOMContentLoaded', simplifyAll);
+  // If DOMContentLoaded already fired in single-file apps, run immediately
+  simplifyAll();
+})();
+</script>
+</body>
 </html>
