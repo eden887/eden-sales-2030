@@ -1524,11 +1524,32 @@
 
         async function pushToFirebase(path, data) {
             try {
+                console.log(`Pushing to Firebase path: ${path}`, data);
+                
+                // Check if Firebase is initialized
+                if (!database) {
+                    throw new Error('Firebase database not initialized');
+                }
+                
                 const ref = await database.ref(path).push(data);
+                console.log(`Successfully pushed to Firebase. Key: ${ref.key}`);
                 return { success: true, key: ref.key };
             } catch (error) {
                 console.error(`Error pushing to Firebase (${path}):`, error);
-                return { success: false, error: error.message };
+                
+                // Fallback to local storage if Firebase fails
+                console.log('Falling back to local storage...');
+                try {
+                    const localKey = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const localData = JSON.parse(localStorage.getItem(path) || '{}');
+                    localData[localKey] = { ...data, localKey: true };
+                    localStorage.setItem(path, JSON.stringify(localData));
+                    console.log('Saved to local storage with key:', localKey);
+                    return { success: true, key: localKey, isLocal: true };
+                } catch (localError) {
+                    console.error('Local storage fallback failed:', localError);
+                    return { success: false, error: error.message };
+                }
             }
         }
 
@@ -4035,23 +4056,7 @@
                 // Clear all options except the first one
                 select.innerHTML = '<option value="">Select Product</option>';
                 
-                // Add default products first
-                const defaultProducts = {
-                    'product1': 'Laptop Pro 15"',
-                    'product2': 'Smartphone X',
-                    'product3': 'Tablet Air',
-                    'product4': 'Headphones Pro',
-                    'product5': 'Smart Watch'
-                };
-                
-                Object.entries(defaultProducts).forEach(([id, name]) => {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = name;
-                    select.appendChild(option);
-                });
-                
-                // Add Firebase products to the select
+                // Add only Firebase products to the select
                 Object.values(firebaseProducts).forEach(product => {
                     const option = document.createElement('option');
                     option.value = product.id;
@@ -4079,21 +4084,7 @@
                 // Clear all options except the first one
                 select.innerHTML = '<option value="">Select Store</option>';
                 
-                // Add default stores first
-                const defaultStores = {
-                    'store1': 'Downtown Store',
-                    'store2': 'Mall Store',
-                    'store3': 'Airport Store'
-                };
-                
-                Object.entries(defaultStores).forEach(([id, name]) => {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = name;
-                    select.appendChild(option);
-                });
-                
-                // Add Firebase stores to the select
+                // Add only Firebase stores to the select
                 Object.values(firebaseStores).forEach(store => {
                     const option = document.createElement('option');
                     option.value = store.id;
@@ -4198,6 +4189,10 @@
 
 
         function initializeSalesEntry() {
+            console.log('Initializing sales entry...');
+            console.log('Current userSession:', userSession);
+            console.log('Current salesData length:', salesData.length);
+            
             // Initialize date options (today and yesterday only)
             const dateSelect = document.getElementById('salesDate');
             const today = new Date();
@@ -4236,10 +4231,17 @@
             loadSalesList();
             
             // Form submission
-            document.getElementById('salesForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                saveSale();
-            });
+            const salesForm = document.getElementById('salesForm');
+            if (salesForm) {
+                salesForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Form submitted, calling saveSale...');
+                    saveSale();
+                });
+                console.log('Sales form event listener added');
+            } else {
+                console.error('Sales form not found!');
+            }
         }
 
         function freezeDateAndStore() {
@@ -4264,8 +4266,8 @@
             const product = document.getElementById('productSelect').value;
             const qty = parseInt(document.getElementById('qtyInput').value);
             
-            if (!date || !store || !product || !qty) {
-                showErrorToast('Please fill in all fields');
+            if (!date || !store || !product || !qty || qty <= 0) {
+                showErrorToast('Please fill in all fields with valid values');
                 return;
             }
             
@@ -4290,13 +4292,19 @@
                 createdAt: new Date().toISOString()
             };
             
+            console.log('Attempting to save sale:', sale);
+            
             try {
                 // Save to Firebase
                 const result = await pushToFirebase('sales', sale);
+                console.log('Firebase save result:', result);
+                
                 if (result.success) {
-                    // Update local data
+                    // Update local data immediately
                     firebaseSales[result.key] = { ...sale, firebaseKey: result.key };
                     salesData.push(sale);
+                    
+                    console.log('Sale saved successfully. Updated salesData length:', salesData.length);
                     
                     // Freeze date and store fields after first entry
                     freezeDateAndStore();
@@ -4305,18 +4313,19 @@
                     document.getElementById('productSelect').value = '';
                     document.getElementById('qtyInput').value = '';
                     
-                    // Update display
+                    // Update display immediately
                     updateTotalQty();
                     loadSalesList();
                     
                     // Show success feedback
                     showSalesSuccess();
                 } else {
-                    showErrorToast('Failed to save sale. Please try again.');
+                    console.error('Firebase save failed:', result.error);
+                    showErrorToast('Failed to save sale: ' + (result.error || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error saving sale:', error);
-                showErrorToast('Failed to save sale. Please try again.');
+                showErrorToast('Failed to save sale: ' + error.message);
             }
         }
 
@@ -4344,35 +4353,55 @@
         function updateTotalQty() {
             const today = new Date().toISOString().split('T')[0];
             
+            console.log('Updating total qty for:', {
+                today,
+                currentUser: userSession.username,
+                totalSalesData: salesData.length
+            });
+            
             // Filter sales for today and current user
             const todaysSales = salesData.filter(sale => {
-                if (!sale || !sale.date) return false;
+                if (!sale || !sale.date || !sale.user) {
+                    console.log('Skipping invalid sale:', sale);
+                    return false;
+                }
                 
                 // Handle both date formats
                 const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
                 const isToday = saleDate === today;
                 const isCurrentUser = sale.user === userSession.username;
                 
+                console.log('Sale check:', {
+                    saleId: sale.id,
+                    saleDate,
+                    saleUser: sale.user,
+                    isToday,
+                    isCurrentUser,
+                    included: isToday && isCurrentUser
+                });
+                
                 return isToday && isCurrentUser;
             });
+            
+            console.log('Filtered today\'s sales:', todaysSales);
             
             // Calculate total quantity
             const totalQty = todaysSales.reduce((sum, sale) => {
                 const qty = parseInt(sale.qty);
-                return sum + (isNaN(qty) ? 0 : qty);
+                const validQty = isNaN(qty) ? 0 : qty;
+                console.log(`Adding qty ${validQty} from sale ${sale.id}`);
+                return sum + validQty;
             }, 0);
+            
+            console.log('Calculated total qty:', totalQty);
             
             const qtyElement = document.getElementById('totalQty');
             if (qtyElement) {
                 qtyElement.textContent = totalQty;
+                console.log('Updated qty element to:', totalQty);
+            } else {
+                console.error('Total qty element not found');
             }
-            
-            console.log('Total Qty Update:', {
-                today,
-                currentUser: userSession.username,
-                todaysSales: todaysSales.length,
-                totalQty
-            });
         }
 
         function loadSalesList() {
@@ -4427,7 +4456,7 @@
                 return firebaseStore.name;
             }
             
-            return `Store ${storeId}`;
+            return `Unknown Store`;
         }
 
         function getProductName(productId) {
@@ -4437,7 +4466,7 @@
                 return firebaseProduct.name;
             }
             
-            return `Product ${productId}`;
+            return `Unknown Product`;
         }
 
         function showSalesSuccess() {
@@ -4629,5 +4658,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97097591f682f9cb',t:'MTc1NTQzNjcyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970990e8a671fa00',t:'MTc1NTQzNzg0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
