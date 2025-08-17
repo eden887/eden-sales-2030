@@ -1399,10 +1399,27 @@
             // Simulate authentication delay
             setTimeout(async () => {
                 try {
-                    // Check credentials
+                    let authenticatedUser = null;
+                    
+                    // First check default users
                     if (users[username] && users[username].password === password) {
-                        const user = users[username];
+                        authenticatedUser = users[username];
+                    } else {
+                        // Check Firebase employees
+                        const firebaseEmployee = Object.values(firebaseEmployees).find(emp => 
+                            emp.username === username && emp.password === password
+                        );
                         
+                        if (firebaseEmployee) {
+                            authenticatedUser = {
+                                name: firebaseEmployee.name,
+                                type: firebaseEmployee.role || 'sales',
+                                username: firebaseEmployee.username
+                            };
+                        }
+                    }
+                    
+                    if (authenticatedUser) {
                         // Try to authenticate with Firebase (optional)
                         try {
                             await auth.signInAnonymously();
@@ -1413,10 +1430,10 @@
                         showFeedback('Login successful! Redirecting...', 'success');
                         
                         setTimeout(() => {
-                            if (user.type === 'admin') {
-                                showAdminDashboard(user);
+                            if (authenticatedUser.type === 'admin') {
+                                showAdminDashboard(authenticatedUser);
                             } else {
-                                showSalesEntryPage(user);
+                                showSalesEntryPage(authenticatedUser);
                             }
                         }, 1000);
                         
@@ -2487,21 +2504,12 @@
             // Clear existing options except the first one
             storeSelect.innerHTML = '<option value="">Select Store</option>';
             
-            // Add default stores first
-            const defaultStores = {
-                'store1': 'Downtown Store',
-                'store2': 'Mall Store',
-                'store3': 'Airport Store'
-            };
-            
-            Object.entries(defaultStores).forEach(([id, name]) => {
-                storeSelect.innerHTML += `<option value="${id}">${name}</option>`;
+            // Add only Firebase stores
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                storeSelect.innerHTML += `<option value="${firebaseKey}">${store.name}</option>`;
             });
             
-            // Add Firebase stores
-            Object.values(firebaseStores).forEach(store => {
-                storeSelect.innerHTML += `<option value="${store.id}">${store.name}</option>`;
-            });
+            console.log('Price management store options loaded:', Object.keys(firebaseStores).length, 'stores');
         }
 
         function loadStorePrices() {
@@ -2515,37 +2523,28 @@
             
             let html = '';
             
-            // Add default products first
-            const defaultProducts = {
-                'product1': 'Laptop Pro 15"',
-                'product2': 'Smartphone X',
-                'product3': 'Tablet Air',
-                'product4': 'Headphones Pro',
-                'product5': 'Smart Watch'
-            };
+            console.log('Loading prices for store:', storeId);
+            console.log('Available Firebase products:', Object.keys(firebaseProducts).length);
             
-            Object.entries(defaultProducts).forEach(([id, name]) => {
-                const currentPrice = (firebaseStorePrices[storeId] && firebaseStorePrices[storeId][id]) || 0;
-                html += `
-                    <div class="price-item">
-                        <div class="price-product-name">${name}</div>
-                        <input type="number" class="price-input" data-product="${id}" value="${currentPrice}" min="0" step="0.01" placeholder="Price in DHS">
-                    </div>
-                `;
-            });
-            
-            // Add Firebase products
-            Object.values(firebaseProducts).forEach(product => {
-                const currentPrice = (firebaseStorePrices[storeId] && firebaseStorePrices[storeId][product.id]) || 0;
+            // Add only Firebase products (no default products)
+            Object.entries(firebaseProducts).forEach(([productKey, product]) => {
+                const currentPrice = (firebaseStorePrices[storeId] && firebaseStorePrices[storeId][productKey]) || 0;
+                console.log(`Product ${productKey} (${product.name}) current price:`, currentPrice);
+                
                 html += `
                     <div class="price-item">
                         <div class="price-product-name">${product.name}</div>
-                        <input type="number" class="price-input" data-product="${product.id}" value="${currentPrice}" min="0" step="0.01" placeholder="Price in DHS">
+                        <input type="number" class="price-input" data-product="${productKey}" value="${currentPrice}" min="0" step="0.01" placeholder="Price in DHS">
                     </div>
                 `;
             });
             
+            if (Object.keys(firebaseProducts).length === 0) {
+                html = '<div class="no-data">No products available. Please add products first.</div>';
+            }
+            
             priceGrid.innerHTML = html;
+            console.log('Price grid loaded with', Object.keys(firebaseProducts).length, 'products');
         }
 
         async function savePrices() {
@@ -3007,6 +3006,8 @@
         async function importPricingData(data) {
             if (!Array.isArray(data)) throw new Error('Invalid pricing data format');
             
+            console.log('Importing pricing data:', data);
+            
             // Validate required fields
             data.forEach(row => {
                 if (!row.store_id || !row.product_id || row.price === undefined) {
@@ -3023,6 +3024,8 @@
                 newPrices[row.store_id][row.product_id] = parseFloat(row.price) || 0;
             });
             
+            console.log('Processed new prices:', newPrices);
+            
             // Merge with existing prices
             Object.keys(newPrices).forEach(storeId => {
                 if (!firebaseStorePrices[storeId]) {
@@ -3031,12 +3034,25 @@
                 Object.assign(firebaseStorePrices[storeId], newPrices[storeId]);
             });
             
+            console.log('Updated firebaseStorePrices:', firebaseStorePrices);
+            
             // Save to Firebase
             try {
                 const result = await saveToFirebase('storePrices', firebaseStorePrices);
                 if (!result.success) {
                     throw new Error('Failed to save to Firebase');
                 }
+                
+                console.log('Successfully saved pricing data to Firebase');
+                
+                // Force reload of Firebase data to ensure consistency
+                await loadFirebaseData();
+                
+                // Refresh analytics to reflect new pricing
+                if (typeof calculateYesterdayAnalytics === 'function') {
+                    calculateYesterdayAnalytics();
+                }
+                
             } catch (error) {
                 console.error('Error saving pricing data:', error);
                 throw new Error('Failed to save pricing data to Firebase');
@@ -3098,35 +3114,41 @@
                         `;
                         break;
                     case 'products':
+                        // Use Firebase key as the ID for products
+                        const productKey = Object.keys(firebaseProducts).find(key => firebaseProducts[key] === item);
                         html += `
                             <div>${item.code}</div>
                             <div>${item.name}</div>
                             <div>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div>
-                                <button class="btn-edit" onclick="editProduct('${item.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteProduct('${item.id}')">Delete</button>
+                                <button class="btn-edit" onclick="editProduct('${productKey}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteProduct('${productKey}')">Delete</button>
                             </div>
                         `;
                         break;
                     case 'employees':
+                        // Use Firebase key as the ID for employees
+                        const employeeKey = Object.keys(firebaseEmployees).find(key => firebaseEmployees[key] === item);
                         html += `
                             <div>${item.empId}</div>
                             <div>${item.name}</div>
                             <div>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div>
-                                <button class="btn-edit" onclick="editEmployee('${item.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteEmployee('${item.id}')">Delete</button>
+                                <button class="btn-edit" onclick="editEmployee('${employeeKey}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteEmployee('${employeeKey}')">Delete</button>
                             </div>
                         `;
                         break;
                     case 'stores':
+                        // Use Firebase key as the ID for stores
+                        const storeKey = Object.keys(firebaseStores).find(key => firebaseStores[key] === item);
                         html += `
                             <div>${item.code}</div>
                             <div>${item.name}</div>
                             <div>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div>
-                                <button class="btn-edit" onclick="editStore('${item.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteStore('${item.id}')">Delete</button>
+                                <button class="btn-edit" onclick="editStore('${storeKey}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteStore('${storeKey}')">Delete</button>
                             </div>
                         `;
                         break;
@@ -3238,9 +3260,13 @@
 
         // Edit functions with proper modal-based editing
         function editProduct(productId) {
+            console.log('Editing product:', productId);
+            console.log('Available products:', firebaseProducts);
+            
             const product = firebaseProducts[productId];
             if (!product) {
-                showErrorToast('Product not found');
+                console.error('Product not found:', productId);
+                showErrorToast('Product not found: ' + productId);
                 return;
             }
             
@@ -3275,9 +3301,13 @@
         }
 
         function editEmployee(employeeId) {
+            console.log('Editing employee:', employeeId);
+            console.log('Available employees:', firebaseEmployees);
+            
             const employee = firebaseEmployees[employeeId];
             if (!employee) {
-                showErrorToast('Employee not found');
+                console.error('Employee not found:', employeeId);
+                showErrorToast('Employee not found: ' + employeeId);
                 return;
             }
             
@@ -3326,9 +3356,13 @@
         }
 
         function editStore(storeId) {
+            console.log('Editing store:', storeId);
+            console.log('Available stores:', firebaseStores);
+            
             const store = firebaseStores[storeId];
             if (!store) {
-                showErrorToast('Store not found');
+                console.error('Store not found:', storeId);
+                showErrorToast('Store not found: ' + storeId);
                 return;
             }
             
@@ -3564,66 +3598,76 @@
 
         function populateProductFilter() {
             const specificFilter = document.getElementById('specificFilter');
-            const products = JSON.parse(localStorage.getItem('products')) || [];
-            const defaultProducts = {
-                'product1': 'Laptop Pro 15"',
-                'product2': 'Smartphone X',
-                'product3': 'Tablet Air',
-                'product4': 'Headphones Pro',
-                'product5': 'Smart Watch'
-            };
+            
+            console.log('Populating product filter...');
+            console.log('Available Firebase products:', firebaseProducts);
             
             specificFilter.innerHTML = '<option value="">All Products</option>';
             
-            // Add default products
-            Object.entries(defaultProducts).forEach(([id, name]) => {
-                specificFilter.innerHTML += `<option value="${id}">${name}</option>`;
+            // Add Firebase products only (since we're using Firebase for product management)
+            Object.entries(firebaseProducts).forEach(([id, product]) => {
+                console.log(`Adding product option: ${id} -> ${product.name}`);
+                specificFilter.innerHTML += `<option value="${id}">${product.name}</option>`;
             });
             
-            // Add custom products
-            products.forEach(product => {
-                specificFilter.innerHTML += `<option value="${product.id}">${product.name}</option>`;
-            });
+            console.log('Product filter populated with', Object.keys(firebaseProducts).length, 'products');
         }
 
         function populateEmployeeFilter() {
             const specificFilter = document.getElementById('specificFilter');
-            const employees = JSON.parse(localStorage.getItem('employees')) || [];
-            const defaultEmployees = ['Administrator', 'John Doe'];
+            
+            console.log('Populating employee filter...');
+            console.log('Available Firebase employees:', firebaseEmployees);
+            console.log('Available sales data for employee extraction:', salesData.length);
             
             specificFilter.innerHTML = '<option value="">All Employees</option>';
             
-            // Add default employees
-            defaultEmployees.forEach(name => {
-                specificFilter.innerHTML += `<option value="${name}">${name}</option>`;
+            // Get unique employee names from actual sales data
+            const uniqueEmployees = [...new Set(salesData.map(sale => sale.user))].filter(user => user && user.trim() !== '');
+            
+            console.log('Unique employees from sales data:', uniqueEmployees);
+            
+            // Add employees from sales data first (these are the ones who actually made sales)
+            uniqueEmployees.forEach(employeeName => {
+                console.log(`Adding employee option from sales: ${employeeName}`);
+                specificFilter.innerHTML += `<option value="${employeeName}">${employeeName}</option>`;
             });
             
-            // Add custom employees
-            employees.forEach(employee => {
-                specificFilter.innerHTML += `<option value="${employee.name}">${employee.name}</option>`;
+            // Also add Firebase employees if they're not already included
+            Object.values(firebaseEmployees).forEach(employee => {
+                if (employee.name && !uniqueEmployees.includes(employee.name)) {
+                    console.log(`Adding Firebase employee option: ${employee.name}`);
+                    specificFilter.innerHTML += `<option value="${employee.name}">${employee.name}</option>`;
+                }
             });
+            
+            // Add default employees if they're not already included
+            const defaultEmployees = ['Administrator', 'Sales User'];
+            defaultEmployees.forEach(empName => {
+                if (!uniqueEmployees.includes(empName)) {
+                    console.log(`Adding default employee option: ${empName}`);
+                    specificFilter.innerHTML += `<option value="${empName}">${empName}</option>`;
+                }
+            });
+            
+            console.log('Employee filter populated with total options:', specificFilter.options.length - 1);
         }
 
         function populateStoreFilter() {
             const specificFilter = document.getElementById('specificFilter');
-            const stores = JSON.parse(localStorage.getItem('stores')) || [];
-            const defaultStores = {
-                'store1': 'Downtown Store',
-                'store2': 'Mall Store',
-                'store3': 'Airport Store'
-            };
+            
+            console.log('Populating store filter...');
+            console.log('Available Firebase stores:', firebaseStores);
             
             specificFilter.innerHTML = '<option value="">All Stores</option>';
             
-            // Add default stores
-            Object.entries(defaultStores).forEach(([id, name]) => {
-                specificFilter.innerHTML += `<option value="${id}">${name}</option>`;
+            // Add Firebase stores using Firebase keys
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                console.log(`Adding store option: ${firebaseKey} -> ${store.name}`);
+                specificFilter.innerHTML += `<option value="${firebaseKey}">${store.name}</option>`;
             });
             
-            // Add custom stores
-            stores.forEach(store => {
-                specificFilter.innerHTML += `<option value="${store.id}">${store.name}</option>`;
-            });
+            console.log('Store filter populated with', Object.keys(firebaseStores).length, 'stores');
         }
 
         function generateReport() {
@@ -3700,11 +3744,14 @@
                 return '<div class="no-data">No data found for the selected criteria</div>';
             }
             
+            console.log('Generating detailed report with data:', data);
+            console.log('Current firebaseStorePrices:', firebaseStorePrices);
+            
             // Calculate summary statistics
             const totalSales = data.length;
             const totalQuantity = data.reduce((sum, sale) => sum + sale.qty, 0);
             
-            // Calculate total revenue using Firebase prices
+            // Calculate total revenue using Firebase prices with proper fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
@@ -3712,18 +3759,24 @@
             let totalRevenue = 0;
             data.forEach(sale => {
                 let price = 0;
-                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = firebaseStorePrices[sale.store][sale.product];
+                
+                // First try Firebase store prices
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    console.log(`Using Firebase price for ${sale.store}/${sale.product}: ${price}`);
                 } else {
+                    // Fallback to default prices
                     price = defaultPrices[sale.product] || 0;
+                    console.log(`Using default price for ${sale.product}: ${price}`);
                 }
+                
                 totalRevenue += price * sale.qty;
             });
             
             // Get unique values for analysis
             const uniqueEmployees = [...new Set(data.map(sale => sale.user))];
-            const uniqueProducts = [...new Set(data.map(sale => sale.product))];
-            const uniqueStores = [...new Set(data.map(sale => sale.store))];
+            const uniqueProducts = [...new Set(data.map(sale => getProductName(sale.product)))];
+            const uniqueStores = [...new Set(data.map(sale => getStoreName(sale.store)))];
             
             let html = `
                 <div class="report-summary">
@@ -3772,20 +3825,28 @@
             
             data.forEach(sale => {
                 let price = 0;
-                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = firebaseStorePrices[sale.store][sale.product];
+                
+                // First try Firebase store prices
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
                 } else {
+                    // Fallback to default prices
                     price = defaultPrices[sale.product] || 0;
                 }
+                
                 const totalAmount = price * sale.qty;
+                const storeName = getStoreName(sale.store);
+                const productName = getProductName(sale.product);
+                
+                console.log(`Report row: Store ${sale.store} -> ${storeName}, Product ${sale.product} -> ${productName}, Price: ${price}`);
                 
                 html += `
                     <tr>
                         <td>#${sale.id}</td>
                         <td>${new Date(sale.date).toLocaleDateString()}</td>
                         <td>${sale.user}</td>
-                        <td>${getStoreName(sale.store)}</td>
-                        <td>${getProductName(sale.product)}</td>
+                        <td>${storeName}</td>
+                        <td>${productName}</td>
                         <td>${sale.qty}</td>
                         <td>${price.toLocaleString()} DHS</td>
                         <td>${totalAmount.toLocaleString()} DHS</td>
@@ -3803,6 +3864,9 @@
                 return '<div class="no-data">No data found for the selected criteria</div>';
             }
             
+            console.log('Generating summary report with data:', data);
+            console.log('Current firebaseStorePrices:', firebaseStorePrices);
+            
             // Group data by different dimensions
             const byEmployee = {};
             const byProduct = {};
@@ -3815,11 +3879,17 @@
             
             data.forEach(sale => {
                 let price = 0;
-                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = firebaseStorePrices[sale.store][sale.product];
+                
+                // First try Firebase store prices
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    console.log(`Using Firebase price for ${sale.store}/${sale.product}: ${price}`);
                 } else {
+                    // Fallback to default prices
                     price = defaultPrices[sale.product] || 0;
+                    console.log(`Using default price for ${sale.product}: ${price}`);
                 }
+                
                 const revenue = price * sale.qty;
                 
                 // By employee
@@ -3832,6 +3902,7 @@
                 
                 // By product
                 const productName = getProductName(sale.product);
+                console.log(`Product mapping: ${sale.product} -> ${productName}`);
                 if (!byProduct[productName]) {
                     byProduct[productName] = { qty: 0, revenue: 0, sales: 0 };
                 }
@@ -3841,6 +3912,7 @@
                 
                 // By store
                 const storeName = getStoreName(sale.store);
+                console.log(`Store mapping: ${sale.store} -> ${storeName}`);
                 if (!byStore[storeName]) {
                     byStore[storeName] = { qty: 0, revenue: 0, sales: 0 };
                 }
@@ -3979,14 +4051,26 @@
             
             let csv = 'Sale ID,Date,Employee,Store,Product,Quantity,Unit Price,Total Amount,Timestamp\n';
             
+            const defaultPrices = {
+                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+            };
+            
             data.forEach(sale => {
                 let price = 0;
-                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = firebaseStorePrices[sale.store][sale.product];
-                }
-                const totalAmount = price * sale.qty;
                 
-                csv += `${sale.id},${sale.date},${sale.user},"${getStoreName(sale.store)}","${getProductName(sale.product)}",${sale.qty},${price},${totalAmount},"${sale.timestamp || 'N/A'}"\n`;
+                // First try Firebase store prices
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                } else {
+                    // Fallback to default prices
+                    price = defaultPrices[sale.product] || 0;
+                }
+                
+                const totalAmount = price * sale.qty;
+                const storeName = getStoreName(sale.store);
+                const productName = getProductName(sale.product);
+                
+                csv += `${sale.id},${sale.date},${sale.user},"${storeName}","${productName}",${sale.qty},${price},${totalAmount},"${sale.timestamp || 'N/A'}"\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -4015,19 +4099,31 @@
             // Prepare table data
             const data = window.currentReportData;
             
+            const defaultPrices = {
+                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+            };
+            
             const tableData = data.map(sale => {
                 let price = 0;
-                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = firebaseStorePrices[sale.store][sale.product];
+                
+                // First try Firebase store prices
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                } else {
+                    // Fallback to default prices
+                    price = defaultPrices[sale.product] || 0;
                 }
+                
                 const totalAmount = price * sale.qty;
+                const storeName = getStoreName(sale.store);
+                const productName = getProductName(sale.product);
                 
                 return [
                     sale.id,
                     sale.date,
                     sale.user,
-                    getStoreName(sale.store),
-                    getProductName(sale.product),
+                    storeName,
+                    productName,
                     sale.qty,
                     `${price} DHS`,
                     `${totalAmount} DHS`
@@ -4084,10 +4180,10 @@
                 // Clear all options except the first one
                 select.innerHTML = '<option value="">Select Store</option>';
                 
-                // Add only Firebase stores to the select
-                Object.values(firebaseStores).forEach(store => {
+                // Add only Firebase stores to the select using Firebase keys
+                Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
                     const option = document.createElement('option');
-                    option.value = store.id;
+                    option.value = firebaseKey;
                     option.textContent = store.name;
                     select.appendChild(option);
                 });
@@ -4102,12 +4198,21 @@
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
+            console.log('Calculating analytics for yesterday:', yesterdayStr);
+            console.log('Total sales data available:', salesData.length);
+            
             // Filter sales for yesterday from Firebase data
             const yesterdaySales = salesData.filter(sale => {
                 if (!sale || !sale.date) return false;
                 const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
-                return saleDate === yesterdayStr;
+                const isYesterday = saleDate === yesterdayStr;
+                if (isYesterday) {
+                    console.log('Found yesterday sale:', sale);
+                }
+                return isYesterday;
             });
+            
+            console.log('Yesterday sales found:', yesterdaySales.length);
             
             // Calculate total sales amount
             let totalAmount = 0;
@@ -4115,54 +4220,90 @@
             const userSales = {};
             const productSales = {};
             
+            // Default prices for fallback
+            const defaultPrices = {
+                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+            };
+            
             yesterdaySales.forEach(sale => {
                 const qty = parseInt(sale.qty);
                 if (isNaN(qty)) return;
                 
-                // Get price from Firebase store prices only
+                console.log('Processing sale:', {
+                    id: sale.id,
+                    user: sale.user,
+                    product: sale.product,
+                    qty: qty,
+                    store: sale.store
+                });
+                
+                // Get price from Firebase store prices or default prices
                 let price = 0;
                 if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                } else {
+                    price = defaultPrices[sale.product] || 0;
                 }
                 
                 const saleAmount = price * qty;
                 totalAmount += saleAmount;
                 totalQty += qty;
                 
-                // Track sales by user for best performer
-                if (!userSales[sale.user]) {
-                    userSales[sale.user] = 0;
+                // Track sales by user for best performer (use actual user name)
+                const userName = sale.user || 'Unknown User';
+                if (!userSales[userName]) {
+                    userSales[userName] = { amount: 0, qty: 0 };
                 }
-                userSales[sale.user] += saleAmount;
+                userSales[userName].amount += saleAmount;
+                userSales[userName].qty += qty;
                 
-                // Track product sales for most sold product
+                // Track product sales for most sold product (use actual product name)
                 const productName = getProductName(sale.product);
                 if (!productSales[productName]) {
                     productSales[productName] = 0;
                 }
                 productSales[productName] += qty;
+                
+                console.log('Updated tracking:', {
+                    userName,
+                    userAmount: userSales[userName].amount,
+                    productName,
+                    productQty: productSales[productName]
+                });
             });
             
-            // Find best performer
+            console.log('Final user sales:', userSales);
+            console.log('Final product sales:', productSales);
+            
+            // Find best performer by revenue
             let bestPerformer = 'No Data';
             let maxSales = 0;
             
-            Object.entries(userSales).forEach(([user, amount]) => {
-                if (amount > maxSales) {
-                    maxSales = amount;
+            Object.entries(userSales).forEach(([user, stats]) => {
+                console.log(`Checking user ${user} with amount ${stats.amount}`);
+                if (stats.amount > maxSales) {
+                    maxSales = stats.amount;
                     bestPerformer = user;
                 }
             });
             
-            // Find most sold product
+            // Find most sold product by quantity
             let mostSoldProduct = 'No Data';
             let maxQty = 0;
             
             Object.entries(productSales).forEach(([product, qty]) => {
+                console.log(`Checking product ${product} with qty ${qty}`);
                 if (qty > maxQty) {
                     maxQty = qty;
                     mostSoldProduct = `${product} (${qty} units)`;
                 }
+            });
+            
+            console.log('Final results:', {
+                bestPerformer,
+                mostSoldProduct,
+                totalAmount,
+                totalQty
             });
             
             // Update display elements if they exist
@@ -4171,12 +4312,24 @@
             const bestPerformerElement = document.getElementById('bestPerformer');
             const mostSoldProductElement = document.getElementById('mostSoldProduct');
             
-            if (totalSalesElement) totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
-            if (totalQtyElement) totalQtyElement.textContent = totalQty.toString();
-            if (bestPerformerElement) bestPerformerElement.textContent = bestPerformer;
-            if (mostSoldProductElement) mostSoldProductElement.textContent = mostSoldProduct;
+            if (totalSalesElement) {
+                totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
+                console.log('Updated total sales element');
+            }
+            if (totalQtyElement) {
+                totalQtyElement.textContent = totalQty.toString();
+                console.log('Updated total qty element');
+            }
+            if (bestPerformerElement) {
+                bestPerformerElement.textContent = bestPerformer;
+                console.log('Updated best performer element to:', bestPerformer);
+            }
+            if (mostSoldProductElement) {
+                mostSoldProductElement.textContent = mostSoldProduct;
+                console.log('Updated most sold product element to:', mostSoldProduct);
+            }
             
-            console.log('Analytics Updated:', {
+            console.log('Analytics Updated Successfully:', {
                 yesterdayStr,
                 salesCount: yesterdaySales.length,
                 totalAmount,
@@ -4353,15 +4506,14 @@
         function updateTotalQty() {
             const today = new Date().toISOString().split('T')[0];
             
-            console.log('Updating total qty for:', {
+            console.log('Updating total qty for today:', {
                 today,
-                currentUser: userSession.username,
                 totalSalesData: salesData.length
             });
             
-            // Filter sales for today and current user
+            // Filter sales for TODAY ONLY (all users)
             const todaysSales = salesData.filter(sale => {
-                if (!sale || !sale.date || !sale.user) {
+                if (!sale || !sale.date) {
                     console.log('Skipping invalid sale:', sale);
                     return false;
                 }
@@ -4369,31 +4521,29 @@
                 // Handle both date formats
                 const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
                 const isToday = saleDate === today;
-                const isCurrentUser = sale.user === userSession.username;
                 
                 console.log('Sale check:', {
                     saleId: sale.id,
                     saleDate,
                     saleUser: sale.user,
                     isToday,
-                    isCurrentUser,
-                    included: isToday && isCurrentUser
+                    qty: sale.qty
                 });
                 
-                return isToday && isCurrentUser;
+                return isToday;
             });
             
-            console.log('Filtered today\'s sales:', todaysSales);
+            console.log('Filtered today\'s sales (all users):', todaysSales);
             
-            // Calculate total quantity
+            // Calculate total quantity for today (all users)
             const totalQty = todaysSales.reduce((sum, sale) => {
                 const qty = parseInt(sale.qty);
                 const validQty = isNaN(qty) ? 0 : qty;
-                console.log(`Adding qty ${validQty} from sale ${sale.id}`);
+                console.log(`Adding qty ${validQty} from sale ${sale.id} by ${sale.user}`);
                 return sum + validQty;
             }, 0);
             
-            console.log('Calculated total qty:', totalQty);
+            console.log('Calculated total qty for today:', totalQty);
             
             const qtyElement = document.getElementById('totalQty');
             if (qtyElement) {
@@ -4413,12 +4563,12 @@
                 return;
             }
             
-            // Filter sales for current user and sort by ID (newest first)
+            // Filter sales for CURRENT USER ONLY and sort by ID (newest first)
             const userSales = salesData.filter(sale => sale.user === userSession.username);
             const sortedSales = [...userSales].sort((a, b) => (b.id || 0) - (a.id || 0));
             
             if (sortedSales.length === 0) {
-                salesList.innerHTML = '<div class="no-sales">No sales recorded yet</div>';
+                salesList.innerHTML = '<div class="no-sales">No sales recorded by you yet</div>';
                 return;
             }
             
@@ -4450,23 +4600,37 @@
         }
 
         function getStoreName(storeId) {
-            // Check Firebase stores only
+            // Check Firebase stores using the storeId as Firebase key
             const firebaseStore = firebaseStores[storeId];
             if (firebaseStore) {
                 return firebaseStore.name;
             }
             
-            return `Unknown Store`;
+            // If not found, return unknown store
+            return `Unknown Store (${storeId})`;
         }
 
         function getProductName(productId) {
-            // Check Firebase products only
+            // First check Firebase products
             const firebaseProduct = firebaseProducts[productId];
             if (firebaseProduct) {
                 return firebaseProduct.name;
             }
             
-            return `Unknown Product`;
+            // Then check default products
+            const defaultProducts = {
+                'product1': 'Laptop Pro 15"',
+                'product2': 'Smartphone X',
+                'product3': 'Tablet Air',
+                'product4': 'Headphones Pro',
+                'product5': 'Smart Watch'
+            };
+            
+            if (defaultProducts[productId]) {
+                return defaultProducts[productId];
+            }
+            
+            return `Unknown Product (${productId})`;
         }
 
         function showSalesSuccess() {
@@ -4658,5 +4822,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970990e8a671fa00',t:'MTc1NTQzNzg0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9709c37e9210f9d5',t:'MTc1NTQzOTkxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
