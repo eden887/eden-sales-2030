@@ -1548,8 +1548,8 @@
 
         // Auto ID generation functions
         function generateProductCode() {
-            const products = JSON.parse(localStorage.getItem('products')) || [];
-            const existingCodes = products.map(p => p.code);
+            // Get existing codes from Firebase products
+            const existingCodes = Object.values(firebaseProducts).map(p => p.code);
             let counter = 1;
             let code;
             
@@ -1562,8 +1562,8 @@
         }
 
         function generateEmployeeId() {
-            const employees = JSON.parse(localStorage.getItem('employees')) || [];
-            const existingIds = employees.map(e => e.empId);
+            // Get existing IDs from Firebase employees
+            const existingIds = Object.values(firebaseEmployees).map(e => e.empId);
             let counter = 1;
             let id;
             
@@ -1576,8 +1576,8 @@
         }
 
         function generateStoreCode() {
-            const stores = JSON.parse(localStorage.getItem('stores')) || [];
-            const existingCodes = stores.map(s => s.code);
+            // Get existing codes from Firebase stores
+            const existingCodes = Object.values(firebaseStores).map(s => s.code);
             let counter = 1;
             let code;
             
@@ -2395,7 +2395,10 @@
         // Modal functions
         function openProductModal() {
             document.getElementById('productModal').style.display = 'flex';
-            document.getElementById('previewProductCode').textContent = generateProductCode();
+            // Generate fresh product code each time modal opens
+            const newCode = generateProductCode();
+            document.getElementById('previewProductCode').textContent = newCode;
+            console.log('Generated new product code:', newCode);
         }
 
         function closeProductModal() {
@@ -2405,7 +2408,10 @@
 
         function openEmployeeModal() {
             document.getElementById('employeeModal').style.display = 'flex';
-            document.getElementById('previewEmployeeId').textContent = generateEmployeeId();
+            // Generate fresh employee ID each time modal opens
+            const newId = generateEmployeeId();
+            document.getElementById('previewEmployeeId').textContent = newId;
+            console.log('Generated new employee ID:', newId);
         }
 
         function closeEmployeeModal() {
@@ -2415,7 +2421,10 @@
 
         function openStoreModal() {
             document.getElementById('storeModal').style.display = 'flex';
-            document.getElementById('previewStoreCode').textContent = generateStoreCode();
+            // Generate fresh store code each time modal opens
+            const newCode = generateStoreCode();
+            document.getElementById('previewStoreCode').textContent = newCode;
+            console.log('Generated new store code:', newCode);
         }
 
         function closeStoreModal() {
@@ -4620,5 +4629,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97096ab4c15bfa02',t:'MTc1NTQzNjI4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97097591f682f9cb',t:'MTc1NTQzNjcyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
