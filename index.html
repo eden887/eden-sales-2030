@@ -4535,10 +4535,20 @@
                 
                 // Track product sales for most sold product (use actual product name)
                 const productName = getProductName(sale.product);
-                if (!productSales[productName]) {
-                    productSales[productName] = 0;
+                console.log(`Product mapping for analytics: ${sale.product} -> ${productName}`);
+                
+                // Only track valid product names
+                if (productName && 
+                    productName !== 'No Product Selected' && 
+                    !productName.includes('undefined') && 
+                    !productName.includes('null')) {
+                    if (!productSales[productName]) {
+                        productSales[productName] = 0;
+                    }
+                    productSales[productName] += qty;
+                } else {
+                    console.warn(`Skipping invalid product name: ${productName} for product ID: ${sale.product}`);
                 }
-                productSales[productName] += qty;
                 
                 console.log('Updated tracking:', {
                     userName,
@@ -4951,13 +4961,11 @@
             // Return empty string if no productId provided
             if (!productId) return 'No Product Selected';
             
-            // First check Firebase products
-            const firebaseProduct = firebaseProducts[productId];
-            if (firebaseProduct && firebaseProduct.name) {
-                return firebaseProduct.name;
-            }
+            console.log(`Getting product name for ID: ${productId}`);
+            console.log('Available Firebase products:', Object.keys(firebaseProducts));
+            console.log('Firebase products data:', firebaseProducts);
             
-            // Then check default products
+            // Then check default products first (most common case)
             const defaultProducts = {
                 'product1': 'Laptop Pro 15"',
                 'product2': 'Smartphone X',
@@ -4967,18 +4975,28 @@
             };
             
             if (defaultProducts[productId]) {
+                console.log(`Found default product: ${productId} -> ${defaultProducts[productId]}`);
                 return defaultProducts[productId];
+            }
+            
+            // Then check Firebase products
+            const firebaseProduct = firebaseProducts[productId];
+            if (firebaseProduct && firebaseProduct.name) {
+                console.log(`Found Firebase product: ${productId} -> ${firebaseProduct.name}`);
+                return firebaseProduct.name;
             }
             
             // Check if it's a code that needs mapping
             const productByCode = Object.entries(firebaseProducts).find(([key, product]) => 
-                product.code === productId || product.id === productId
+                product && (product.code === productId || product.id === productId)
             );
             
-            if (productByCode && productByCode[1].name) {
+            if (productByCode && productByCode[1] && productByCode[1].name) {
+                console.log(`Found product by code: ${productId} -> ${productByCode[1].name}`);
                 return productByCode[1].name;
             }
             
+            console.warn(`No product found for ID: ${productId}, returning fallback`);
             // Return a clean fallback name
             return `Product ${productId}`;
         }
@@ -5217,5 +5235,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970a253cf6abf9d9',t:'MTc1NTQ0MzkyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970a34fe72b3f9f8',t:'MTc1NTQ0NDU2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
