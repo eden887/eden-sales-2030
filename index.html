@@ -1366,18 +1366,14 @@
         });
 
         function initializeLogin() {
-            // Check for existing session
-            const savedSession = localStorage.getItem('userSession');
-            if (savedSession) {
-                const session = JSON.parse(savedSession);
-                if (session.type === 'admin') {
-                    showAdminDashboard(session);
-                } else {
-                    showSalesEntryPage(session);
-                }
-                return;
-            }
-
+            // Always show login page first - no auto-login
+            // Clear any existing session on page load for security
+            localStorage.removeItem('userSession');
+            userSession = {};
+            
+            // Ensure login page is visible
+            document.querySelector('.container').style.display = 'flex';
+            
             // Initialize login form
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
         }
@@ -1587,7 +1583,7 @@
         // Auto ID generation functions
         function generateProductCode() {
             // Get existing codes from Firebase products
-            const existingCodes = Object.values(firebaseProducts).map(p => p.code);
+            const existingCodes = Object.values(firebaseProducts).map(p => p.code || p.id);
             let counter = 1;
             let code;
             
@@ -1601,7 +1597,7 @@
 
         function generateEmployeeId() {
             // Get existing IDs from Firebase employees
-            const existingIds = Object.values(firebaseEmployees).map(e => e.empId);
+            const existingIds = Object.values(firebaseEmployees).map(e => e.empId || e.id);
             let counter = 1;
             let id;
             
@@ -1615,7 +1611,7 @@
 
         function generateStoreCode() {
             // Get existing codes from Firebase stores
-            const existingCodes = Object.values(firebaseStores).map(s => s.code);
+            const existingCodes = Object.values(firebaseStores).map(s => s.code || s.id);
             let counter = 1;
             let code;
             
@@ -1625,6 +1621,13 @@
             } while (existingCodes.includes(code));
             
             return code;
+        }
+
+        function generateTextId(prefix) {
+            // Generate a text-based ID instead of using Firebase keys
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substr(2, 5);
+            return `${prefix}_${timestamp}_${random}`;
         }
 
         function showAdminDashboard(user) {
@@ -2333,18 +2336,22 @@
                 const name = document.getElementById('productName').value.trim();
                 if (!name) return;
                 
+                const productCode = generateProductCode();
+                const textId = generateTextId('PROD');
+                
                 const newProduct = {
+                    id: textId,
                     name: name,
-                    code: generateProductCode(),
+                    code: productCode,
                     createdAt: new Date().toISOString(),
                     createdBy: userSession.username
                 };
                 
                 try {
-                    const result = await pushToFirebase('products', newProduct);
+                    const result = await saveToFirebase(`products/${textId}`, newProduct);
                     if (result.success) {
-                        // Update local data
-                        firebaseProducts[result.key] = { ...newProduct, id: result.key };
+                        // Update local data using text ID
+                        firebaseProducts[textId] = newProduct;
                         
                         showSuccessToast('Product added successfully!');
                         closeProductModal();
@@ -2369,21 +2376,25 @@
                 
                 if (!name || !username || !password || !role) return;
                 
+                const employeeId = generateEmployeeId();
+                const textId = generateTextId('EMP');
+                
                 const newEmployee = {
+                    id: textId,
                     name: name,
                     username: username,
                     password: password,
                     role: role,
-                    empId: generateEmployeeId(),
+                    empId: employeeId,
                     createdAt: new Date().toISOString(),
                     createdBy: userSession.username
                 };
                 
                 try {
-                    const result = await pushToFirebase('employees', newEmployee);
+                    const result = await saveToFirebase(`employees/${textId}`, newEmployee);
                     if (result.success) {
-                        // Update local data
-                        firebaseEmployees[result.key] = { ...newEmployee, id: result.key };
+                        // Update local data using text ID
+                        firebaseEmployees[textId] = newEmployee;
                         
                         showSuccessToast('Employee added successfully!');
                         closeEmployeeModal();
@@ -2404,18 +2415,22 @@
                 const name = document.getElementById('storeName').value.trim();
                 if (!name) return;
                 
+                const storeCode = generateStoreCode();
+                const textId = generateTextId('STORE');
+                
                 const newStore = {
+                    id: textId,
                     name: name,
-                    code: generateStoreCode(),
+                    code: storeCode,
                     createdAt: new Date().toISOString(),
                     createdBy: userSession.username
                 };
                 
                 try {
-                    const result = await pushToFirebase('stores', newStore);
+                    const result = await saveToFirebase(`stores/${textId}`, newStore);
                     if (result.success) {
-                        // Update local data
-                        firebaseStores[result.key] = { ...newStore, id: result.key };
+                        // Update local data using text ID
+                        firebaseStores[textId] = newStore;
                         
                         showSuccessToast('Store added successfully!');
                         closeStoreModal();
@@ -2761,21 +2776,96 @@
             let data = [];
             let filename = '';
             
+            console.log('Exporting data type:', exportType, 'format:', exportFormat);
+            
             switch(exportType) {
                 case 'sales':
-                    data = salesData;
+                    // Export sales with proper store and product IDs
+                    data = salesData.map(sale => ({
+                        ...sale,
+                        store_id: sale.store,
+                        store_name: getStoreName(sale.store),
+                        product_id: sale.product,
+                        product_name: getProductName(sale.product)
+                    }));
                     filename = 'sales_data';
                     break;
                 case 'products':
-                    data = JSON.parse(localStorage.getItem('products')) || [];
+                    // Export both default and Firebase products with proper IDs
+                    data = [];
+                    
+                    // Add default products
+                    const defaultProducts = [
+                        { id: 'product1', name: 'Laptop Pro 15"', code: 'product1', type: 'default' },
+                        { id: 'product2', name: 'Smartphone X', code: 'product2', type: 'default' },
+                        { id: 'product3', name: 'Tablet Air', code: 'product3', type: 'default' },
+                        { id: 'product4', name: 'Headphones Pro', code: 'product4', type: 'default' },
+                        { id: 'product5', name: 'Smart Watch', code: 'product5', type: 'default' }
+                    ];
+                    data.push(...defaultProducts);
+                    
+                    // Add Firebase products with text IDs
+                    Object.entries(firebaseProducts).forEach(([textId, product]) => {
+                        data.push({
+                            id: product.id || textId,
+                            name: product.name,
+                            code: product.code || product.id || textId,
+                            type: 'custom',
+                            createdAt: product.createdAt,
+                            createdBy: product.createdBy
+                        });
+                    });
                     filename = 'products';
                     break;
                 case 'employees':
-                    data = JSON.parse(localStorage.getItem('employees')) || [];
+                    // Export both default and Firebase employees with proper IDs
+                    data = [];
+                    
+                    // Add default employees
+                    const defaultEmployees = [
+                        { id: 'admin', name: 'Administrator', username: 'admin', role: 'admin', type: 'default' },
+                        { id: 'sales', name: 'Sales User', username: 'sales', role: 'sales', type: 'default' }
+                    ];
+                    data.push(...defaultEmployees);
+                    
+                    // Add Firebase employees with text IDs
+                    Object.entries(firebaseEmployees).forEach(([textId, employee]) => {
+                        data.push({
+                            id: employee.id || textId,
+                            name: employee.name,
+                            username: employee.username,
+                            role: employee.role,
+                            empId: employee.empId || employee.id || textId,
+                            type: 'custom',
+                            createdAt: employee.createdAt,
+                            createdBy: employee.createdBy
+                        });
+                    });
                     filename = 'employees';
                     break;
                 case 'stores':
-                    data = JSON.parse(localStorage.getItem('stores')) || [];
+                    // Export both default and Firebase stores with proper IDs
+                    data = [];
+                    
+                    // Add default stores
+                    const defaultStores = [
+                        { id: 'store1', name: 'Downtown Store', code: 'store1', type: 'default' },
+                        { id: 'store2', name: 'Mall Store', code: 'store2', type: 'default' },
+                        { id: 'store3', name: 'Airport Store', code: 'store3', type: 'default' }
+                    ];
+                    data.push(...defaultStores);
+                    
+                    // Add Firebase stores with text IDs
+                    Object.entries(firebaseStores).forEach(([textId, store]) => {
+                        data.push({
+                            id: store.id || textId,
+                            name: store.name,
+                            code: store.code || store.id || textId,
+                            type: 'custom',
+                            createdAt: store.createdAt,
+                            createdBy: store.createdBy
+                        });
+                    });
                     filename = 'stores';
                     break;
                 case 'prices':
@@ -2797,6 +2887,8 @@
                     filename = 'all_data';
                     break;
             }
+            
+            console.log('Prepared data for export:', data);
             
             if (exportFormat === 'csv' && exportType !== 'all' && exportType !== 'prices') {
                 exportCSV(data, filename);
@@ -2834,14 +2926,18 @@
         function generatePricingTemplate() {
             const template = [];
             
-            // Add default stores with their IDs
+            console.log('Generating pricing template...');
+            console.log('Available Firebase stores:', firebaseStores);
+            console.log('Available Firebase products:', firebaseProducts);
+            
+            // Add default stores with their actual IDs used in the system
             const defaultStores = [
                 { id: 'store1', name: 'Downtown Store' },
                 { id: 'store2', name: 'Mall Store' },
                 { id: 'store3', name: 'Airport Store' }
             ];
             
-            // Add default products with their IDs
+            // Add default products with their actual IDs used in the system
             const defaultProducts = [
                 { id: 'product1', name: 'Laptop Pro 15"' },
                 { id: 'product2', name: 'Smartphone X' },
@@ -2850,37 +2946,47 @@
                 { id: 'product5', name: 'Smart Watch' }
             ];
             
-            // Get all stores (default + Firebase)
+            // Get all stores (default + Firebase with text IDs)
             const allStores = [...defaultStores];
-            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+            Object.entries(firebaseStores).forEach(([textId, store]) => {
                 allStores.push({
-                    id: firebaseKey,
-                    name: store.name
+                    id: store.id || textId, // Use text ID
+                    name: store.name,
+                    code: store.code || store.id || textId
                 });
+                console.log(`Added Firebase store: ID=${store.id || textId}, Name=${store.name}`);
             });
             
-            // Get all products (default + Firebase)
+            // Get all products (default + Firebase with text IDs)
             const allProducts = [...defaultProducts];
-            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+            Object.entries(firebaseProducts).forEach(([textId, product]) => {
                 allProducts.push({
-                    id: firebaseKey,
-                    name: product.name
+                    id: product.id || textId, // Use text ID
+                    name: product.name,
+                    code: product.code || product.id || textId
                 });
+                console.log(`Added Firebase product: ID=${product.id || textId}, Name=${product.name}`);
             });
             
-            // Generate template rows
+            console.log('Total stores for template:', allStores.length);
+            console.log('Total products for template:', allProducts.length);
+            
+            // Generate template rows with proper IDs
             allStores.forEach(store => {
                 allProducts.forEach(product => {
-                    template.push({
+                    const row = {
                         store_id: store.id,
                         store_name: store.name,
                         product_id: product.id,
                         product_name: product.name,
                         price: 0
-                    });
+                    };
+                    template.push(row);
+                    console.log(`Template row: ${store.id} (${store.name}) + ${product.id} (${product.name})`);
                 });
             });
             
+            console.log('Generated pricing template with', template.length, 'rows');
             return template;
         }
 
@@ -4808,6 +4914,15 @@
         }
 
         function exportMasterData() {
+            console.log('Exporting master data...');
+            console.log('Available Firebase data:', {
+                sales: salesData.length,
+                products: Object.keys(firebaseProducts).length,
+                employees: Object.keys(firebaseEmployees).length,
+                stores: Object.keys(firebaseStores).length,
+                prices: Object.keys(firebaseStorePrices).length
+            });
+            
             // Collect all Firebase data
             const masterData = {
                 sales: salesData,
@@ -4817,78 +4932,92 @@
                 storePrices: firebaseStorePrices
             };
             
-            // Create comprehensive CSV with all data
+            // Create comprehensive CSV with all data including proper IDs
             let csv = '';
             
-            // Sales Data Section
+            // Sales Data Section with proper IDs
             csv += 'SALES DATA\n';
-            csv += 'Sale ID,Date,Employee,Store,Product,Quantity,Timestamp\n';
+            csv += 'Sale ID,Date,Employee,Store ID,Store Name,Product ID,Product Name,Quantity,Timestamp\n';
             masterData.sales.forEach(sale => {
-                csv += `${sale.id},${sale.date},${sale.user},"${getStoreName(sale.store)}","${getProductName(sale.product)}",${sale.qty},"${sale.timestamp || 'N/A'}"\n`;
+                csv += `${sale.id},${sale.date},${sale.user},${sale.store},"${getStoreName(sale.store)}",${sale.product},"${getProductName(sale.product)}",${sale.qty},"${sale.timestamp || 'N/A'}"\n`;
             });
             
             csv += '\n\n';
             
-            // Products Section
+            // Products Section with proper IDs
             csv += 'PRODUCTS DATA\n';
-            csv += 'Product Code,Product Name,Type\n';
+            csv += 'Product ID,Product Code,Product Name,Type,Created At,Created By\n';
             
-            // Default products
-            const defaultProducts = {
-                'product1': 'Laptop Pro 15"',
-                'product2': 'Smartphone X',
-                'product3': 'Tablet Air',
-                'product4': 'Headphones Pro',
-                'product5': 'Smart Watch'
-            };
+            // Default products with their actual IDs
+            const defaultProducts = [
+                { id: 'product1', code: 'product1', name: 'Laptop Pro 15"' },
+                { id: 'product2', code: 'product2', name: 'Smartphone X' },
+                { id: 'product3', code: 'product3', name: 'Tablet Air' },
+                { id: 'product4', code: 'product4', name: 'Headphones Pro' },
+                { id: 'product5', code: 'product5', name: 'Smart Watch' }
+            ];
             
-            Object.entries(defaultProducts).forEach(([id, name]) => {
-                csv += `${id},"${name}",Default\n`;
+            defaultProducts.forEach(product => {
+                csv += `${product.id},${product.code},"${product.name}",Default,System,System\n`;
             });
             
-            // Firebase products
-            masterData.products.forEach(product => {
-                csv += `${product.code},"${product.name}",Custom\n`;
+            // Firebase products with Firebase keys as IDs
+            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+                csv += `${firebaseKey},${product.code || firebaseKey},"${product.name}",Custom,"${product.createdAt || 'N/A'}","${product.createdBy || 'N/A'}"\n`;
             });
             
             csv += '\n\n';
             
-            // Employees Section
+            // Employees Section with proper IDs
             csv += 'EMPLOYEES DATA\n';
-            csv += 'Employee ID,Employee Name,Type\n';
-            csv += 'admin,"Administrator",Default\n';
-            csv += 'john.doe,"John Doe",Default\n';
+            csv += 'Employee ID,Employee Code,Employee Name,Username,Role,Type,Created At,Created By\n';
             
-            masterData.employees.forEach(employee => {
-                csv += `${employee.empId},"${employee.name}",Custom\n`;
+            // Default employees
+            csv += 'admin,admin,"Administrator",admin,admin,Default,System,System\n';
+            csv += 'sales,sales,"Sales User",sales,sales,Default,System,System\n';
+            
+            // Firebase employees with Firebase keys as IDs
+            Object.entries(firebaseEmployees).forEach(([firebaseKey, employee]) => {
+                csv += `${firebaseKey},${employee.empId || firebaseKey},"${employee.name}","${employee.username || 'N/A'}","${employee.role || 'sales'}",Custom,"${employee.createdAt || 'N/A'}","${employee.createdBy || 'N/A'}"\n`;
             });
             
             csv += '\n\n';
             
-            // Stores Section
+            // Stores Section with proper IDs
             csv += 'STORES DATA\n';
-            csv += 'Store Code,Store Name,Type\n';
-            csv += 'store1,"Downtown Store",Default\n';
-            csv += 'store2,"Mall Store",Default\n';
-            csv += 'store3,"Airport Store",Default\n';
+            csv += 'Store ID,Store Code,Store Name,Type,Created At,Created By\n';
             
-            masterData.stores.forEach(store => {
-                csv += `${store.code},"${store.name}",Custom\n`;
+            // Default stores with their actual IDs
+            const defaultStores = [
+                { id: 'store1', code: 'store1', name: 'Downtown Store' },
+                { id: 'store2', code: 'store2', name: 'Mall Store' },
+                { id: 'store3', code: 'store3', name: 'Airport Store' }
+            ];
+            
+            defaultStores.forEach(store => {
+                csv += `${store.id},${store.code},"${store.name}",Default,System,System\n`;
+            });
+            
+            // Firebase stores with Firebase keys as IDs
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                csv += `${firebaseKey},${store.code || firebaseKey},"${store.name}",Custom,"${store.createdAt || 'N/A'}","${store.createdBy || 'N/A'}"\n`;
             });
             
             csv += '\n\n';
             
-            // Store Prices Section
+            // Store Prices Section with proper IDs
             csv += 'STORE PRICES DATA\n';
-            csv += 'Store,Product,Price (DHS)\n';
+            csv += 'Store ID,Store Name,Product ID,Product Name,Price (DHS)\n';
             
             Object.entries(masterData.storePrices).forEach(([storeId, prices]) => {
                 const storeName = getStoreName(storeId);
                 Object.entries(prices).forEach(([productId, price]) => {
                     const productName = getProductName(productId);
-                    csv += `"${storeName}","${productName}",${price}\n`;
+                    csv += `${storeId},"${storeName}",${productId},"${productName}",${price}\n`;
                 });
             });
+            
+            console.log('Generated CSV with proper IDs');
             
             // Export CSV
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -4899,7 +5028,7 @@
             a.click();
             window.URL.revokeObjectURL(url);
             
-            showSuccessToast('Master data exported successfully!');
+            showSuccessToast('Master data exported successfully with proper IDs!');
         }
 
         function logout() {
@@ -4922,5 +5051,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9709f1dea015f9d1',t:'MTc1NTQ0MTgxNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970a0e776510f9d3',t:'MTc1NTQ0Mjk4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
