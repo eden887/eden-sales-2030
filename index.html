@@ -1491,22 +1491,44 @@
                 firebaseStores = storesSnapshot.val() || {};
                 firebaseStorePrices = pricesSnapshot.val() || {};
 
+                // Validate and clean Firebase data
+                Object.keys(firebaseProducts).forEach(key => {
+                    if (!firebaseProducts[key] || !firebaseProducts[key].name) {
+                        console.warn(`Invalid product data for key ${key}:`, firebaseProducts[key]);
+                        delete firebaseProducts[key];
+                    }
+                });
+
+                Object.keys(firebaseEmployees).forEach(key => {
+                    if (!firebaseEmployees[key] || !firebaseEmployees[key].name) {
+                        console.warn(`Invalid employee data for key ${key}:`, firebaseEmployees[key]);
+                        delete firebaseEmployees[key];
+                    }
+                });
+
+                Object.keys(firebaseStores).forEach(key => {
+                    if (!firebaseStores[key] || !firebaseStores[key].name) {
+                        console.warn(`Invalid store data for key ${key}:`, firebaseStores[key]);
+                        delete firebaseStores[key];
+                    }
+                });
+
                 // Convert Firebase objects to arrays for compatibility and ensure proper structure
                 salesData = Object.values(firebaseSales).map(sale => {
-                    // Ensure each sale has proper structure
+                    // Ensure each sale has proper structure and valid references
                     return {
                         id: sale.id || Date.now() + Math.random(),
                         date: sale.date || new Date().toISOString().split('T')[0],
-                        store: sale.store || '',
-                        product: sale.product || '',
+                        store: sale.store || 'store1', // Default to store1 if missing
+                        product: sale.product || 'product1', // Default to product1 if missing
                         qty: parseInt(sale.qty) || 0,
-                        user: sale.user || 'Unknown',
+                        user: sale.user || 'Unknown User',
                         timestamp: sale.timestamp || new Date().toLocaleString(),
                         createdAt: sale.createdAt || new Date().toISOString()
                     };
-                });
+                }).filter(sale => sale.qty > 0); // Remove invalid sales with 0 quantity
                 
-                console.log('Firebase data loaded successfully', {
+                console.log('Firebase data loaded and validated successfully', {
                     sales: salesData.length,
                     products: Object.keys(firebaseProducts).length,
                     employees: Object.keys(firebaseEmployees).length,
@@ -2932,57 +2954,61 @@
             
             // Add default stores with their actual IDs used in the system
             const defaultStores = [
-                { id: 'store1', name: 'Downtown Store' },
-                { id: 'store2', name: 'Mall Store' },
-                { id: 'store3', name: 'Airport Store' }
+                { id: 'store1', name: 'Downtown Store', code: 'STR001' },
+                { id: 'store2', name: 'Mall Store', code: 'STR002' },
+                { id: 'store3', name: 'Airport Store', code: 'STR003' }
             ];
             
             // Add default products with their actual IDs used in the system
             const defaultProducts = [
-                { id: 'product1', name: 'Laptop Pro 15"' },
-                { id: 'product2', name: 'Smartphone X' },
-                { id: 'product3', name: 'Tablet Air' },
-                { id: 'product4', name: 'Headphones Pro' },
-                { id: 'product5', name: 'Smart Watch' }
+                { id: 'product1', name: 'Laptop Pro 15"', code: 'PRD001' },
+                { id: 'product2', name: 'Smartphone X', code: 'PRD002' },
+                { id: 'product3', name: 'Tablet Air', code: 'PRD003' },
+                { id: 'product4', name: 'Headphones Pro', code: 'PRD004' },
+                { id: 'product5', name: 'Smart Watch', code: 'PRD005' }
             ];
             
-            // Get all stores (default + Firebase with text IDs)
+            // Get all stores (default + Firebase with readable codes)
             const allStores = [...defaultStores];
-            Object.entries(firebaseStores).forEach(([textId, store]) => {
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
                 allStores.push({
-                    id: store.id || textId, // Use text ID
+                    id: firebaseKey, // Use Firebase key for system reference
                     name: store.name,
-                    code: store.code || store.id || textId
+                    code: store.code || store.id || `STR_${store.name.replace(/\s+/g, '_').toUpperCase()}`,
+                    display_id: store.code || store.id || `STR_${store.name.replace(/\s+/g, '_').toUpperCase()}`
                 });
-                console.log(`Added Firebase store: ID=${store.id || textId}, Name=${store.name}`);
+                console.log(`Added Firebase store: Code=${store.code || store.id}, Name=${store.name}`);
             });
             
-            // Get all products (default + Firebase with text IDs)
+            // Get all products (default + Firebase with readable codes)
             const allProducts = [...defaultProducts];
-            Object.entries(firebaseProducts).forEach(([textId, product]) => {
+            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
                 allProducts.push({
-                    id: product.id || textId, // Use text ID
+                    id: firebaseKey, // Use Firebase key for system reference
                     name: product.name,
-                    code: product.code || product.id || textId
+                    code: product.code || product.id || `PRD_${product.name.replace(/\s+/g, '_').toUpperCase()}`,
+                    display_id: product.code || product.id || `PRD_${product.name.replace(/\s+/g, '_').toUpperCase()}`
                 });
-                console.log(`Added Firebase product: ID=${product.id || textId}, Name=${product.name}`);
+                console.log(`Added Firebase product: Code=${product.code || product.id}, Name=${product.name}`);
             });
             
             console.log('Total stores for template:', allStores.length);
             console.log('Total products for template:', allProducts.length);
             
-            // Generate template rows with proper IDs
+            // Generate template rows with readable IDs for export
             allStores.forEach(store => {
                 allProducts.forEach(product => {
                     const row = {
-                        store_id: store.id,
+                        store_id: store.display_id || store.code || store.id,
                         store_name: store.name,
-                        product_id: product.id,
+                        product_id: product.display_id || product.code || product.id,
                         product_name: product.name,
-                        price: 0
+                        price: 0,
+                        internal_store_id: store.id, // Keep for system reference
+                        internal_product_id: product.id // Keep for system reference
                     };
                     template.push(row);
-                    console.log(`Template row: ${store.id} (${store.name}) + ${product.id} (${product.name})`);
+                    console.log(`Template row: ${row.store_id} (${store.name}) + ${row.product_id} (${product.name})`);
                 });
             });
             
@@ -3180,16 +3206,71 @@
                 }
             });
             
-            // Process pricing data
-            const newPrices = {};
-            data.forEach(row => {
-                if (!newPrices[row.store_id]) {
-                    newPrices[row.store_id] = {};
-                }
-                newPrices[row.store_id][row.product_id] = parseFloat(row.price) || 0;
+            // Create mapping from readable IDs to internal Firebase keys
+            const storeIdMap = {};
+            const productIdMap = {};
+            
+            // Map default stores
+            const defaultStoreMap = {
+                'STR001': 'store1', 'store1': 'store1',
+                'STR002': 'store2', 'store2': 'store2', 
+                'STR003': 'store3', 'store3': 'store3'
+            };
+            Object.assign(storeIdMap, defaultStoreMap);
+            
+            // Map default products
+            const defaultProductMap = {
+                'PRD001': 'product1', 'product1': 'product1',
+                'PRD002': 'product2', 'product2': 'product2',
+                'PRD003': 'product3', 'product3': 'product3',
+                'PRD004': 'product4', 'product4': 'product4',
+                'PRD005': 'product5', 'product5': 'product5'
+            };
+            Object.assign(productIdMap, defaultProductMap);
+            
+            // Map Firebase stores (code/display_id to Firebase key)
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                const code = store.code || store.id || `STR_${store.name.replace(/\s+/g, '_').toUpperCase()}`;
+                storeIdMap[code] = firebaseKey;
+                storeIdMap[firebaseKey] = firebaseKey; // Also map Firebase key to itself
             });
             
-            console.log('Processed new prices:', newPrices);
+            // Map Firebase products (code/display_id to Firebase key)
+            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+                const code = product.code || product.id || `PRD_${product.name.replace(/\s+/g, '_').toUpperCase()}`;
+                productIdMap[code] = firebaseKey;
+                productIdMap[firebaseKey] = firebaseKey; // Also map Firebase key to itself
+            });
+            
+            console.log('Store ID mapping:', storeIdMap);
+            console.log('Product ID mapping:', productIdMap);
+            
+            // Process pricing data with ID mapping
+            const newPrices = {};
+            data.forEach(row => {
+                // Use internal_store_id and internal_product_id if available, otherwise map from display IDs
+                const internalStoreId = row.internal_store_id || storeIdMap[row.store_id];
+                const internalProductId = row.internal_product_id || productIdMap[row.product_id];
+                
+                if (!internalStoreId) {
+                    console.warn(`Could not map store ID: ${row.store_id}`);
+                    return;
+                }
+                
+                if (!internalProductId) {
+                    console.warn(`Could not map product ID: ${row.product_id}`);
+                    return;
+                }
+                
+                if (!newPrices[internalStoreId]) {
+                    newPrices[internalStoreId] = {};
+                }
+                newPrices[internalStoreId][internalProductId] = parseFloat(row.price) || 0;
+                
+                console.log(`Mapped: ${row.store_id} -> ${internalStoreId}, ${row.product_id} -> ${internalProductId}, Price: ${row.price}`);
+            });
+            
+            console.log('Processed new prices with internal IDs:', newPrices);
             
             // Merge with existing prices
             Object.keys(newPrices).forEach(storeId => {
@@ -3269,7 +3350,7 @@
                     case 'sales':
                         html += `
                             <div>${new Date(item.date).toLocaleDateString()}</div>
-                            <div>${item.user}</div>
+                            <div>${getEmployeeName(item.user)}</div>
                             <div>${getStoreName(item.store)}</div>
                             <div>${getProductName(item.product)}</div>
                             <div>${item.qty}</div>
@@ -4009,7 +4090,7 @@
                     <tr>
                         <td>#${sale.id}</td>
                         <td>${new Date(sale.date).toLocaleDateString()}</td>
-                        <td>${sale.user}</td>
+                        <td>${getEmployeeName(sale.user)}</td>
                         <td>${storeName}</td>
                         <td>${productName}</td>
                         <td>${sale.qty}</td>
@@ -4235,7 +4316,7 @@
                 const storeName = getStoreName(sale.store);
                 const productName = getProductName(sale.product);
                 
-                csv += `${sale.id},${sale.date},${sale.user},"${storeName}","${productName}",${sale.qty},${price},${totalAmount},"${sale.timestamp || 'N/A'}"\n`;
+                csv += `${sale.id},${sale.date},"${getEmployeeName(sale.user)}","${storeName}","${productName}",${sale.qty},${price},${totalAmount},"${sale.timestamp || 'N/A'}"\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -4286,7 +4367,7 @@
                 return [
                     sale.id,
                     sale.date,
-                    sale.user,
+                    getEmployeeName(sale.user),
                     storeName,
                     productName,
                     sale.qty,
@@ -4795,6 +4876,9 @@
         }
 
         function getStoreName(storeId) {
+            // Return empty string if no storeId provided
+            if (!storeId) return 'No Store Selected';
+            
             // First check default stores
             const defaultStores = {
                 'store1': 'Downtown Store',
@@ -4808,18 +4892,68 @@
             
             // Then check Firebase stores using the storeId as Firebase key
             const firebaseStore = firebaseStores[storeId];
-            if (firebaseStore) {
+            if (firebaseStore && firebaseStore.name) {
                 return firebaseStore.name;
             }
             
-            // If not found, return unknown store
-            return `Unknown Store (${storeId})`;
+            // Check if it's a code that needs mapping
+            const storeByCode = Object.entries(firebaseStores).find(([key, store]) => 
+                store.code === storeId || store.id === storeId
+            );
+            
+            if (storeByCode && storeByCode[1].name) {
+                return storeByCode[1].name;
+            }
+            
+            // Return a clean fallback name
+            return `Store ${storeId}`;
+        }
+
+        function getEmployeeName(employeeId) {
+            // Return empty string if no employeeId provided
+            if (!employeeId) return 'No Employee Selected';
+            
+            // First check default employees
+            const defaultEmployees = {
+                'admin': 'Administrator',
+                'sales': 'Sales User'
+            };
+            
+            if (defaultEmployees[employeeId]) {
+                return defaultEmployees[employeeId];
+            }
+            
+            // Then check Firebase employees using the employeeId as Firebase key
+            const firebaseEmployee = firebaseEmployees[employeeId];
+            if (firebaseEmployee && firebaseEmployee.name) {
+                return firebaseEmployee.name;
+            }
+            
+            // Check if it's a code that needs mapping
+            const employeeByCode = Object.entries(firebaseEmployees).find(([key, employee]) => 
+                employee.empId === employeeId || employee.id === employeeId || employee.username === employeeId
+            );
+            
+            if (employeeByCode && employeeByCode[1].name) {
+                return employeeByCode[1].name;
+            }
+            
+            // If it's already a name (from sales data), return as is
+            if (typeof employeeId === 'string' && employeeId.length > 0 && !employeeId.includes('_')) {
+                return employeeId;
+            }
+            
+            // Return a clean fallback name
+            return `Employee ${employeeId}`;
         }
 
         function getProductName(productId) {
+            // Return empty string if no productId provided
+            if (!productId) return 'No Product Selected';
+            
             // First check Firebase products
             const firebaseProduct = firebaseProducts[productId];
-            if (firebaseProduct) {
+            if (firebaseProduct && firebaseProduct.name) {
                 return firebaseProduct.name;
             }
             
@@ -4836,7 +4970,17 @@
                 return defaultProducts[productId];
             }
             
-            return `Unknown Product (${productId})`;
+            // Check if it's a code that needs mapping
+            const productByCode = Object.entries(firebaseProducts).find(([key, product]) => 
+                product.code === productId || product.id === productId
+            );
+            
+            if (productByCode && productByCode[1].name) {
+                return productByCode[1].name;
+            }
+            
+            // Return a clean fallback name
+            return `Product ${productId}`;
         }
 
         function showSalesSuccess() {
@@ -4939,7 +5083,7 @@
             csv += 'SALES DATA\n';
             csv += 'Sale ID,Date,Employee,Store ID,Store Name,Product ID,Product Name,Quantity,Timestamp\n';
             masterData.sales.forEach(sale => {
-                csv += `${sale.id},${sale.date},${sale.user},${sale.store},"${getStoreName(sale.store)}",${sale.product},"${getProductName(sale.product)}",${sale.qty},"${sale.timestamp || 'N/A'}"\n`;
+                csv += `${sale.id},${sale.date},"${getEmployeeName(sale.user)}",${sale.store},"${getStoreName(sale.store)}",${sale.product},"${getProductName(sale.product)}",${sale.qty},"${sale.timestamp || 'N/A'}"\n`;
             });
             
             csv += '\n\n';
@@ -5005,15 +5149,37 @@
             
             csv += '\n\n';
             
-            // Store Prices Section with proper IDs
+            // Store Prices Section with readable IDs
             csv += 'STORE PRICES DATA\n';
             csv += 'Store ID,Store Name,Product ID,Product Name,Price (DHS)\n';
             
             Object.entries(masterData.storePrices).forEach(([storeId, prices]) => {
                 const storeName = getStoreName(storeId);
+                
+                // Get readable store ID
+                let readableStoreId = storeId;
+                if (storeId === 'store1') readableStoreId = 'STR001';
+                else if (storeId === 'store2') readableStoreId = 'STR002';
+                else if (storeId === 'store3') readableStoreId = 'STR003';
+                else if (firebaseStores[storeId]) {
+                    readableStoreId = firebaseStores[storeId].code || firebaseStores[storeId].id || `STR_${firebaseStores[storeId].name.replace(/\s+/g, '_').toUpperCase()}`;
+                }
+                
                 Object.entries(prices).forEach(([productId, price]) => {
                     const productName = getProductName(productId);
-                    csv += `${storeId},"${storeName}",${productId},"${productName}",${price}\n`;
+                    
+                    // Get readable product ID
+                    let readableProductId = productId;
+                    if (productId === 'product1') readableProductId = 'PRD001';
+                    else if (productId === 'product2') readableProductId = 'PRD002';
+                    else if (productId === 'product3') readableProductId = 'PRD003';
+                    else if (productId === 'product4') readableProductId = 'PRD004';
+                    else if (productId === 'product5') readableProductId = 'PRD005';
+                    else if (firebaseProducts[productId]) {
+                        readableProductId = firebaseProducts[productId].code || firebaseProducts[productId].id || `PRD_${firebaseProducts[productId].name.replace(/\s+/g, '_').toUpperCase()}`;
+                    }
+                    
+                    csv += `${readableStoreId},"${storeName}",${readableProductId},"${productName}",${price}\n`;
                 });
             });
             
@@ -5051,5 +5217,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970a0e776510f9d3',t:'MTc1NTQ0Mjk4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970a253cf6abf9d9',t:'MTc1NTQ0MzkyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
