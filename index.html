@@ -3206,40 +3206,206 @@
             }
         }
 
-        // Edit functions
+        // Edit functions with proper modal-based editing
         function editProduct(productId) {
             const product = firebaseProducts[productId];
-            if (!product) return;
-            
-            const newName = prompt('Edit Product Name:', product.name);
-            if (newName && newName.trim() !== product.name) {
-                updateProduct(productId, { name: newName.trim() });
+            if (!product) {
+                showErrorToast('Product not found');
+                return;
             }
+            
+            // Create edit modal
+            const editModal = createEditModal('Edit Product', [
+                { label: 'Product Name', id: 'editProductName', value: product.name, required: true },
+                { label: 'Product Code', id: 'editProductCode', value: product.code, readonly: true }
+            ]);
+            
+            document.body.appendChild(editModal);
+            editModal.style.display = 'flex';
+            
+            // Handle save
+            editModal.querySelector('.save-edit-btn').onclick = () => {
+                const newName = editModal.querySelector('#editProductName').value.trim();
+                if (!newName) {
+                    showErrorToast('Product name is required');
+                    return;
+                }
+                
+                if (newName !== product.name) {
+                    updateProduct(productId, { name: newName });
+                }
+                
+                document.body.removeChild(editModal);
+            };
+            
+            // Handle cancel
+            editModal.querySelector('.cancel-edit-btn').onclick = () => {
+                document.body.removeChild(editModal);
+            };
         }
 
         function editEmployee(employeeId) {
             const employee = firebaseEmployees[employeeId];
-            if (!employee) return;
-            
-            const newName = prompt('Edit Employee Name:', employee.name);
-            if (newName && newName.trim() !== employee.name) {
-                updateEmployee(employeeId, { name: newName.trim() });
+            if (!employee) {
+                showErrorToast('Employee not found');
+                return;
             }
+            
+            // Create edit modal
+            const editModal = createEditModal('Edit Employee', [
+                { label: 'Employee Name', id: 'editEmployeeName', value: employee.name, required: true },
+                { label: 'Employee ID', id: 'editEmployeeId', value: employee.empId, readonly: true },
+                { label: 'Username', id: 'editEmployeeUsername', value: employee.username || '', required: true },
+                { label: 'Role', id: 'editEmployeeRole', value: employee.role || 'sales', type: 'select', options: [
+                    { value: 'admin', text: 'Admin' },
+                    { value: 'sales', text: 'Sales' },
+                    { value: 'manager', text: 'Manager' }
+                ]}
+            ]);
+            
+            document.body.appendChild(editModal);
+            editModal.style.display = 'flex';
+            
+            // Handle save
+            editModal.querySelector('.save-edit-btn').onclick = () => {
+                const newName = editModal.querySelector('#editEmployeeName').value.trim();
+                const newUsername = editModal.querySelector('#editEmployeeUsername').value.trim();
+                const newRole = editModal.querySelector('#editEmployeeRole').value;
+                
+                if (!newName || !newUsername) {
+                    showErrorToast('Name and username are required');
+                    return;
+                }
+                
+                const updates = {};
+                if (newName !== employee.name) updates.name = newName;
+                if (newUsername !== employee.username) updates.username = newUsername;
+                if (newRole !== employee.role) updates.role = newRole;
+                
+                if (Object.keys(updates).length > 0) {
+                    updateEmployee(employeeId, updates);
+                }
+                
+                document.body.removeChild(editModal);
+            };
+            
+            // Handle cancel
+            editModal.querySelector('.cancel-edit-btn').onclick = () => {
+                document.body.removeChild(editModal);
+            };
         }
 
         function editStore(storeId) {
             const store = firebaseStores[storeId];
-            if (!store) return;
-            
-            const newName = prompt('Edit Store Name:', store.name);
-            if (newName && newName.trim() !== store.name) {
-                updateStore(storeId, { name: newName.trim() });
+            if (!store) {
+                showErrorToast('Store not found');
+                return;
             }
+            
+            // Create edit modal
+            const editModal = createEditModal('Edit Store', [
+                { label: 'Store Name', id: 'editStoreName', value: store.name, required: true },
+                { label: 'Store Code', id: 'editStoreCode', value: store.code, readonly: true }
+            ]);
+            
+            document.body.appendChild(editModal);
+            editModal.style.display = 'flex';
+            
+            // Handle save
+            editModal.querySelector('.save-edit-btn').onclick = () => {
+                const newName = editModal.querySelector('#editStoreName').value.trim();
+                if (!newName) {
+                    showErrorToast('Store name is required');
+                    return;
+                }
+                
+                if (newName !== store.name) {
+                    updateStore(storeId, { name: newName });
+                }
+                
+                document.body.removeChild(editModal);
+            };
+            
+            // Handle cancel
+            editModal.querySelector('.cancel-edit-btn').onclick = () => {
+                document.body.removeChild(editModal);
+            };
+        }
+
+        // Create reusable edit modal
+        function createEditModal(title, fields) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            `;
+            
+            let fieldsHTML = '';
+            fields.forEach(field => {
+                if (field.type === 'select') {
+                    let optionsHTML = '';
+                    field.options.forEach(option => {
+                        const selected = option.value === field.value ? 'selected' : '';
+                        optionsHTML += `<option value="${option.value}" ${selected}>${option.text}</option>`;
+                    });
+                    fieldsHTML += `
+                        <div class="form-group">
+                            <label class="form-label">${field.label}</label>
+                            <select class="form-input" id="${field.id}" ${field.required ? 'required' : ''}>
+                                ${optionsHTML}
+                            </select>
+                        </div>
+                    `;
+                } else {
+                    fieldsHTML += `
+                        <div class="form-group">
+                            <label class="form-label">${field.label}</label>
+                            <input type="text" class="form-input" id="${field.id}" 
+                                   value="${field.value}" 
+                                   ${field.required ? 'required' : ''}
+                                   ${field.readonly ? 'readonly' : ''}>
+                        </div>
+                    `;
+                }
+            });
+            
+            modal.innerHTML = `
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <h3 class="modal-title">${title}</h3>
+                    </div>
+                    <div class="modal-form">
+                        ${fieldsHTML}
+                        <div class="form-actions">
+                            <button type="button" class="btn-primary save-edit-btn">💾 Save Changes</button>
+                            <button type="button" class="btn-secondary cancel-edit-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return modal;
         }
 
         async function updateProduct(productId, updates) {
             try {
-                const updatedProduct = { ...firebaseProducts[productId], ...updates };
+                const updatedProduct = { 
+                    ...firebaseProducts[productId], 
+                    ...updates,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: userSession.username
+                };
+                
                 const result = await saveToFirebase(`products/${productId}`, updatedProduct);
                 if (result.success) {
                     firebaseProducts[productId] = updatedProduct;
@@ -3257,7 +3423,13 @@
 
         async function updateEmployee(employeeId, updates) {
             try {
-                const updatedEmployee = { ...firebaseEmployees[employeeId], ...updates };
+                const updatedEmployee = { 
+                    ...firebaseEmployees[employeeId], 
+                    ...updates,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: userSession.username
+                };
+                
                 const result = await saveToFirebase(`employees/${employeeId}`, updatedEmployee);
                 if (result.success) {
                     firebaseEmployees[employeeId] = updatedEmployee;
@@ -3275,7 +3447,13 @@
 
         async function updateStore(storeId, updates) {
             try {
-                const updatedStore = { ...firebaseStores[storeId], ...updates };
+                const updatedStore = { 
+                    ...firebaseStores[storeId], 
+                    ...updates,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: userSession.username
+                };
+                
                 const result = await saveToFirebase(`stores/${storeId}`, updatedStore);
                 if (result.success) {
                     firebaseStores[storeId] = updatedStore;
@@ -3768,9 +3946,6 @@
             if (!window.currentReportData) return;
             
             const data = window.currentReportData;
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
             
             let csv = 'Sale ID,Date,Employee,Store,Product,Quantity,Unit Price,Total Amount,Timestamp\n';
             
@@ -3778,8 +3953,6 @@
                 let price = 0;
                 if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = firebaseStorePrices[sale.store][sale.product];
-                } else {
-                    price = defaultPrices[sale.product] || 0;
                 }
                 const totalAmount = price * sale.qty;
                 
@@ -3811,16 +3984,11 @@
             
             // Prepare table data
             const data = window.currentReportData;
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
             
             const tableData = data.map(sale => {
                 let price = 0;
                 if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = firebaseStorePrices[sale.store][sale.product];
-                } else {
-                    price = defaultPrices[sale.product] || 0;
                 }
                 const totalAmount = price * sale.qty;
                 
@@ -3941,11 +4109,6 @@
                 return saleDate === yesterdayStr;
             });
             
-            // Default prices for fallback
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
-            
             // Calculate total sales amount
             let totalAmount = 0;
             let totalQty = 0;
@@ -3956,12 +4119,10 @@
                 const qty = parseInt(sale.qty);
                 if (isNaN(qty)) return;
                 
-                // Get price from Firebase store prices or default
+                // Get price from Firebase store prices only
                 let price = 0;
                 if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    price = defaultPrices[sale.product] || 0;
                 }
                 
                 const saleAmount = price * qty;
@@ -4251,39 +4412,23 @@
         }
 
         function getStoreName(storeId) {
-            // Check Firebase stores first
+            // Check Firebase stores only
             const firebaseStore = firebaseStores[storeId];
             if (firebaseStore) {
                 return firebaseStore.name;
             }
             
-            // Check default stores
-            const defaultStores = {
-                'store1': 'Downtown Store',
-                'store2': 'Mall Store',
-                'store3': 'Airport Store'
-            };
-            
-            return defaultStores[storeId] || `Store ${storeId}`;
+            return `Store ${storeId}`;
         }
 
         function getProductName(productId) {
-            // Check Firebase products first
+            // Check Firebase products only
             const firebaseProduct = firebaseProducts[productId];
             if (firebaseProduct) {
                 return firebaseProduct.name;
             }
             
-            // Check default products
-            const defaultProducts = {
-                'product1': 'Laptop Pro 15"',
-                'product2': 'Smartphone X',
-                'product3': 'Tablet Air',
-                'product4': 'Headphones Pro',
-                'product5': 'Smart Watch'
-            };
-            
-            return defaultProducts[productId] || `Product ${productId}`;
+            return `Product ${productId}`;
         }
 
         function showSalesSuccess() {
@@ -4475,5 +4620,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'970411c016faf9cb',t:'MTc1NTM4MDIwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97096ab4c15bfa02',t:'MTc1NTQzNjI4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
