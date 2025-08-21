@@ -2155,9 +2155,15 @@
                             <button class="logout-btn" onclick="logout()">Logout</button>
                         </div>
                     </div>
-                    <div class="total-qty">
-                        <span class="qty-label">Total Qty Sold Today:</span>
-                        <span class="qty-value" id="totalQty">0</span>
+                    <div class="stats-row">
+                        <div class="total-qty">
+                            <span class="qty-label">Total Qty Sold Today:</span>
+                            <span class="qty-value" id="totalQty">0</span>
+                        </div>
+                        <div class="total-amount">
+                            <span class="amount-label">Total Sales Amount Today:</span>
+                            <span class="amount-value" id="totalAmount">0 DHS</span>
+                        </div>
                     </div>
                 </div>
 
@@ -2236,17 +2242,31 @@
                     margin: 0;
                 }
 
-                .total-qty {
+                .stats-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                }
+
+                .total-qty, .total-amount {
                     display: flex;
                     align-items: center;
                     gap: 16px;
                     padding: 16px 24px;
-                    background: rgba(0, 122, 255, 0.15);
                     border: 1px solid rgba(0, 122, 255, 0.2);
                     border-radius: 16px;
                 }
 
-                .qty-label {
+                .total-qty {
+                    background: rgba(0, 122, 255, 0.15);
+                }
+
+                .total-amount {
+                    background: rgba(34, 197, 94, 0.15);
+                    border-color: rgba(34, 197, 94, 0.2);
+                }
+
+                .qty-label, .amount-label {
                     color: rgba(255, 255, 255, 0.8);
                     font-weight: 600;
                     font-size: 1rem;
@@ -2254,6 +2274,13 @@
 
                 .qty-value {
                     color: #007aff;
+                    font-size: 2rem;
+                    font-weight: 700;
+                    letter-spacing: -0.02em;
+                }
+
+                .amount-value {
+                    color: #22c55e;
                     font-size: 2rem;
                     font-weight: 700;
                     letter-spacing: -0.02em;
@@ -2373,7 +2400,12 @@
                         font-size: 2rem;
                     }
 
-                    .qty-value {
+                    .stats-row {
+                        grid-template-columns: 1fr;
+                        gap: 16px;
+                    }
+
+                    .qty-value, .amount-value {
                         font-size: 1.5rem;
                     }
                 }
@@ -5674,7 +5706,7 @@
         function updateTotalQty() {
             const today = new Date().toISOString().split('T')[0];
             
-            console.log('Updating total qty for today:', {
+            console.log('Updating total qty and amount for today:', {
                 today,
                 totalSalesData: salesData.length
             });
@@ -5703,22 +5735,52 @@
             
             console.log('Filtered today\'s sales (all users):', todaysSales);
             
-            // Calculate total quantity for today (all users)
-            const totalQty = todaysSales.reduce((sum, sale) => {
+            // Default prices for fallback
+            const defaultPrices = {
+                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+            };
+            
+            // Calculate total quantity and amount for today (all users)
+            let totalQty = 0;
+            let totalAmount = 0;
+            
+            todaysSales.forEach(sale => {
                 const qty = parseInt(sale.qty);
                 const validQty = isNaN(qty) ? 0 : qty;
-                console.log(`Adding qty ${validQty} from sale ${sale.id} by ${sale.user}`);
-                return sum + validQty;
-            }, 0);
+                totalQty += validQty;
+                
+                // Get price from Firebase store prices or default prices
+                let price = 0;
+                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                } else {
+                    price = defaultPrices[sale.product] || 0;
+                }
+                
+                const saleAmount = price * validQty;
+                totalAmount += saleAmount;
+                
+                console.log(`Adding qty ${validQty} and amount ${saleAmount} from sale ${sale.id} by ${sale.user}`);
+            });
             
-            console.log('Calculated total qty for today:', totalQty);
+            console.log('Calculated totals for today:', { totalQty, totalAmount });
             
+            // Update quantity display
             const qtyElement = document.getElementById('totalQty');
             if (qtyElement) {
                 qtyElement.textContent = totalQty;
                 console.log('Updated qty element to:', totalQty);
             } else {
                 console.error('Total qty element not found');
+            }
+            
+            // Update amount display
+            const amountElement = document.getElementById('totalAmount');
+            if (amountElement) {
+                amountElement.textContent = `${totalAmount.toLocaleString()} DHS`;
+                console.log('Updated amount element to:', totalAmount);
+            } else {
+                console.error('Total amount element not found');
             }
         }
 
@@ -6112,5 +6174,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9729108fa263f9f0',t:'MTc1NTc2ODEzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972c28baf63bf9eb',t:'MTc1NTgwMDU4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
