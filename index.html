@@ -3197,7 +3197,7 @@
             }
         }
 
-        function importData() {
+        async function importData() {
             const fileInput = document.getElementById('importFile');
             const importType = document.getElementById('importType').value;
             
@@ -3209,40 +3209,84 @@
             const file = fileInput.files[0];
             const reader = new FileReader();
             
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     let importedData;
                     
+                    console.log('Starting import process for type:', importType);
+                    console.log('File name:', file.name);
+                    
                     if (file.name.endsWith('.csv')) {
                         importedData = parseCSV(e.target.result);
+                        console.log('Parsed CSV data:', importedData);
                     } else {
                         importedData = JSON.parse(e.target.result);
+                        console.log('Parsed JSON data:', importedData);
                     }
+                    
+                    if (!importedData || (Array.isArray(importedData) && importedData.length === 0)) {
+                        throw new Error('No valid data found in file');
+                    }
+                    
+                    // Show loading state
+                    const importBtn = document.getElementById('importBtn');
+                    const originalText = importBtn.innerHTML;
+                    importBtn.innerHTML = '⏳ Importing...';
+                    importBtn.disabled = true;
                     
                     // Validate and import data based on type
+                    let result;
                     switch(importType) {
                         case 'sales':
-                            importSalesData(importedData);
+                            result = await importSalesData(importedData);
                             break;
                         case 'products':
-                            importProductsData(importedData);
+                            result = await importProductsData(importedData);
                             break;
                         case 'employees':
-                            importEmployeesData(importedData);
+                            result = await importEmployeesData(importedData);
                             break;
                         case 'stores':
-                            importStoresData(importedData);
+                            result = await importStoresData(importedData);
                             break;
                         case 'pricing':
-                            importPricingData(importedData);
+                            result = await importPricingData(importedData);
                             break;
+                        default:
+                            throw new Error('Invalid import type selected');
                     }
                     
-                    showSuccessToast('Data imported successfully!');
-                    closeImportExportModal();
+                    // Reset button
+                    importBtn.innerHTML = originalText;
+                    importBtn.disabled = false;
+                    
+                    if (result && result.success) {
+                        showSuccessToast(`${importType} data imported successfully! ${result.count || 0} records processed.`);
+                        closeImportExportModal();
+                        
+                        // Refresh relevant data displays
+                        if (importType === 'products') updateProductSelects();
+                        if (importType === 'stores') updateStoreSelects();
+                        if (importType === 'sales') {
+                            calculateYesterdayAnalytics();
+                            if (typeof updateTotalQty === 'function') updateTotalQty();
+                        }
+                        
+                        // Reload Firebase data to ensure consistency
+                        await loadFirebaseData();
+                        
+                    } else {
+                        throw new Error(result?.error || 'Import failed');
+                    }
                     
                 } catch (error) {
-                    alert('Error importing data: ' + error.message);
+                    console.error('Import error:', error);
+                    showErrorToast('Error importing data: ' + error.message);
+                    
+                    // Reset button
+                    const importBtn = document.getElementById('importBtn');
+                    importBtn.innerHTML = '💾 Save Import';
+                    importBtn.disabled = false;
                 }
             };
             
@@ -3250,87 +3294,340 @@
         }
 
         function parseCSV(csvText) {
-            const lines = csvText.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
+            console.log('Parsing CSV text:', csvText.substring(0, 200) + '...');
+            
+            const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
+            
+            if (lines.length < 2) {
+                throw new Error('CSV file must have at least a header row and one data row');
+            }
+            
+            console.log('CSV lines found:', lines.length);
+            
+            // Parse headers - handle quoted values properly
+            const headerLine = lines[0];
+            const headers = parseCSVLine(headerLine);
+            console.log('CSV headers:', headers);
+            
             const data = [];
             
+            // Parse data rows
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.replace(/"/g, ''));
-                const row = {};
-                headers.forEach((header, index) => {
-                    row[header] = values[index];
-                });
-                data.push(row);
+                const line = lines[i].trim();
+                if (!line) continue; // Skip empty lines
+                
+                try {
+                    const values = parseCSVLine(line);
+                    const row = {};
+                    
+                    headers.forEach((header, index) => {
+                        const value = values[index] || '';
+                        row[header.trim()] = value.trim();
+                    });
+                    
+                    // Only add rows that have at least one non-empty value
+                    if (Object.values(row).some(val => val !== '')) {
+                        data.push(row);
+                    }
+                } catch (error) {
+                    console.warn(`Error parsing CSV line ${i + 1}: ${line}`, error);
+                }
             }
+            
+            console.log('Parsed CSV data:', data.length, 'records');
+            console.log('Sample record:', data[0]);
             
             return data;
         }
 
-        function importSalesData(data) {
-            if (!Array.isArray(data)) throw new Error('Invalid sales data format');
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const nextChar = line[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        // Escaped quote
+                        current += '"';
+                        i++; // Skip next quote
+                    } else {
+                        // Toggle quote state
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    // End of field
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            // Add the last field
+            result.push(current);
+            
+            return result;
+        }
+
+        async function importSalesData(data) {
+            if (!Array.isArray(data)) throw new Error('Invalid sales data format - expected array');
+            
+            console.log('Importing sales data:', data.length, 'records');
             
             // Validate required fields
-            data.forEach(sale => {
+            const validSales = [];
+            data.forEach((sale, index) => {
                 if (!sale.date || !sale.store || !sale.product || !sale.qty) {
-                    throw new Error('Missing required fields in sales data');
+                    console.warn(`Skipping invalid sale at index ${index}:`, sale);
+                    return;
+                }
+                
+                // Clean and validate the sale data
+                const cleanSale = {
+                    id: sale.id || generateSaleId(),
+                    date: sale.date,
+                    store: sale.store,
+                    product: sale.product,
+                    qty: parseInt(sale.qty) || 0,
+                    user: sale.user || 'Imported',
+                    timestamp: sale.timestamp || new Date().toLocaleString(),
+                    createdAt: sale.createdAt || new Date().toISOString()
+                };
+                
+                if (cleanSale.qty > 0) {
+                    validSales.push(cleanSale);
                 }
             });
             
-            // Add to existing sales data
-            const existingSales = JSON.parse(localStorage.getItem('salesData')) || [];
-            const newSales = data.map(sale => ({
-                ...sale,
-                id: Date.now() + Math.random(),
-                qty: parseInt(sale.qty),
-                user: sale.user || 'Imported',
-                timestamp: sale.timestamp || new Date().toLocaleString()
-            }));
+            if (validSales.length === 0) {
+                throw new Error('No valid sales records found in import data');
+            }
             
-            const updatedSales = [...existingSales, ...newSales];
-            localStorage.setItem('salesData', JSON.stringify(updatedSales));
-            salesData = updatedSales;
+            console.log('Valid sales to import:', validSales.length);
+            
+            // Save each sale to Firebase
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const sale of validSales) {
+                try {
+                    const result = await pushToFirebase('sales', sale);
+                    if (result.success) {
+                        // Update local data
+                        firebaseSales[result.key] = { ...sale, firebaseKey: result.key };
+                        salesData.push(sale);
+                        successCount++;
+                    } else {
+                        console.error('Failed to save sale:', sale, result.error);
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Error saving sale:', sale, error);
+                    errorCount++;
+                }
+            }
+            
+            console.log(`Import complete: ${successCount} success, ${errorCount} errors`);
+            
+            return {
+                success: successCount > 0,
+                count: successCount,
+                errors: errorCount,
+                error: errorCount > 0 ? `${errorCount} records failed to import` : null
+            };
         }
 
-        function importProductsData(data) {
-            if (!Array.isArray(data)) throw new Error('Invalid products data format');
+        async function importProductsData(data) {
+            if (!Array.isArray(data)) throw new Error('Invalid products data format - expected array');
             
-            const existingProducts = JSON.parse(localStorage.getItem('products')) || [];
-            const newProducts = data.map(product => ({
-                id: product.id || `imported_product_${Date.now()}_${Math.random()}`,
-                name: product.name,
-                code: product.code || generateProductCode()
-            }));
+            console.log('Importing products data:', data.length, 'records');
             
-            const updatedProducts = [...existingProducts, ...newProducts];
-            localStorage.setItem('products', JSON.stringify(updatedProducts));
+            // Validate and clean product data
+            const validProducts = [];
+            data.forEach((product, index) => {
+                if (!product.name || !product.name.trim()) {
+                    console.warn(`Skipping invalid product at index ${index}:`, product);
+                    return;
+                }
+                
+                const cleanProduct = {
+                    id: generateTextId('PROD'),
+                    name: product.name.trim(),
+                    code: product.code || generateProductCode(),
+                    createdAt: new Date().toISOString(),
+                    createdBy: 'Import',
+                    type: 'imported'
+                };
+                
+                validProducts.push(cleanProduct);
+            });
+            
+            if (validProducts.length === 0) {
+                throw new Error('No valid product records found in import data');
+            }
+            
+            console.log('Valid products to import:', validProducts.length);
+            
+            // Save each product to Firebase
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const product of validProducts) {
+                try {
+                    const result = await saveToFirebase(`products/${product.id}`, product);
+                    if (result.success) {
+                        // Update local data
+                        firebaseProducts[product.id] = product;
+                        successCount++;
+                    } else {
+                        console.error('Failed to save product:', product, result.error);
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Error saving product:', product, error);
+                    errorCount++;
+                }
+            }
+            
+            console.log(`Product import complete: ${successCount} success, ${errorCount} errors`);
+            
+            return {
+                success: successCount > 0,
+                count: successCount,
+                errors: errorCount,
+                error: errorCount > 0 ? `${errorCount} products failed to import` : null
+            };
         }
 
-        function importEmployeesData(data) {
-            if (!Array.isArray(data)) throw new Error('Invalid employees data format');
+        async function importEmployeesData(data) {
+            if (!Array.isArray(data)) throw new Error('Invalid employees data format - expected array');
             
-            const existingEmployees = JSON.parse(localStorage.getItem('employees')) || [];
-            const newEmployees = data.map(employee => ({
-                id: employee.id || `imported_employee_${Date.now()}_${Math.random()}`,
-                name: employee.name,
-                empId: employee.empId || generateEmployeeId()
-            }));
+            console.log('Importing employees data:', data.length, 'records');
             
-            const updatedEmployees = [...existingEmployees, ...newEmployees];
-            localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+            // Validate and clean employee data
+            const validEmployees = [];
+            data.forEach((employee, index) => {
+                if (!employee.name || !employee.name.trim()) {
+                    console.warn(`Skipping invalid employee at index ${index}:`, employee);
+                    return;
+                }
+                
+                const cleanEmployee = {
+                    id: generateTextId('EMP'),
+                    name: employee.name.trim(),
+                    empId: employee.empId || generateEmployeeId(),
+                    username: employee.username || employee.name.toLowerCase().replace(/\s+/g, ''),
+                    password: employee.password || 'password123',
+                    role: employee.role || 'sales',
+                    createdAt: new Date().toISOString(),
+                    createdBy: 'Import',
+                    type: 'imported'
+                };
+                
+                validEmployees.push(cleanEmployee);
+            });
+            
+            if (validEmployees.length === 0) {
+                throw new Error('No valid employee records found in import data');
+            }
+            
+            console.log('Valid employees to import:', validEmployees.length);
+            
+            // Save each employee to Firebase
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const employee of validEmployees) {
+                try {
+                    const result = await saveToFirebase(`employees/${employee.id}`, employee);
+                    if (result.success) {
+                        // Update local data
+                        firebaseEmployees[employee.id] = employee;
+                        successCount++;
+                    } else {
+                        console.error('Failed to save employee:', employee, result.error);
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Error saving employee:', employee, error);
+                    errorCount++;
+                }
+            }
+            
+            console.log(`Employee import complete: ${successCount} success, ${errorCount} errors`);
+            
+            return {
+                success: successCount > 0,
+                count: successCount,
+                errors: errorCount,
+                error: errorCount > 0 ? `${errorCount} employees failed to import` : null
+            };
         }
 
-        function importStoresData(data) {
-            if (!Array.isArray(data)) throw new Error('Invalid stores data format');
+        async function importStoresData(data) {
+            if (!Array.isArray(data)) throw new Error('Invalid stores data format - expected array');
             
-            const existingStores = JSON.parse(localStorage.getItem('stores')) || [];
-            const newStores = data.map(store => ({
-                id: store.id || `imported_store_${Date.now()}_${Math.random()}`,
-                name: store.name,
-                code: store.code || generateStoreCode()
-            }));
+            console.log('Importing stores data:', data.length, 'records');
             
-            const updatedStores = [...existingStores, ...newStores];
-            localStorage.setItem('stores', JSON.stringify(updatedStores));
+            // Validate and clean store data
+            const validStores = [];
+            data.forEach((store, index) => {
+                if (!store.name || !store.name.trim()) {
+                    console.warn(`Skipping invalid store at index ${index}:`, store);
+                    return;
+                }
+                
+                const cleanStore = {
+                    id: generateTextId('STORE'),
+                    name: store.name.trim(),
+                    code: store.code || generateStoreCode(),
+                    createdAt: new Date().toISOString(),
+                    createdBy: 'Import',
+                    type: 'imported'
+                };
+                
+                validStores.push(cleanStore);
+            });
+            
+            if (validStores.length === 0) {
+                throw new Error('No valid store records found in import data');
+            }
+            
+            console.log('Valid stores to import:', validStores.length);
+            
+            // Save each store to Firebase
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const store of validStores) {
+                try {
+                    const result = await saveToFirebase(`stores/${store.id}`, store);
+                    if (result.success) {
+                        // Update local data
+                        firebaseStores[store.id] = store;
+                        successCount++;
+                    } else {
+                        console.error('Failed to save store:', store, result.error);
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Error saving store:', store, error);
+                    errorCount++;
+                }
+            }
+            
+            console.log(`Store import complete: ${successCount} success, ${errorCount} errors`);
+            
+            return {
+                success: successCount > 0,
+                count: successCount,
+                errors: errorCount,
+                error: errorCount > 0 ? `${errorCount} stores failed to import` : null
+            };
         }
 
         async function importPricingData(data) {
@@ -5374,5 +5671,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9728c9786031f9f0',t:'MTc1NTc2NTIyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9728de1ef2b1f9f8',t:'MTc1NTc2NjA2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
