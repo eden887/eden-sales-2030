@@ -2941,13 +2941,18 @@
             
             switch(exportType) {
                 case 'sales':
-                    // Export sales with proper store and product IDs
+                    // Export sales with proper store and product IDs and names
                     data = salesData.map(sale => ({
-                        ...sale,
-                        store_id: sale.store,
+                        id: sale.id,
+                        date: sale.date,
+                        store: sale.store,
                         store_name: getStoreName(sale.store),
-                        product_id: sale.product,
-                        product_name: getProductName(sale.product)
+                        product: sale.product,
+                        product_name: getProductName(sale.product),
+                        qty: sale.qty,
+                        user: sale.user,
+                        timestamp: sale.timestamp,
+                        createdAt: sale.createdAt
                     }));
                     filename = 'sales_data';
                     break;
@@ -2957,20 +2962,20 @@
                     
                     // Add default products
                     const defaultProducts = [
-                        { id: 'product1', name: 'Laptop Pro 15"', code: 'product1', type: 'default' },
-                        { id: 'product2', name: 'Smartphone X', code: 'product2', type: 'default' },
-                        { id: 'product3', name: 'Tablet Air', code: 'product3', type: 'default' },
-                        { id: 'product4', name: 'Headphones Pro', code: 'product4', type: 'default' },
-                        { id: 'product5', name: 'Smart Watch', code: 'product5', type: 'default' }
+                        { id: 'product1', name: 'Laptop Pro 15"', code: 'PRD001', type: 'default' },
+                        { id: 'product2', name: 'Smartphone X', code: 'PRD002', type: 'default' },
+                        { id: 'product3', name: 'Tablet Air', code: 'PRD003', type: 'default' },
+                        { id: 'product4', name: 'Headphones Pro', code: 'PRD004', type: 'default' },
+                        { id: 'product5', name: 'Smart Watch', code: 'PRD005', type: 'default' }
                     ];
                     data.push(...defaultProducts);
                     
                     // Add Firebase products with text IDs
                     Object.entries(firebaseProducts).forEach(([textId, product]) => {
                         data.push({
-                            id: product.id || textId,
+                            id: textId,
                             name: product.name,
-                            code: product.code || product.id || textId,
+                            code: product.code || textId,
                             type: 'custom',
                             createdAt: product.createdAt,
                             createdBy: product.createdBy
@@ -2984,19 +2989,19 @@
                     
                     // Add default employees
                     const defaultEmployees = [
-                        { id: 'admin', name: 'Administrator', username: 'admin', role: 'admin', type: 'default' },
-                        { id: 'sales', name: 'Sales User', username: 'sales', role: 'sales', type: 'default' }
+                        { id: 'admin', name: 'Administrator', username: 'admin', role: 'admin', empId: 'EMP001', type: 'default' },
+                        { id: 'sales', name: 'Sales User', username: 'sales', role: 'sales', empId: 'EMP002', type: 'default' }
                     ];
                     data.push(...defaultEmployees);
                     
                     // Add Firebase employees with text IDs
                     Object.entries(firebaseEmployees).forEach(([textId, employee]) => {
                         data.push({
-                            id: employee.id || textId,
+                            id: textId,
                             name: employee.name,
                             username: employee.username,
                             role: employee.role,
-                            empId: employee.empId || employee.id || textId,
+                            empId: employee.empId || textId,
                             type: 'custom',
                             createdAt: employee.createdAt,
                             createdBy: employee.createdBy
@@ -3010,18 +3015,18 @@
                     
                     // Add default stores
                     const defaultStores = [
-                        { id: 'store1', name: 'Downtown Store', code: 'store1', type: 'default' },
-                        { id: 'store2', name: 'Mall Store', code: 'store2', type: 'default' },
-                        { id: 'store3', name: 'Airport Store', code: 'store3', type: 'default' }
+                        { id: 'store1', name: 'Downtown Store', code: 'STR001', type: 'default' },
+                        { id: 'store2', name: 'Mall Store', code: 'STR002', type: 'default' },
+                        { id: 'store3', name: 'Airport Store', code: 'STR003', type: 'default' }
                     ];
                     data.push(...defaultStores);
                     
                     // Add Firebase stores with text IDs
                     Object.entries(firebaseStores).forEach(([textId, store]) => {
                         data.push({
-                            id: store.id || textId,
+                            id: textId,
                             name: store.name,
-                            code: store.code || store.id || textId,
+                            code: store.code || textId,
                             type: 'custom',
                             createdAt: store.createdAt,
                             createdBy: store.createdBy
@@ -3030,7 +3035,19 @@
                     filename = 'stores';
                     break;
                 case 'prices':
-                    data = firebaseStorePrices || {};
+                    // Convert prices to readable format
+                    data = [];
+                    Object.entries(firebaseStorePrices).forEach(([storeId, prices]) => {
+                        Object.entries(prices).forEach(([productId, price]) => {
+                            data.push({
+                                store_id: storeId,
+                                store_name: getStoreName(storeId),
+                                product_id: productId,
+                                product_name: getProductName(productId),
+                                price: price
+                            });
+                        });
+                    });
                     filename = 'price_settings';
                     break;
                 case 'pricing-template':
@@ -3039,10 +3056,37 @@
                     break;
                 case 'all':
                     data = {
-                        sales: salesData,
-                        products: Object.values(firebaseProducts),
-                        employees: Object.values(firebaseEmployees),
-                        stores: Object.values(firebaseStores),
+                        sales: salesData.map(sale => ({
+                            id: sale.id,
+                            date: sale.date,
+                            store: sale.store,
+                            store_name: getStoreName(sale.store),
+                            product: sale.product,
+                            product_name: getProductName(sale.product),
+                            qty: sale.qty,
+                            user: sale.user,
+                            timestamp: sale.timestamp
+                        })),
+                        products: [...defaultProducts, ...Object.entries(firebaseProducts).map(([id, product]) => ({
+                            id,
+                            name: product.name,
+                            code: product.code || id,
+                            type: 'custom'
+                        }))],
+                        employees: [...defaultEmployees, ...Object.entries(firebaseEmployees).map(([id, employee]) => ({
+                            id,
+                            name: employee.name,
+                            username: employee.username,
+                            role: employee.role,
+                            empId: employee.empId || id,
+                            type: 'custom'
+                        }))],
+                        stores: [...defaultStores, ...Object.entries(firebaseStores).map(([id, store]) => ({
+                            id,
+                            name: store.name,
+                            code: store.code || id,
+                            type: 'custom'
+                        }))],
                         prices: firebaseStorePrices
                     };
                     filename = 'all_data';
@@ -3051,7 +3095,7 @@
             
             console.log('Prepared data for export:', data);
             
-            if (exportFormat === 'csv' && exportType !== 'all' && exportType !== 'prices') {
+            if (exportFormat === 'csv' && exportType !== 'all') {
                 exportCSV(data, filename);
             } else {
                 exportJSON(data, filename);
@@ -3059,24 +3103,53 @@
         }
 
         function exportCSV(data, filename) {
-            if (data.length === 0) {
-                alert('No data to export');
+            if (!data || data.length === 0) {
+                showErrorToast('No data to export');
                 return;
             }
             
-            let csv = '';
-            const headers = Object.keys(data[0]);
-            csv += headers.join(',') + '\n';
+            console.log('Exporting CSV with data:', data.slice(0, 3));
             
-            data.forEach(row => {
-                const values = headers.map(header => {
-                    const value = row[header];
-                    return typeof value === 'string' ? `"${value}"` : value;
+            try {
+                let csv = '';
+                const headers = Object.keys(data[0]);
+                
+                // Add BOM for proper UTF-8 encoding
+                csv = '\uFEFF';
+                
+                // Add headers
+                csv += headers.map(header => `"${String(header).replace(/"/g, '""')}"`).join(',') + '\r\n';
+                
+                // Add data rows
+                data.forEach(row => {
+                    const values = headers.map(header => {
+                        let value = row[header];
+                        
+                        // Handle null/undefined values
+                        if (value === null || value === undefined) {
+                            value = '';
+                        }
+                        
+                        // Convert to string and handle special characters
+                        value = String(value);
+                        
+                        // Always wrap in quotes and escape internal quotes for safety
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                        
+                        return value;
+                    });
+                    csv += values.join(',') + '\r\n';
                 });
-                csv += values.join(',') + '\n';
-            });
-            
-            downloadFile(csv, `${filename}.csv`, 'text/csv');
+                
+                console.log('Generated CSV preview:', csv.substring(0, 500));
+                
+                // Use improved download function
+                downloadCSVFile(csv, `${filename}.csv`);
+                
+            } catch (error) {
+                console.error('Error generating CSV:', error);
+                showErrorToast('Failed to generate CSV file: ' + error.message);
+            }
         }
 
         function exportJSON(data, filename) {
@@ -3156,15 +3229,82 @@
         }
 
         function downloadFile(content, filename, mimeType) {
-            const blob = new Blob([content], { type: mimeType });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            showSuccessToast('Data exported successfully!');
+            try {
+                const blob = new Blob([content], { type: mimeType });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                
+                // Add to DOM, click, then remove
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up URL object
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+                
+                showSuccessToast('Data exported successfully!');
+            } catch (error) {
+                console.error('Download error:', error);
+                showErrorToast('Failed to download file: ' + error.message);
+            }
+        }
+
+        function downloadCSVFile(csvContent, filename) {
+            try {
+                // Create blob with proper CSV MIME type and UTF-8 encoding
+                const blob = new Blob([csvContent], { 
+                    type: 'text/csv;charset=utf-8;' 
+                });
+                
+                // Check if browser supports the download attribute
+                if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                    // For IE/Edge
+                    window.navigator.msSaveOrOpenBlob(blob, filename);
+                } else {
+                    // For modern browsers
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    
+                    // Ensure the link is added to DOM for Firefox compatibility
+                    document.body.appendChild(link);
+                    
+                    // Trigger download
+                    link.click();
+                    
+                    // Clean up
+                    document.body.removeChild(link);
+                    
+                    // Revoke URL after a short delay to ensure download starts
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                }
+                
+                showSuccessToast('CSV file downloaded successfully!');
+                console.log('CSV download completed:', filename);
+                
+            } catch (error) {
+                console.error('CSV download error:', error);
+                showErrorToast('Failed to download CSV file: ' + error.message);
+                
+                // Fallback: try to copy to clipboard
+                try {
+                    navigator.clipboard.writeText(csvContent).then(() => {
+                        showSuccessToast('CSV data copied to clipboard as fallback');
+                    });
+                } catch (clipboardError) {
+                    console.error('Clipboard fallback failed:', clipboardError);
+                }
+            }
         }
 
         function handleImportFile() {
@@ -3261,7 +3401,11 @@
                     importBtn.disabled = false;
                     
                     if (result && result.success) {
-                        showSuccessToast(`${importType} data imported successfully! ${result.count || 0} records processed.`);
+                        let message = `${importType} data imported successfully! ${result.count || 0} records processed.`;
+                        if (result.errors && result.errors > 0) {
+                            message += ` (${result.errors} records had errors)`;
+                        }
+                        showSuccessToast(message);
                         closeImportExportModal();
                         
                         // Refresh relevant data displays
@@ -3270,6 +3414,13 @@
                         if (importType === 'sales') {
                             calculateYesterdayAnalytics();
                             if (typeof updateTotalQty === 'function') updateTotalQty();
+                        }
+                        if (importType === 'pricing') {
+                            // Refresh price management if open
+                            const priceStoreSelect = document.getElementById('priceStoreSelect');
+                            if (priceStoreSelect && priceStoreSelect.value) {
+                                loadStorePrices();
+                            }
                         }
                         
                         // Reload Firebase data to ensure consistency
@@ -3377,34 +3528,55 @@
             if (!Array.isArray(data)) throw new Error('Invalid sales data format - expected array');
             
             console.log('Importing sales data:', data.length, 'records');
+            console.log('Sample data:', data.slice(0, 3));
             
             // Validate required fields
             const validSales = [];
             data.forEach((sale, index) => {
-                if (!sale.date || !sale.store || !sale.product || !sale.qty) {
-                    console.warn(`Skipping invalid sale at index ${index}:`, sale);
+                console.log(`Processing sale at index ${index}:`, sale);
+                
+                // Check if sale is an object
+                if (!sale || typeof sale !== 'object') {
+                    console.warn(`Skipping invalid sale at index ${index}: not an object`, sale);
+                    return;
+                }
+                
+                // Extract fields with multiple possible names
+                const saleDate = sale.date || sale.sale_date || sale.saleDate;
+                const storeId = sale.store || sale.store_id || sale.storeId;
+                const productId = sale.product || sale.product_id || sale.productId;
+                const quantity = sale.qty || sale.quantity || sale.amount;
+                const user = sale.user || sale.employee || sale.salesperson || 'Imported';
+                
+                if (!saleDate || !storeId || !productId || !quantity) {
+                    console.warn(`Skipping invalid sale at index ${index}: missing required fields`, {
+                        date: saleDate, store: storeId, product: productId, qty: quantity
+                    });
                     return;
                 }
                 
                 // Clean and validate the sale data
                 const cleanSale = {
                     id: sale.id || generateSaleId(),
-                    date: sale.date,
-                    store: sale.store,
-                    product: sale.product,
-                    qty: parseInt(sale.qty) || 0,
-                    user: sale.user || 'Imported',
+                    date: saleDate,
+                    store: storeId,
+                    product: productId,
+                    qty: parseInt(quantity) || 0,
+                    user: user,
                     timestamp: sale.timestamp || new Date().toLocaleString(),
                     createdAt: sale.createdAt || new Date().toISOString()
                 };
                 
                 if (cleanSale.qty > 0) {
                     validSales.push(cleanSale);
+                    console.log(`Valid sale added:`, cleanSale);
+                } else {
+                    console.warn(`Skipping sale with invalid quantity:`, cleanSale);
                 }
             });
             
             if (validSales.length === 0) {
-                throw new Error('No valid sales records found in import data');
+                throw new Error('No valid sales records found. Please check that your data has date, store, product, and qty fields.');
             }
             
             console.log('Valid sales to import:', validSales.length);
@@ -3421,6 +3593,7 @@
                         firebaseSales[result.key] = { ...sale, firebaseKey: result.key };
                         salesData.push(sale);
                         successCount++;
+                        console.log(`Successfully imported sale: ${sale.id}`);
                     } else {
                         console.error('Failed to save sale:', sale, result.error);
                         errorCount++;
@@ -3431,7 +3604,7 @@
                 }
             }
             
-            console.log(`Import complete: ${successCount} success, ${errorCount} errors`);
+            console.log(`Sales import complete: ${successCount} success, ${errorCount} errors`);
             
             return {
                 success: successCount > 0,
@@ -3445,29 +3618,66 @@
             if (!Array.isArray(data)) throw new Error('Invalid products data format - expected array');
             
             console.log('Importing products data:', data.length, 'records');
+            console.log('Raw import data:', data);
             
             // Validate and clean product data
             const validProducts = [];
             data.forEach((product, index) => {
-                if (!product.name || !product.name.trim()) {
-                    console.warn(`Skipping invalid product at index ${index}:`, product);
+                console.log(`Processing product at index ${index}:`, product);
+                
+                // Check if product is an object and has required fields
+                if (!product || typeof product !== 'object') {
+                    console.warn(`Skipping invalid product at index ${index}: not an object`, product);
                     return;
+                }
+                
+                // Extract name from various possible field names
+                let productName = '';
+                if (product.name && typeof product.name === 'string') {
+                    productName = product.name.trim();
+                } else if (product.product_name && typeof product.product_name === 'string') {
+                    productName = product.product_name.trim();
+                } else if (product.productName && typeof product.productName === 'string') {
+                    productName = product.productName.trim();
+                }
+                
+                if (!productName) {
+                    console.warn(`Skipping invalid product at index ${index}: no valid name found`, product);
+                    return;
+                }
+                
+                // Extract code from various possible field names
+                let productCode = '';
+                if (product.code && typeof product.code === 'string') {
+                    productCode = product.code.trim();
+                } else if (product.product_code && typeof product.product_code === 'string') {
+                    productCode = product.product_code.trim();
+                } else if (product.productCode && typeof product.productCode === 'string') {
+                    productCode = product.productCode.trim();
+                } else if (product.id && typeof product.id === 'string') {
+                    productCode = product.id.trim();
+                }
+                
+                // Generate code if not provided
+                if (!productCode) {
+                    productCode = generateProductCode();
                 }
                 
                 const cleanProduct = {
                     id: generateTextId('PROD'),
-                    name: product.name.trim(),
-                    code: product.code || generateProductCode(),
+                    name: productName,
+                    code: productCode,
                     createdAt: new Date().toISOString(),
-                    createdBy: 'Import',
+                    createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
                 
+                console.log(`Valid product created:`, cleanProduct);
                 validProducts.push(cleanProduct);
             });
             
             if (validProducts.length === 0) {
-                throw new Error('No valid product records found in import data');
+                throw new Error('No valid product records found in import data. Please check that your data has "name" or "product_name" fields.');
             }
             
             console.log('Valid products to import:', validProducts.length);
@@ -3478,13 +3688,38 @@
             
             for (const product of validProducts) {
                 try {
-                    const result = await saveToFirebase(`products/${product.id}`, product);
+                    console.log('Saving product to Firebase:', product);
+                    
+                    // Ensure all required fields are present and not undefined
+                    const productToSave = {
+                        id: product.id || generateTextId('PROD'),
+                        name: product.name || 'Unnamed Product',
+                        code: product.code || generateProductCode(),
+                        createdAt: product.createdAt || new Date().toISOString(),
+                        createdBy: product.createdBy || 'Import',
+                        type: product.type || 'imported'
+                    };
+                    
+                    // Validate that no field is undefined
+                    Object.keys(productToSave).forEach(key => {
+                        if (productToSave[key] === undefined || productToSave[key] === null) {
+                            console.error(`Field ${key} is undefined/null, setting default value`);
+                            productToSave[key] = key === 'name' ? 'Unnamed Product' : 
+                                                key === 'code' ? generateProductCode() :
+                                                key === 'createdAt' ? new Date().toISOString() :
+                                                key === 'createdBy' ? 'Import' :
+                                                key === 'type' ? 'imported' : 'default';
+                        }
+                    });
+                    
+                    const result = await saveToFirebase(`products/${productToSave.id}`, productToSave);
                     if (result.success) {
                         // Update local data
-                        firebaseProducts[product.id] = product;
+                        firebaseProducts[productToSave.id] = productToSave;
                         successCount++;
+                        console.log(`Successfully saved product: ${productToSave.name}`);
                     } else {
-                        console.error('Failed to save product:', product, result.error);
+                        console.error('Failed to save product:', productToSave, result.error);
                         errorCount++;
                     }
                 } catch (error) {
@@ -3507,32 +3742,58 @@
             if (!Array.isArray(data)) throw new Error('Invalid employees data format - expected array');
             
             console.log('Importing employees data:', data.length, 'records');
+            console.log('Raw import data:', data);
             
             // Validate and clean employee data
             const validEmployees = [];
             data.forEach((employee, index) => {
-                if (!employee.name || !employee.name.trim()) {
-                    console.warn(`Skipping invalid employee at index ${index}:`, employee);
+                console.log(`Processing employee at index ${index}:`, employee);
+                
+                // Check if employee is an object and has required fields
+                if (!employee || typeof employee !== 'object') {
+                    console.warn(`Skipping invalid employee at index ${index}: not an object`, employee);
                     return;
                 }
                 
+                // Extract name from various possible field names
+                let employeeName = '';
+                if (employee.name && typeof employee.name === 'string') {
+                    employeeName = employee.name.trim();
+                } else if (employee.employee_name && typeof employee.employee_name === 'string') {
+                    employeeName = employee.employee_name.trim();
+                } else if (employee.employeeName && typeof employee.employeeName === 'string') {
+                    employeeName = employee.employeeName.trim();
+                }
+                
+                if (!employeeName) {
+                    console.warn(`Skipping invalid employee at index ${index}: no valid name found`, employee);
+                    return;
+                }
+                
+                // Extract other fields with fallbacks
+                const empId = employee.empId || employee.employee_id || employee.emp_id || generateEmployeeId();
+                const username = employee.username || employee.user_name || employeeName.toLowerCase().replace(/\s+/g, '');
+                const password = employee.password || 'password123';
+                const role = employee.role || 'sales';
+                
                 const cleanEmployee = {
                     id: generateTextId('EMP'),
-                    name: employee.name.trim(),
-                    empId: employee.empId || generateEmployeeId(),
-                    username: employee.username || employee.name.toLowerCase().replace(/\s+/g, ''),
-                    password: employee.password || 'password123',
-                    role: employee.role || 'sales',
+                    name: employeeName,
+                    empId: empId,
+                    username: username,
+                    password: password,
+                    role: role,
                     createdAt: new Date().toISOString(),
-                    createdBy: 'Import',
+                    createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
                 
+                console.log(`Valid employee created:`, cleanEmployee);
                 validEmployees.push(cleanEmployee);
             });
             
             if (validEmployees.length === 0) {
-                throw new Error('No valid employee records found in import data');
+                throw new Error('No valid employee records found in import data. Please check that your data has "name" or "employee_name" fields.');
             }
             
             console.log('Valid employees to import:', validEmployees.length);
@@ -3543,13 +3804,44 @@
             
             for (const employee of validEmployees) {
                 try {
-                    const result = await saveToFirebase(`employees/${employee.id}`, employee);
+                    console.log('Saving employee to Firebase:', employee);
+                    
+                    // Ensure all required fields are present and not undefined
+                    const employeeToSave = {
+                        id: employee.id || generateTextId('EMP'),
+                        name: employee.name || 'Unnamed Employee',
+                        empId: employee.empId || generateEmployeeId(),
+                        username: employee.username || 'user' + Date.now(),
+                        password: employee.password || 'password123',
+                        role: employee.role || 'sales',
+                        createdAt: employee.createdAt || new Date().toISOString(),
+                        createdBy: employee.createdBy || 'Import',
+                        type: employee.type || 'imported'
+                    };
+                    
+                    // Validate that no field is undefined
+                    Object.keys(employeeToSave).forEach(key => {
+                        if (employeeToSave[key] === undefined || employeeToSave[key] === null) {
+                            console.error(`Field ${key} is undefined/null, setting default value`);
+                            employeeToSave[key] = key === 'name' ? 'Unnamed Employee' : 
+                                                 key === 'empId' ? generateEmployeeId() :
+                                                 key === 'username' ? 'user' + Date.now() :
+                                                 key === 'password' ? 'password123' :
+                                                 key === 'role' ? 'sales' :
+                                                 key === 'createdAt' ? new Date().toISOString() :
+                                                 key === 'createdBy' ? 'Import' :
+                                                 key === 'type' ? 'imported' : 'default';
+                        }
+                    });
+                    
+                    const result = await saveToFirebase(`employees/${employeeToSave.id}`, employeeToSave);
                     if (result.success) {
                         // Update local data
-                        firebaseEmployees[employee.id] = employee;
+                        firebaseEmployees[employeeToSave.id] = employeeToSave;
                         successCount++;
+                        console.log(`Successfully saved employee: ${employeeToSave.name}`);
                     } else {
-                        console.error('Failed to save employee:', employee, result.error);
+                        console.error('Failed to save employee:', employeeToSave, result.error);
                         errorCount++;
                     }
                 } catch (error) {
@@ -3572,29 +3864,66 @@
             if (!Array.isArray(data)) throw new Error('Invalid stores data format - expected array');
             
             console.log('Importing stores data:', data.length, 'records');
+            console.log('Raw import data:', data);
             
             // Validate and clean store data
             const validStores = [];
             data.forEach((store, index) => {
-                if (!store.name || !store.name.trim()) {
-                    console.warn(`Skipping invalid store at index ${index}:`, store);
+                console.log(`Processing store at index ${index}:`, store);
+                
+                // Check if store is an object and has required fields
+                if (!store || typeof store !== 'object') {
+                    console.warn(`Skipping invalid store at index ${index}: not an object`, store);
                     return;
+                }
+                
+                // Extract name from various possible field names
+                let storeName = '';
+                if (store.name && typeof store.name === 'string') {
+                    storeName = store.name.trim();
+                } else if (store.store_name && typeof store.store_name === 'string') {
+                    storeName = store.store_name.trim();
+                } else if (store.storeName && typeof store.storeName === 'string') {
+                    storeName = store.storeName.trim();
+                }
+                
+                if (!storeName) {
+                    console.warn(`Skipping invalid store at index ${index}: no valid name found`, store);
+                    return;
+                }
+                
+                // Extract code from various possible field names
+                let storeCode = '';
+                if (store.code && typeof store.code === 'string') {
+                    storeCode = store.code.trim();
+                } else if (store.store_code && typeof store.store_code === 'string') {
+                    storeCode = store.store_code.trim();
+                } else if (store.storeCode && typeof store.storeCode === 'string') {
+                    storeCode = store.storeCode.trim();
+                } else if (store.id && typeof store.id === 'string') {
+                    storeCode = store.id.trim();
+                }
+                
+                // Generate code if not provided
+                if (!storeCode) {
+                    storeCode = generateStoreCode();
                 }
                 
                 const cleanStore = {
                     id: generateTextId('STORE'),
-                    name: store.name.trim(),
-                    code: store.code || generateStoreCode(),
+                    name: storeName,
+                    code: storeCode,
                     createdAt: new Date().toISOString(),
-                    createdBy: 'Import',
+                    createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
                 
+                console.log(`Valid store created:`, cleanStore);
                 validStores.push(cleanStore);
             });
             
             if (validStores.length === 0) {
-                throw new Error('No valid store records found in import data');
+                throw new Error('No valid store records found in import data. Please check that your data has "name" or "store_name" fields.');
             }
             
             console.log('Valid stores to import:', validStores.length);
@@ -3605,13 +3934,38 @@
             
             for (const store of validStores) {
                 try {
-                    const result = await saveToFirebase(`stores/${store.id}`, store);
+                    console.log('Saving store to Firebase:', store);
+                    
+                    // Ensure all required fields are present and not undefined
+                    const storeToSave = {
+                        id: store.id || generateTextId('STORE'),
+                        name: store.name || 'Unnamed Store',
+                        code: store.code || generateStoreCode(),
+                        createdAt: store.createdAt || new Date().toISOString(),
+                        createdBy: store.createdBy || 'Import',
+                        type: store.type || 'imported'
+                    };
+                    
+                    // Validate that no field is undefined
+                    Object.keys(storeToSave).forEach(key => {
+                        if (storeToSave[key] === undefined || storeToSave[key] === null) {
+                            console.error(`Field ${key} is undefined/null, setting default value`);
+                            storeToSave[key] = key === 'name' ? 'Unnamed Store' : 
+                                              key === 'code' ? generateStoreCode() :
+                                              key === 'createdAt' ? new Date().toISOString() :
+                                              key === 'createdBy' ? 'Import' :
+                                              key === 'type' ? 'imported' : 'default';
+                        }
+                    });
+                    
+                    const result = await saveToFirebase(`stores/${storeToSave.id}`, storeToSave);
                     if (result.success) {
                         // Update local data
-                        firebaseStores[store.id] = store;
+                        firebaseStores[storeToSave.id] = storeToSave;
                         successCount++;
+                        console.log(`Successfully saved store: ${storeToSave.name}`);
                     } else {
-                        console.error('Failed to save store:', store, result.error);
+                        console.error('Failed to save store:', storeToSave, result.error);
                         errorCount++;
                     }
                 } catch (error) {
@@ -3631,16 +3985,54 @@
         }
 
         async function importPricingData(data) {
-            if (!Array.isArray(data)) throw new Error('Invalid pricing data format');
+            if (!Array.isArray(data)) throw new Error('Invalid pricing data format - expected array');
             
-            console.log('Importing pricing data:', data);
+            console.log('Importing pricing data:', data.length, 'records');
+            console.log('Sample pricing data:', data.slice(0, 3));
             
-            // Validate required fields
-            data.forEach(row => {
-                if (!row.store_id || !row.product_id || row.price === undefined) {
-                    throw new Error('Missing required fields in pricing data (store_id, product_id, price)');
+            // Validate and process pricing data
+            const validPrices = [];
+            data.forEach((row, index) => {
+                console.log(`Processing pricing row at index ${index}:`, row);
+                
+                // Check if row is an object
+                if (!row || typeof row !== 'object') {
+                    console.warn(`Skipping invalid pricing row at index ${index}: not an object`, row);
+                    return;
                 }
+                
+                // Extract fields with multiple possible names
+                const storeId = row.store_id || row.storeId || row.store || row.internal_store_id;
+                const productId = row.product_id || row.productId || row.product || row.internal_product_id;
+                const price = row.price || row.amount || row.cost;
+                
+                if (!storeId || !productId || price === undefined || price === null) {
+                    console.warn(`Skipping invalid pricing row at index ${index}: missing required fields`, {
+                        storeId, productId, price
+                    });
+                    return;
+                }
+                
+                const numericPrice = parseFloat(price);
+                if (isNaN(numericPrice) || numericPrice < 0) {
+                    console.warn(`Skipping pricing row with invalid price at index ${index}:`, price);
+                    return;
+                }
+                
+                validPrices.push({
+                    storeId: storeId,
+                    productId: productId,
+                    price: numericPrice
+                });
+                
+                console.log(`Valid pricing row added:`, { storeId, productId, price: numericPrice });
             });
+            
+            if (validPrices.length === 0) {
+                throw new Error('No valid pricing records found. Please check that your data has store_id, product_id, and price fields.');
+            }
+            
+            console.log('Valid pricing records to import:', validPrices.length);
             
             // Create mapping from readable IDs to internal Firebase keys
             const storeIdMap = {};
@@ -3683,27 +4075,33 @@
             
             // Process pricing data with ID mapping
             const newPrices = {};
-            data.forEach(row => {
-                // Use internal_store_id and internal_product_id if available, otherwise map from display IDs
-                const internalStoreId = row.internal_store_id || storeIdMap[row.store_id];
-                const internalProductId = row.internal_product_id || productIdMap[row.product_id];
+            let successCount = 0;
+            let errorCount = 0;
+            
+            validPrices.forEach(row => {
+                // Map to internal IDs
+                const internalStoreId = storeIdMap[row.storeId] || row.storeId;
+                const internalProductId = productIdMap[row.productId] || row.productId;
                 
                 if (!internalStoreId) {
-                    console.warn(`Could not map store ID: ${row.store_id}`);
+                    console.warn(`Could not map store ID: ${row.storeId}`);
+                    errorCount++;
                     return;
                 }
                 
                 if (!internalProductId) {
-                    console.warn(`Could not map product ID: ${row.product_id}`);
+                    console.warn(`Could not map product ID: ${row.productId}`);
+                    errorCount++;
                     return;
                 }
                 
                 if (!newPrices[internalStoreId]) {
                     newPrices[internalStoreId] = {};
                 }
-                newPrices[internalStoreId][internalProductId] = parseFloat(row.price) || 0;
+                newPrices[internalStoreId][internalProductId] = row.price;
+                successCount++;
                 
-                console.log(`Mapped: ${row.store_id} -> ${internalStoreId}, ${row.product_id} -> ${internalProductId}, Price: ${row.price}`);
+                console.log(`Mapped: ${row.storeId} -> ${internalStoreId}, ${row.productId} -> ${internalProductId}, Price: ${row.price}`);
             });
             
             console.log('Processed new prices with internal IDs:', newPrices);
@@ -3722,7 +4120,7 @@
             try {
                 const result = await saveToFirebase('storePrices', firebaseStorePrices);
                 if (!result.success) {
-                    throw new Error('Failed to save to Firebase');
+                    throw new Error('Failed to save to Firebase: ' + result.error);
                 }
                 
                 console.log('Successfully saved pricing data to Firebase');
@@ -3735,9 +4133,16 @@
                     calculateYesterdayAnalytics();
                 }
                 
+                return {
+                    success: true,
+                    count: successCount,
+                    errors: errorCount,
+                    error: errorCount > 0 ? `${errorCount} pricing records failed to import` : null
+                };
+                
             } catch (error) {
                 console.error('Error saving pricing data:', error);
-                throw new Error('Failed to save pricing data to Firebase');
+                throw new Error('Failed to save pricing data to Firebase: ' + error.message);
             }
         }
 
@@ -4193,16 +4598,48 @@
 
         async function updateStore(storeId, updates) {
             try {
+                const currentStore = firebaseStores[storeId];
+                if (!currentStore) {
+                    throw new Error('Store not found');
+                }
+                
                 const updatedStore = { 
-                    ...firebaseStores[storeId], 
+                    ...currentStore, 
                     ...updates,
                     updatedAt: new Date().toISOString(),
-                    updatedBy: userSession.username
+                    updatedBy: userSession?.username || 'Unknown'
                 };
                 
-                const result = await saveToFirebase(`stores/${storeId}`, updatedStore);
+                // Ensure all required fields are present and not undefined
+                const storeToSave = {
+                    id: updatedStore.id || storeId,
+                    name: updatedStore.name || 'Unnamed Store',
+                    code: updatedStore.code || generateStoreCode(),
+                    createdAt: updatedStore.createdAt || new Date().toISOString(),
+                    createdBy: updatedStore.createdBy || 'System',
+                    type: updatedStore.type || 'custom',
+                    updatedAt: updatedStore.updatedAt,
+                    updatedBy: updatedStore.updatedBy
+                };
+                
+                // Validate that no field is undefined
+                Object.keys(storeToSave).forEach(key => {
+                    if (storeToSave[key] === undefined || storeToSave[key] === null) {
+                        console.error(`Field ${key} is undefined/null, setting default value`);
+                        storeToSave[key] = key === 'name' ? 'Unnamed Store' : 
+                                          key === 'code' ? generateStoreCode() :
+                                          key === 'createdAt' ? new Date().toISOString() :
+                                          key === 'createdBy' ? 'System' :
+                                          key === 'updatedBy' ? 'System' :
+                                          key === 'type' ? 'custom' : 'default';
+                    }
+                });
+                
+                console.log('Updating store with validated data:', storeToSave);
+                
+                const result = await saveToFirebase(`stores/${storeId}`, storeToSave);
                 if (result.success) {
-                    firebaseStores[storeId] = updatedStore;
+                    firebaseStores[storeId] = storeToSave;
                     loadManageData();
                     updateStoreSelects();
                     showSuccessToast('Store updated successfully!');
@@ -4727,41 +5164,50 @@
         }
 
         function exportReportCSV() {
-            if (!window.currentReportData) return;
+            if (!window.currentReportData) {
+                showErrorToast('No report data available to export');
+                return;
+            }
             
-            const data = window.currentReportData;
-            
-            let csv = 'Sale ID,Date,Employee,Store,Product,Quantity,Unit Price,Total Amount,Timestamp\n';
-            
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
-            
-            data.forEach(sale => {
-                let price = 0;
+            try {
+                const data = window.currentReportData;
                 
-                // First try Firebase store prices
-                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    // Fallback to default prices
-                    price = defaultPrices[sale.product] || 0;
-                }
+                // Add BOM for proper UTF-8 encoding
+                let csv = '\uFEFF';
+                csv += '"Sale ID","Date","Employee","Store","Product","Quantity","Unit Price","Total Amount","Timestamp"\r\n';
                 
-                const totalAmount = price * sale.qty;
-                const storeName = getStoreName(sale.store);
-                const productName = getProductName(sale.product);
+                const defaultPrices = {
+                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                };
                 
-                csv += `${sale.id},${sale.date},"${getEmployeeName(sale.user)}","${storeName}","${productName}",${sale.qty},${price},${totalAmount},"${sale.timestamp || 'N/A'}"\n`;
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
+                data.forEach(sale => {
+                    let price = 0;
+                    
+                    // First try Firebase store prices
+                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    } else {
+                        // Fallback to default prices
+                        price = defaultPrices[sale.product] || 0;
+                    }
+                    
+                    const totalAmount = price * sale.qty;
+                    const storeName = getStoreName(sale.store);
+                    const productName = getProductName(sale.product);
+                    const employeeName = getEmployeeName(sale.user);
+                    const timestamp = sale.timestamp || 'N/A';
+                    
+                    // Properly escape all values
+                    csv += `"${sale.id}","${sale.date}","${employeeName.replace(/"/g, '""')}","${storeName.replace(/"/g, '""')}","${productName.replace(/"/g, '""')}","${sale.qty}","${price}","${totalAmount}","${timestamp.replace(/"/g, '""')}"\r\n`;
+                });
+                
+                const filename = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
+                downloadCSVFile(csv, filename);
+                
+            } catch (error) {
+                console.error('Error exporting report CSV:', error);
+                showErrorToast('Failed to export report: ' + error.message);
+            }
         }
 
         function exportReportPDF() {
@@ -5639,16 +6085,11 @@
             
             console.log('Generated CSV with proper IDs');
             
-            // Export CSV
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `EDEN_Master_Data_Export_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
+            // Export CSV using improved download function
+            const filename = `EDEN_Master_Data_Export_${new Date().toISOString().split('T')[0]}.csv`;
+            downloadCSVFile(csv, filename);
             
-            showSuccessToast('Master data exported successfully with proper IDs!');
+            console.log('Master data export completed with proper IDs');
         }
 
         function logout() {
@@ -5671,5 +6112,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9728de1ef2b1f9f8',t:'MTc1NTc2NjA2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9729108fa263f9f0',t:'MTc1NTc2ODEzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
