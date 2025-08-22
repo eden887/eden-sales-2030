@@ -5381,63 +5381,186 @@
         }
 
         function exportReportPDF() {
-            if (!window.currentReportData || typeof jsPDF === 'undefined') return;
+            if (!window.currentReportData) {
+                showErrorToast('No report data available to export');
+                return;
+            }
             
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Add title
-            doc.setFontSize(20);
-            doc.text('Sales Report', 20, 20);
-            
-            // Add generation date
-            doc.setFontSize(12);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
-            
-            // Prepare table data
-            const data = window.currentReportData;
-            
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
-            
-            const tableData = data.map(sale => {
-                let price = 0;
-                
-                // First try Firebase store prices
-                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    // Fallback to default prices
-                    price = defaultPrices[sale.product] || 0;
+            try {
+                // Check if jsPDF is available
+                if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                    console.error('jsPDF library not loaded properly');
+                    showErrorToast('PDF export library not available. Please try CSV export instead.');
+                    return;
                 }
                 
-                const totalAmount = price * sale.qty;
-                const storeName = getStoreName(sale.store);
-                const productName = getProductName(sale.product);
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
                 
-                return [
-                    sale.id,
-                    sale.date,
-                    getEmployeeName(sale.user),
-                    storeName,
-                    productName,
-                    sale.qty,
-                    `${price} DHS`,
-                    `${totalAmount} DHS`
-                ];
-            });
-            
-            // Add table
-            doc.autoTable({
-                head: [['ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Unit Price', 'Total']],
-                body: tableData,
-                startY: 40,
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [0, 122, 255] }
-            });
-            
-            doc.save(`sales_report_${new Date().toISOString().split('T')[0]}.pdf`);
+                console.log('Creating PDF with jsPDF...');
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('EDEN Sales Report', 20, 20);
+                
+                // Add generation date
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 35);
+                doc.text(`Report Type: ${window.currentReportType || 'Detailed'}`, 20, 45);
+                
+                // Prepare table data
+                const data = window.currentReportData;
+                console.log('Preparing PDF data for', data.length, 'records');
+                
+                const defaultPrices = {
+                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                };
+                
+                // Calculate summary
+                let totalQty = 0;
+                let totalRevenue = 0;
+                
+                const tableData = data.map(sale => {
+                    let price = 0;
+                    
+                    // First try Firebase store prices
+                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    } else {
+                        // Fallback to default prices
+                        price = defaultPrices[sale.product] || 0;
+                    }
+                    
+                    const totalAmount = price * sale.qty;
+                    totalQty += sale.qty;
+                    totalRevenue += totalAmount;
+                    
+                    const storeName = getStoreName(sale.store);
+                    const productName = getProductName(sale.product);
+                    
+                    return [
+                        `#${sale.id}`,
+                        new Date(sale.date).toLocaleDateString(),
+                        getEmployeeName(sale.user),
+                        storeName,
+                        productName,
+                        sale.qty.toString(),
+                        `${price.toLocaleString()} DHS`,
+                        `${totalAmount.toLocaleString()} DHS`
+                    ];
+                });
+                
+                // Add summary section
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Summary', 20, 60);
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Total Sales: ${data.length}`, 20, 70);
+                doc.text(`Total Quantity: ${totalQty}`, 20, 80);
+                doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 90);
+                
+                // Check if autoTable is available
+                if (typeof doc.autoTable === 'function') {
+                    console.log('Using autoTable for PDF generation...');
+                    
+                    // Add table with autoTable
+                    doc.autoTable({
+                        head: [['Sale ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Unit Price', 'Total']],
+                        body: tableData,
+                        startY: 100,
+                        styles: { 
+                            fontSize: 8,
+                            cellPadding: 2
+                        },
+                        headStyles: { 
+                            fillColor: [0, 122, 255],
+                            textColor: [255, 255, 255],
+                            fontStyle: 'bold'
+                        },
+                        alternateRowStyles: {
+                            fillColor: [245, 245, 245]
+                        },
+                        margin: { top: 100, left: 10, right: 10 }
+                    });
+                } else {
+                    console.log('autoTable not available, using basic table...');
+                    
+                    // Fallback: Create basic table manually
+                    let yPosition = 110;
+                    const lineHeight = 6;
+                    
+                    // Table headers
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'bold');
+                    const headers = ['ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Price', 'Total'];
+                    let xPosition = 10;
+                    const colWidths = [15, 25, 30, 25, 30, 15, 25, 25];
+                    
+                    headers.forEach((header, index) => {
+                        doc.text(header, xPosition, yPosition);
+                        xPosition += colWidths[index];
+                    });
+                    
+                    yPosition += lineHeight;
+                    
+                    // Table data (limit to first 30 rows to avoid page overflow)
+                    doc.setFont('helvetica', 'normal');
+                    const limitedData = tableData.slice(0, 30);
+                    
+                    limitedData.forEach(row => {
+                        xPosition = 10;
+                        row.forEach((cell, index) => {
+                            const cellText = cell.toString();
+                            const maxWidth = colWidths[index] - 2;
+                            
+                            // Truncate long text
+                            const truncatedText = cellText.length > 12 ? cellText.substring(0, 12) + '...' : cellText;
+                            doc.text(truncatedText, xPosition, yPosition);
+                            xPosition += colWidths[index];
+                        });
+                        yPosition += lineHeight;
+                        
+                        // Check if we need a new page
+                        if (yPosition > 280) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                    });
+                    
+                    if (tableData.length > 30) {
+                        yPosition += 10;
+                        doc.setFont('helvetica', 'italic');
+                        doc.text(`... and ${tableData.length - 30} more records`, 10, yPosition);
+                    }
+                }
+                
+                // Add footer
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Page ${i} of ${pageCount}`, 180, 290);
+                    doc.text('Generated by EDEN Sales Management System', 20, 290);
+                }
+                
+                // Save the PDF
+                const filename = `EDEN_Sales_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                console.log('Saving PDF as:', filename);
+                
+                doc.save(filename);
+                
+                showSuccessToast('PDF report exported successfully!');
+                console.log('PDF export completed successfully');
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                showErrorToast('Failed to generate PDF: ' + error.message + '. Please try CSV export instead.');
+            }
         }
 
         function updateProductSelects() {
@@ -5447,10 +5570,19 @@
             productSelects.forEach(select => {
                 const currentValue = select.value;
                 
+                // Get selected store for filtering (only for sales entry page)
+                const storeSelect = document.getElementById('storeSelect');
+                const selectedStore = storeSelect ? storeSelect.value : null;
+                
                 // Clear all options except the first one
                 select.innerHTML = '<option value="">Select Product</option>';
                 
-                // Add default products first
+                // Default prices for fallback
+                const defaultPrices = {
+                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                };
+                
+                // Add default products first (with price filtering if store is selected)
                 const defaultProducts = [
                     { id: 'product1', name: 'Laptop Pro 15"' },
                     { id: 'product2', name: 'Smartphone X' },
@@ -5460,14 +5592,48 @@
                 ];
                 
                 defaultProducts.forEach(product => {
+                    // Check if we should filter by price (only for sales entry with selected store)
+                    if (selectedStore && storeSelect) {
+                        let price = 0;
+                        
+                        // Get price from Firebase store prices or default prices
+                        if (firebaseStorePrices[selectedStore] && firebaseStorePrices[selectedStore][product.id]) {
+                            price = parseFloat(firebaseStorePrices[selectedStore][product.id]) || 0;
+                        } else {
+                            price = defaultPrices[product.id] || 0;
+                        }
+                        
+                        // Skip products with 0 price
+                        if (price === 0) {
+                            console.log(`Hiding product ${product.name} - price is 0 for store ${selectedStore}`);
+                            return;
+                        }
+                    }
+                    
                     const option = document.createElement('option');
                     option.value = product.id;
                     option.textContent = product.name;
                     select.appendChild(option);
                 });
                 
-                // Add Firebase products using Firebase keys
+                // Add Firebase products using Firebase keys (with price filtering if store is selected)
                 Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+                    // Check if we should filter by price (only for sales entry with selected store)
+                    if (selectedStore && storeSelect) {
+                        let price = 0;
+                        
+                        // Get price from Firebase store prices
+                        if (firebaseStorePrices[selectedStore] && firebaseStorePrices[selectedStore][firebaseKey]) {
+                            price = parseFloat(firebaseStorePrices[selectedStore][firebaseKey]) || 0;
+                        }
+                        
+                        // Skip products with 0 price
+                        if (price === 0) {
+                            console.log(`Hiding Firebase product ${product.name} - price is 0 for store ${selectedStore}`);
+                            return;
+                        }
+                    }
+                    
                     const option = document.createElement('option');
                     option.value = firebaseKey;
                     option.textContent = product.name;
@@ -5708,6 +5874,24 @@
             }
             if (userSession.defaultStore) {
                 document.getElementById('storeSelect').value = userSession.defaultStore;
+                // Update products based on selected store
+                updateProductSelects();
+            }
+            
+            // Add store change listener to update products based on selected store
+            const storeSelect = document.getElementById('storeSelect');
+            if (storeSelect) {
+                storeSelect.addEventListener('change', function() {
+                    console.log('Store changed to:', this.value);
+                    // Clear product selection when store changes
+                    const productSelect = document.getElementById('productSelect');
+                    if (productSelect) {
+                        productSelect.value = '';
+                    }
+                    // Update product list based on new store selection
+                    updateProductSelects();
+                });
+                console.log('Store change listener added');
             }
             
             // Check if user has made first entry and freeze fields
@@ -6312,5 +6496,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9730325ae36df9ef',t:'MTc1NTg0MjkxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9731e8e0a6bdf9d5',t:'MTc1NTg2MDg3OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
