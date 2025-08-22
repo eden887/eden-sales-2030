@@ -6,7 +6,7 @@
     <title>EDEN - Sales Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -5387,17 +5387,29 @@
             }
             
             try {
-                // Check if jsPDF is available
-                if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-                    console.error('jsPDF library not loaded properly');
-                    showErrorToast('PDF export library not available. Please try CSV export instead.');
+                console.log('Starting PDF export...');
+                console.log('Checking jsPDF availability...');
+                
+                // Multiple ways to check for jsPDF
+                let jsPDF = null;
+                
+                if (window.jspdf && window.jspdf.jsPDF) {
+                    jsPDF = window.jspdf.jsPDF;
+                    console.log('Found jsPDF via window.jspdf.jsPDF');
+                } else if (window.jsPDF) {
+                    jsPDF = window.jsPDF;
+                    console.log('Found jsPDF via window.jsPDF');
+                } else if (typeof jsPDF !== 'undefined') {
+                    console.log('Found jsPDF in global scope');
+                } else {
+                    console.error('jsPDF not found in any expected location');
+                    console.log('Available window properties:', Object.keys(window).filter(key => key.toLowerCase().includes('pdf')));
+                    showErrorToast('PDF library not loaded. Please refresh the page and try again.');
                     return;
                 }
                 
-                const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                
-                console.log('Creating PDF with jsPDF...');
+                console.log('jsPDF instance created successfully');
                 
                 // Add title
                 doc.setFontSize(20);
@@ -5464,28 +5476,37 @@
                 doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 90);
                 
                 // Check if autoTable is available
+                console.log('Checking autoTable availability...');
+                console.log('doc.autoTable type:', typeof doc.autoTable);
+                
                 if (typeof doc.autoTable === 'function') {
                     console.log('Using autoTable for PDF generation...');
                     
-                    // Add table with autoTable
-                    doc.autoTable({
-                        head: [['Sale ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Unit Price', 'Total']],
-                        body: tableData,
-                        startY: 100,
-                        styles: { 
-                            fontSize: 8,
-                            cellPadding: 2
-                        },
-                        headStyles: { 
-                            fillColor: [0, 122, 255],
-                            textColor: [255, 255, 255],
-                            fontStyle: 'bold'
-                        },
-                        alternateRowStyles: {
-                            fillColor: [245, 245, 245]
-                        },
-                        margin: { top: 100, left: 10, right: 10 }
-                    });
+                    try {
+                        // Add table with autoTable
+                        doc.autoTable({
+                            head: [['Sale ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Unit Price', 'Total']],
+                            body: tableData,
+                            startY: 100,
+                            styles: { 
+                                fontSize: 8,
+                                cellPadding: 2
+                            },
+                            headStyles: { 
+                                fillColor: [0, 122, 255],
+                                textColor: [255, 255, 255],
+                                fontStyle: 'bold'
+                            },
+                            alternateRowStyles: {
+                                fillColor: [245, 245, 245]
+                            },
+                            margin: { top: 100, left: 10, right: 10 }
+                        });
+                        console.log('autoTable completed successfully');
+                    } catch (autoTableError) {
+                        console.error('autoTable failed:', autoTableError);
+                        throw new Error('autoTable plugin error: ' + autoTableError.message);
+                    }
                 } else {
                     console.log('autoTable not available, using basic table...');
                     
@@ -5558,8 +5579,36 @@
                 console.log('PDF export completed successfully');
                 
             } catch (error) {
-                console.error('Error generating PDF:', error);
-                showErrorToast('Failed to generate PDF: ' + error.message + '. Please try CSV export instead.');
+                console.error('Detailed PDF export error:', error);
+                console.error('Error stack:', error.stack);
+                
+                // More specific error messages
+                let errorMessage = 'Failed to generate PDF';
+                if (error.message.includes('jsPDF')) {
+                    errorMessage = 'PDF library not properly loaded. Please refresh the page and try again.';
+                } else if (error.message.includes('autoTable')) {
+                    errorMessage = 'PDF table generation failed. The data might be too complex.';
+                } else if (error.message.includes('save')) {
+                    errorMessage = 'PDF generated but failed to download. Please check your browser settings.';
+                }
+                
+                showErrorToast(errorMessage + ' Please try CSV export instead.');
+                
+                // Fallback: try to generate a simple PDF without autoTable
+                try {
+                    console.log('Attempting fallback PDF generation...');
+                    const fallbackDoc = new (window.jspdf?.jsPDF || window.jsPDF)();
+                    fallbackDoc.setFontSize(16);
+                    fallbackDoc.text('EDEN Sales Report', 20, 20);
+                    fallbackDoc.setFontSize(12);
+                    fallbackDoc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
+                    fallbackDoc.text(`Total Records: ${window.currentReportData.length}`, 20, 60);
+                    fallbackDoc.text('For detailed data, please use CSV export.', 20, 80);
+                    fallbackDoc.save(`EDEN_Simple_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                    showSuccessToast('Simple PDF report generated successfully!');
+                } catch (fallbackError) {
+                    console.error('Fallback PDF also failed:', fallbackError);
+                }
             }
         }
 
@@ -6028,12 +6077,13 @@
         function updateTotalQty() {
             const today = new Date().toISOString().split('T')[0];
             
-            console.log('Updating total qty and amount for today:', {
+            console.log('Updating total qty and amount for today (current user only):', {
                 today,
+                currentUser: userSession.username,
                 totalSalesData: salesData.length
             });
             
-            // Filter sales for TODAY ONLY (all users)
+            // Filter sales for TODAY ONLY AND CURRENT USER ONLY
             const todaysSales = salesData.filter(sale => {
                 if (!sale || !sale.date) {
                     console.log('Skipping invalid sale:', sale);
@@ -6043,26 +6093,29 @@
                 // Handle both date formats
                 const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
                 const isToday = saleDate === today;
+                const isCurrentUser = sale.user === userSession.username;
                 
                 console.log('Sale check:', {
                     saleId: sale.id,
                     saleDate,
                     saleUser: sale.user,
+                    currentUser: userSession.username,
                     isToday,
+                    isCurrentUser,
                     qty: sale.qty
                 });
                 
-                return isToday;
+                return isToday && isCurrentUser;
             });
             
-            console.log('Filtered today\'s sales (all users):', todaysSales);
+            console.log('Filtered today\'s sales (current user only):', todaysSales);
             
             // Default prices for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
-            // Calculate total quantity and amount for today (all users)
+            // Calculate total quantity and amount for today (current user only)
             let totalQty = 0;
             let totalAmount = 0;
             
@@ -6082,10 +6135,10 @@
                 const saleAmount = price * validQty;
                 totalAmount += saleAmount;
                 
-                console.log(`Adding qty ${validQty} and amount ${saleAmount} from sale ${sale.id} by ${sale.user}`);
+                console.log(`Adding qty ${validQty} and amount ${saleAmount} from sale ${sale.id} by current user ${sale.user}`);
             });
             
-            console.log('Calculated totals for today:', { totalQty, totalAmount });
+            console.log('Calculated totals for today (current user only):', { totalQty, totalAmount });
             
             // Update quantity display
             const qtyElement = document.getElementById('totalQty');
@@ -6496,5 +6549,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9731e8e0a6bdf9d5',t:'MTc1NTg2MDg3OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9731f5f4c55cd1d0',t:'MTc1NTg2MTQxNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
