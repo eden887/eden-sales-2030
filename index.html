@@ -414,6 +414,12 @@
             }
         }
 
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
         .modal-title {
             color: white;
             font-size: 1.5rem;
@@ -1747,7 +1753,7 @@
                             <div class="tile-subtitle">Create new store</div>
                         </div>
 
-                        <div class="management-tile" onclick="openManageModal()">
+                        <div class="management-tile" onclick="openPasswordModal('manage')">
                             <div class="tile-icon">⚙️</div>
                             <div class="tile-title">Manage Data</div>
                             <div class="tile-subtitle">Edit & delete records</div>
@@ -1759,7 +1765,7 @@
                             <div class="tile-subtitle">Comprehensive analytics</div>
                         </div>
 
-                        <div class="management-tile" onclick="openPriceModal()">
+                        <div class="management-tile" onclick="openPasswordModal('price')">
                             <div class="tile-icon">💰</div>
                             <div class="tile-title">Manage Prices</div>
                             <div class="tile-subtitle">Set product prices</div>
@@ -2092,6 +2098,44 @@
                                 <div id="importFileName" style="color: rgba(255, 255, 255, 0.6); margin-top: 8px; font-size: 0.9rem;"></div>
                                 <div id="importPreview" style="margin-top: 16px;"></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password Protection Modal -->
+                <div class="modal-overlay" id="passwordModal">
+                    <div class="modal-card">
+                        <div class="modal-header">
+                            <h3 class="modal-title">🔒 Access Protected Area</h3>
+                            <button class="modal-close" onclick="closePasswordModal()">✕</button>
+                        </div>
+                        <div class="modal-form">
+                            <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                                <h4 style="color: #ffa500; margin-bottom: 12px;">🛡️ PROTECTED ACCESS</h4>
+                                <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 8px;">
+                                    This area contains sensitive data management functions.
+                                </p>
+                                <p style="color: rgba(255, 255, 255, 0.8); font-size: 0.9rem;">
+                                    Please enter the password to continue.
+                                </p>
+                            </div>
+                            
+                            <form id="passwordForm" onsubmit="verifyPassword(event)">
+                                <div class="form-group">
+                                    <label class="form-label" style="color: #ffa500;">Enter Password</label>
+                                    <input type="password" class="form-input" id="protectionPassword" placeholder="Enter password to access" style="border-color: rgba(255, 165, 0, 0.3);" required>
+                                    <div style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; margin-top: 4px;">
+                                        Password required for security
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-primary" style="background: #ffa500; border-color: #ffa500;">
+                                        🔓 Access
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -2585,12 +2629,22 @@
         }
 
         function openManageModal() {
-            document.getElementById('manageModal').style.display = 'flex';
-            loadManageData();
+            console.log('Opening manage modal...');
+            const modal = document.getElementById('manageModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                loadManageData();
+                console.log('Manage modal opened successfully');
+            } else {
+                console.error('Manage modal not found!');
+            }
         }
 
         function closeManageModal() {
-            document.getElementById('manageModal').style.display = 'none';
+            const modal = document.getElementById('manageModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
 
         function openReportsModal() {
@@ -2604,12 +2658,22 @@
 
         // Price Management Functions
         function openPriceModal() {
-            document.getElementById('priceModal').style.display = 'flex';
-            loadStoreOptions();
+            console.log('Opening price modal...');
+            const modal = document.getElementById('priceModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                loadStoreOptions();
+                console.log('Price modal opened successfully');
+            } else {
+                console.error('Price modal not found!');
+            }
         }
 
         function closePriceModal() {
-            document.getElementById('priceModal').style.display = 'none';
+            const modal = document.getElementById('priceModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
 
         function loadStoreOptions() {
@@ -2856,6 +2920,80 @@
             document.getElementById('importFileName').textContent = '';
             document.getElementById('importBtn').style.display = 'none';
             document.getElementById('importPreview').innerHTML = '';
+        }
+
+        // Password Protection Functions
+        let pendingAction = null;
+
+        function openPasswordModal(action) {
+            console.log('Opening password modal for action:', action);
+            pendingAction = action;
+            const modal = document.getElementById('passwordModal');
+            const passwordInput = document.getElementById('protectionPassword');
+            
+            if (modal && passwordInput) {
+                modal.style.display = 'flex';
+                passwordInput.value = '';
+                
+                // Focus on password input
+                setTimeout(() => {
+                    passwordInput.focus();
+                }, 100);
+                
+                console.log('Password modal opened successfully, pending action:', pendingAction);
+            } else {
+                console.error('Password modal elements not found!', { modal: !!modal, passwordInput: !!passwordInput });
+            }
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('protectionPassword').value = '';
+            pendingAction = null;
+        }
+
+        function verifyPassword(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            const password = document.getElementById('protectionPassword').value;
+            
+            if (password === 'eden@123') {
+                // Store the pending action before closing modal
+                const actionToExecute = pendingAction;
+                
+                // Close password modal first
+                closePasswordModal();
+                
+                // Execute the pending action immediately
+                if (actionToExecute === 'manage') {
+                    console.log('Opening manage modal after successful authentication');
+                    openManageModal();
+                } else if (actionToExecute === 'price') {
+                    console.log('Opening price modal after successful authentication');
+                    openPriceModal();
+                }
+                
+                // Show success message
+                showSuccessToast('Access granted! Welcome to the protected area.');
+                
+            } else {
+                showErrorToast('Incorrect password. Access denied.');
+                
+                // Clear password field and refocus
+                document.getElementById('protectionPassword').value = '';
+                document.getElementById('protectionPassword').focus();
+                
+                // Add shake animation to modal
+                const modal = document.querySelector('#passwordModal .modal-card');
+                if (modal) {
+                    modal.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        modal.style.animation = '';
+                    }, 500);
+                }
+            }
         }
 
         // Clear All Data Functions
@@ -6174,5 +6312,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'972c28baf63bf9eb',t:'MTc1NTgwMDU4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9730325ae36df9ef',t:'MTc1NTg0MjkxOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
