@@ -1389,24 +1389,59 @@
             const spinner = document.getElementById('spinner');
             const btnText = document.getElementById('btnText');
             
+            console.log('🔐 LOGIN ATTEMPT:', { username, password: '***' });
+            
+            // Validate input
+            if (!username || !password) {
+                showFeedback('Please enter both username and password', 'error');
+                return;
+            }
+            
             // Show loading state
             signinBtn.classList.add('loading');
             spinner.style.display = 'block';
             btnText.textContent = 'Signing In...';
+            signinBtn.disabled = true;
             
             // Simulate authentication delay
             setTimeout(async () => {
                 try {
                     let authenticatedUser = null;
                     
-                    // First check default users
-                    if (users[username] && users[username].password === password) {
-                        authenticatedUser = users[username];
+                    console.log('🔍 Checking authentication...');
+                    console.log('Available default users:', Object.keys(users));
+                    console.log('Available Firebase employees:', Object.keys(firebaseEmployees));
+                    
+                    // First check default users with exact matching
+                    console.log('🔑 Checking default users...');
+                    if (users[username]) {
+                        console.log(`Found user ${username}, checking password...`);
+                        console.log(`Expected password: ${users[username].password}`);
+                        console.log(`Provided password: ${password}`);
+                        
+                        if (users[username].password === password) {
+                            authenticatedUser = {
+                                name: users[username].name,
+                                type: users[username].type,
+                                username: username
+                            };
+                            console.log('✅ Default user authenticated:', authenticatedUser);
+                        } else {
+                            console.log('❌ Password mismatch for default user');
+                        }
                     } else {
-                        // Check Firebase employees
-                        const firebaseEmployee = Object.values(firebaseEmployees).find(emp => 
-                            emp.username === username && emp.password === password
-                        );
+                        console.log(`❌ Default user ${username} not found`);
+                    }
+                    
+                    // If not found in default users, check Firebase employees
+                    if (!authenticatedUser) {
+                        console.log('🔍 Checking Firebase employees...');
+                        console.log('Firebase employees data:', firebaseEmployees);
+                        
+                        const firebaseEmployee = Object.values(firebaseEmployees).find(emp => {
+                            console.log('Checking employee:', emp);
+                            return emp && emp.username === username && emp.password === password;
+                        });
                         
                         if (firebaseEmployee) {
                             authenticatedUser = {
@@ -1414,20 +1449,27 @@
                                 type: firebaseEmployee.role || 'sales',
                                 username: firebaseEmployee.username
                             };
+                            console.log('✅ Firebase employee authenticated:', authenticatedUser);
+                        } else {
+                            console.log('❌ No matching Firebase employee found');
                         }
                     }
                     
                     if (authenticatedUser) {
+                        console.log('🎉 AUTHENTICATION SUCCESSFUL:', authenticatedUser);
+                        
                         // Try to authenticate with Firebase (optional)
                         try {
                             await auth.signInAnonymously();
+                            console.log('✅ Firebase anonymous auth successful');
                         } catch (error) {
-                            console.log('Firebase auth failed, continuing with local auth');
+                            console.log('⚠️ Firebase auth failed, continuing with local auth:', error);
                         }
                         
                         showFeedback('Login successful! Redirecting...', 'success');
                         
                         setTimeout(() => {
+                            console.log('🚀 Redirecting user based on type:', authenticatedUser.type);
                             if (authenticatedUser.type === 'admin') {
                                 showAdminDashboard(authenticatedUser);
                             } else {
@@ -1436,23 +1478,35 @@
                         }, 1000);
                         
                     } else {
+                        console.log('❌ AUTHENTICATION FAILED for:', username);
+                        console.log('💡 Available login options:');
+                        console.log('   Default users:', Object.keys(users).map(u => `${u}/${users[u].password}`));
+                        console.log('   Firebase employees:', Object.values(firebaseEmployees).map(e => `${e.username}/${e.password}`));
+                        
                         showFeedback('Invalid username or password', 'error');
                         
                         // Reset form state
-                        signinBtn.classList.remove('loading');
-                        spinner.style.display = 'none';
-                        btnText.textContent = 'Sign In';
+                        resetLoginForm();
                     }
                 } catch (error) {
-                    console.error('Login error:', error);
+                    console.error('💥 Login error:', error);
                     showFeedback('Login failed. Please try again.', 'error');
                     
                     // Reset form state
-                    signinBtn.classList.remove('loading');
-                    spinner.style.display = 'none';
-                    btnText.textContent = 'Sign In';
+                    resetLoginForm();
                 }
-            }, 1500);
+            }, 800);
+        }
+        
+        function resetLoginForm() {
+            const signinBtn = document.getElementById('signinBtn');
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btnText');
+            
+            signinBtn.classList.remove('loading');
+            spinner.style.display = 'none';
+            btnText.textContent = 'Sign In';
+            signinBtn.disabled = false;
         }
 
         function togglePassword() {
@@ -1517,24 +1571,44 @@
 
                 // Convert Firebase objects to arrays for compatibility and ensure proper structure
                 salesData = Object.values(firebaseSales).map(sale => {
-                    // Ensure each sale has proper structure and valid references
+                    // Preserve the exact date as saved, don't modify it
+                    let saleDate = sale.date || sale.selectedDate;
+                    
+                    // If no date found, use current date as fallback
+                    if (!saleDate) {
+                        saleDate = new Date().toISOString().split('T')[0];
+                        console.warn('Sale missing date, using current date as fallback:', sale);
+                    }
+                    
+                    // Ensure date is in YYYY-MM-DD format
+                    if (saleDate.includes('T')) {
+                        saleDate = saleDate.split('T')[0];
+                    }
+                    
                     return {
                         id: sale.id || Date.now() + Math.random(),
-                        date: sale.date || new Date().toISOString().split('T')[0],
-                        store: sale.store || 'store1', // Default to store1 if missing
-                        product: sale.product || 'product1', // Default to product1 if missing
+                        date: saleDate, // Use the preserved date
+                        store: sale.store || 'store1',
+                        product: sale.product || 'product1',
                         qty: parseInt(sale.qty) || 0,
                         user: sale.user || 'Unknown User',
                         timestamp: sale.timestamp || new Date().toLocaleString(),
-                        createdAt: sale.createdAt || new Date().toISOString()
+                        createdAt: sale.createdAt || new Date().toISOString(),
+                        selectedDate: sale.selectedDate // Preserve original selected date
                     };
                 }).filter(sale => sale.qty > 0); // Remove invalid sales with 0 quantity
                 
-                console.log('Firebase data loaded and validated successfully', {
+                console.log('🔥 FIREBASE DATA LOADED SUCCESSFULLY:', {
                     sales: salesData.length,
                     products: Object.keys(firebaseProducts).length,
                     employees: Object.keys(firebaseEmployees).length,
                     stores: Object.keys(firebaseStores).length
+                });
+                
+                // Debug: Show all loaded sales with dates
+                console.log('📊 LOADED SALES DATA WITH PRESERVED DATES:');
+                salesData.forEach((sale, index) => {
+                    console.log(`  ${index + 1}. ID=${sale.id}, Date=${sale.date}, SelectedDate=${sale.selectedDate}, User=${sale.user}, Qty=${sale.qty}`);
                 });
             } catch (error) {
                 console.error('Error loading Firebase data:', error);
@@ -1699,7 +1773,7 @@
                         <div class="card-icon">💰</div>
                         <div class="card-content">
                             <h3 class="card-title">Total Revenue</h3>
-                            <p class="card-subtitle">Yesterday</p>
+                            <p class="card-subtitle" id="revenueSubtitle">Yesterday</p>
                             <div class="card-value" id="totalSalesAmount">0 DHS</div>
                         </div>
                     </div>
@@ -1708,7 +1782,7 @@
                         <div class="card-icon">📦</div>
                         <div class="card-content">
                             <h3 class="card-title">Items Sold</h3>
-                            <p class="card-subtitle">Yesterday</p>
+                            <p class="card-subtitle" id="itemsSubtitle">Yesterday</p>
                             <div class="card-value" id="totalQtySold">0</div>
                         </div>
                     </div>
@@ -1717,7 +1791,7 @@
                         <div class="card-icon">🏆</div>
                         <div class="card-content">
                             <h3 class="card-title">Top Performer</h3>
-                            <p class="card-subtitle">Yesterday</p>
+                            <p class="card-subtitle" id="performerSubtitle">Yesterday</p>
                             <div class="card-value" id="bestPerformer">No Data</div>
                         </div>
                     </div>
@@ -1726,7 +1800,7 @@
                         <div class="card-icon">⭐</div>
                         <div class="card-content">
                             <h3 class="card-title">Most Sold Product</h3>
-                            <p class="card-subtitle">Yesterday</p>
+                            <p class="card-subtitle" id="productSubtitle">Yesterday</p>
                             <div class="card-value" id="mostSoldProduct">No Data</div>
                         </div>
                     </div>
@@ -2090,6 +2164,9 @@
                                         <option value="pricing">Pricing Data</option>
                                     </select>
                                 </div>
+                                
+
+                                
                                 <input type="file" id="importFile" accept=".csv,.json" style="display: none;" onchange="handleImportFile()">
                                 <div class="form-actions">
                                     <button class="btn-secondary" onclick="document.getElementById('importFile').click()">📁 Choose File</button>
@@ -2458,10 +2535,26 @@
         }
 
         function initializeAdminDashboard() {
-            // Wait for data to load then calculate analytics
-            setTimeout(() => {
-                calculateYesterdayAnalytics();
-            }, 1000);
+            console.log('🚀 INITIALIZING ADMIN DASHBOARD');
+            console.log('📊 Current salesData length:', salesData.length);
+            console.log('🔥 Current Firebase sales:', Object.keys(firebaseSales).length);
+            
+            // Force reload Firebase data first, then calculate analytics
+            loadFirebaseData().then(() => {
+                console.log('✅ Firebase data reloaded, now calculating analytics...');
+                console.log('📊 Updated salesData length:', salesData.length);
+                
+                // Calculate analytics after data is fully loaded
+                setTimeout(() => {
+                    calculateYesterdayAnalytics();
+                }, 500);
+            }).catch(error => {
+                console.error('❌ Error loading Firebase data:', error);
+                // Still try to calculate with existing data
+                setTimeout(() => {
+                    calculateYesterdayAnalytics();
+                }, 500);
+            });
 
             // Initialize form handlers
             initializeFormHandlers();
@@ -2469,6 +2562,49 @@
             // Update selects with current data
             updateProductSelects();
             updateStoreSelects();
+            
+            // Set up automatic refresh at 6:00 AM daily
+            setupDailyRefresh();
+        }
+        
+        function setupDailyRefresh() {
+            const now = new Date();
+            const nextRefresh = new Date();
+            
+            // Set next refresh to 6:00 AM
+            nextRefresh.setHours(6, 0, 0, 0);
+            
+            // If it's already past 6 AM today, set for tomorrow
+            if (now.getHours() >= 6) {
+                nextRefresh.setDate(nextRefresh.getDate() + 1);
+            }
+            
+            const timeUntilRefresh = nextRefresh.getTime() - now.getTime();
+            
+            console.log('⏰ DASHBOARD AUTO-REFRESH SCHEDULED:', {
+                currentTime: now.toLocaleString(),
+                nextRefreshTime: nextRefresh.toLocaleString(),
+                millisecondsUntilRefresh: timeUntilRefresh
+            });
+            
+            // Set timeout for the next refresh
+            setTimeout(() => {
+                console.log('🔄 AUTO-REFRESHING DASHBOARD AT 6:00 AM');
+                
+                // Reload Firebase data and recalculate analytics
+                loadFirebaseData().then(() => {
+                    calculateYesterdayAnalytics();
+                    console.log('✅ Dashboard auto-refreshed successfully');
+                    
+                    // Set up the next day's refresh
+                    setupDailyRefresh();
+                }).catch(error => {
+                    console.error('❌ Error during auto-refresh:', error);
+                    // Still set up next refresh even if this one failed
+                    setupDailyRefresh();
+                });
+                
+            }, timeUntilRefresh);
         }
 
         function initializeFormHandlers() {
@@ -3100,6 +3236,8 @@
             document.getElementById(`${tabName}Tab`).classList.add('active');
         }
 
+
+
         function exportData() {
             const exportType = document.getElementById('exportType').value;
             const exportFormat = document.getElementById('exportFormat').value;
@@ -3574,6 +3712,9 @@
                         let message = `${importType} data imported successfully! ${result.count || 0} records processed.`;
                         if (result.errors && result.errors > 0) {
                             message += ` (${result.errors} records had errors)`;
+                        }
+                        if (importType === 'pricing' && result.added && result.updated) {
+                            message += ` (${result.added} new, ${result.updated} updated)`;
                         }
                         showSuccessToast(message);
                         closeImportExportModal();
@@ -4247,6 +4388,8 @@
             const newPrices = {};
             let successCount = 0;
             let errorCount = 0;
+            let addedCount = 0;
+            let updatedCount = 0;
             
             validPrices.forEach(row => {
                 // Map to internal IDs
@@ -4265,33 +4408,50 @@
                     return;
                 }
                 
+                // Check if this combination already exists
+                const existingPrice = firebaseStorePrices[internalStoreId] && firebaseStorePrices[internalStoreId][internalProductId];
+                const hasExisting = existingPrice !== undefined && existingPrice !== null;
+                
                 if (!newPrices[internalStoreId]) {
                     newPrices[internalStoreId] = {};
                 }
                 newPrices[internalStoreId][internalProductId] = row.price;
                 successCount++;
                 
-                console.log(`Mapped: ${row.storeId} -> ${internalStoreId}, ${row.productId} -> ${internalProductId}, Price: ${row.price}`);
+                // Track if this is an update or addition
+                if (hasExisting) {
+                    updatedCount++;
+                    console.log(`Updated existing price: ${row.storeId} -> ${internalStoreId}, ${row.productId} -> ${internalProductId}, Old: ${existingPrice}, New: ${row.price}`);
+                } else {
+                    addedCount++;
+                    console.log(`Added new price: ${row.storeId} -> ${internalStoreId}, ${row.productId} -> ${internalProductId}, Price: ${row.price}`);
+                }
             });
             
             console.log('Processed new prices with internal IDs:', newPrices);
+            console.log('Import statistics:', { successCount, errorCount, addedCount, updatedCount });
             
             // Merge with existing prices
+            const finalPrices = JSON.parse(JSON.stringify(firebaseStorePrices)); // Deep copy existing
+            
             Object.keys(newPrices).forEach(storeId => {
-                if (!firebaseStorePrices[storeId]) {
-                    firebaseStorePrices[storeId] = {};
+                if (!finalPrices[storeId]) {
+                    finalPrices[storeId] = {};
                 }
-                Object.assign(firebaseStorePrices[storeId], newPrices[storeId]);
+                Object.assign(finalPrices[storeId], newPrices[storeId]);
             });
             
-            console.log('Updated firebaseStorePrices:', firebaseStorePrices);
+            console.log('Final prices to save:', finalPrices);
             
             // Save to Firebase
             try {
-                const result = await saveToFirebase('storePrices', firebaseStorePrices);
+                const result = await saveToFirebase('storePrices', finalPrices);
                 if (!result.success) {
                     throw new Error('Failed to save to Firebase: ' + result.error);
                 }
+                
+                // Update local data
+                firebaseStorePrices = finalPrices;
                 
                 console.log('Successfully saved pricing data to Firebase');
                 
@@ -4307,6 +4467,8 @@
                     success: true,
                     count: successCount,
                     errors: errorCount,
+                    added: addedCount,
+                    updated: updatedCount,
                     error: errorCount > 0 ? `${errorCount} pricing records failed to import` : null
                 };
                 
@@ -4366,6 +4528,7 @@
                             <div>${getProductName(item.product)}</div>
                             <div>${item.qty}</div>
                             <div>
+                                <button class="btn-edit" onclick="editSale(${item.id})">Edit</button>
                                 <button class="btn-delete" onclick="deleteSale(${item.id})">Delete</button>
                             </div>
                         `;
@@ -4653,6 +4816,91 @@
             };
         }
 
+        function editSale(saleId) {
+            console.log('Editing sale:', saleId);
+            console.log('Available sales:', salesData);
+            
+            const sale = salesData.find(s => s.id === saleId);
+            if (!sale) {
+                console.error('Sale not found:', saleId);
+                showErrorToast('Sale not found: ' + saleId);
+                return;
+            }
+            
+            console.log('Found sale to edit:', sale);
+            
+            // Create store options
+            const storeOptions = [
+                { value: 'store1', text: 'Downtown Store' },
+                { value: 'store2', text: 'Mall Store' },
+                { value: 'store3', text: 'Airport Store' }
+            ];
+            
+            // Add Firebase stores
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                storeOptions.push({ value: firebaseKey, text: store.name });
+            });
+            
+            // Create product options
+            const productOptions = [
+                { value: 'product1', text: 'Laptop Pro 15"' },
+                { value: 'product2', text: 'Smartphone X' },
+                { value: 'product3', text: 'Tablet Air' },
+                { value: 'product4', text: 'Headphones Pro' },
+                { value: 'product5', text: 'Smart Watch' }
+            ];
+            
+            // Add Firebase products
+            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+                productOptions.push({ value: firebaseKey, text: product.name });
+            });
+            
+            // Create edit modal with all sale fields
+            const editModal = createEditModal('Edit Sale', [
+                { label: 'Sale ID', id: 'editSaleId', value: sale.id, readonly: true },
+                { label: 'Date', id: 'editSaleDate', value: sale.date, type: 'date', required: true },
+                { label: 'Store', id: 'editSaleStore', value: sale.store, type: 'select', options: storeOptions, required: true },
+                { label: 'Product', id: 'editSaleProduct', value: sale.product, type: 'select', options: productOptions, required: true },
+                { label: 'Quantity', id: 'editSaleQty', value: sale.qty, type: 'number', required: true },
+                { label: 'Employee', id: 'editSaleUser', value: sale.user, required: true }
+            ]);
+            
+            document.body.appendChild(editModal);
+            editModal.style.display = 'flex';
+            
+            // Handle save
+            editModal.querySelector('.save-edit-btn').onclick = () => {
+                const newDate = editModal.querySelector('#editSaleDate').value;
+                const newStore = editModal.querySelector('#editSaleStore').value;
+                const newProduct = editModal.querySelector('#editSaleProduct').value;
+                const newQty = parseInt(editModal.querySelector('#editSaleQty').value);
+                const newUser = editModal.querySelector('#editSaleUser').value.trim();
+                
+                if (!newDate || !newStore || !newProduct || !newQty || newQty <= 0 || !newUser) {
+                    showErrorToast('All fields are required and quantity must be greater than 0');
+                    return;
+                }
+                
+                const updates = {};
+                if (newDate !== sale.date) updates.date = newDate;
+                if (newStore !== sale.store) updates.store = newStore;
+                if (newProduct !== sale.product) updates.product = newProduct;
+                if (newQty !== sale.qty) updates.qty = newQty;
+                if (newUser !== sale.user) updates.user = newUser;
+                
+                if (Object.keys(updates).length > 0) {
+                    updateSale(saleId, updates);
+                }
+                
+                document.body.removeChild(editModal);
+            };
+            
+            // Handle cancel
+            editModal.querySelector('.cancel-edit-btn').onclick = () => {
+                document.body.removeChild(editModal);
+            };
+        }
+
         // Create reusable edit modal
         function createEditModal(title, fields) {
             const modal = document.createElement('div');
@@ -4688,13 +4936,19 @@
                         </div>
                     `;
                 } else {
+                    const inputType = field.type || 'text';
+                    const minAttr = field.type === 'number' ? 'min="1"' : '';
+                    const stepAttr = field.type === 'number' ? 'step="1"' : '';
+                    
                     fieldsHTML += `
                         <div class="form-group">
                             <label class="form-label">${field.label}</label>
-                            <input type="text" class="form-input" id="${field.id}" 
+                            <input type="${inputType}" class="form-input" id="${field.id}" 
                                    value="${field.value}" 
                                    ${field.required ? 'required' : ''}
-                                   ${field.readonly ? 'readonly' : ''}>
+                                   ${field.readonly ? 'readonly' : ''}
+                                   ${minAttr}
+                                   ${stepAttr}>
                         </div>
                     `;
                 }
@@ -4819,6 +5073,65 @@
             } catch (error) {
                 console.error('Error updating store:', error);
                 showErrorToast('Failed to update store. Please try again.');
+            }
+        }
+
+        async function updateSale(saleId, updates) {
+            try {
+                console.log('Updating sale:', saleId, 'with updates:', updates);
+                
+                // Find the sale in local data
+                const saleIndex = salesData.findIndex(s => s.id === saleId);
+                if (saleIndex === -1) {
+                    throw new Error('Sale not found in local data');
+                }
+                
+                const currentSale = salesData[saleIndex];
+                console.log('Current sale data:', currentSale);
+                
+                // Find the Firebase key for this sale
+                let firebaseKey = null;
+                Object.entries(firebaseSales).forEach(([key, sale]) => {
+                    if (sale.id === saleId) {
+                        firebaseKey = key;
+                    }
+                });
+                
+                if (!firebaseKey) {
+                    throw new Error('Sale not found in Firebase');
+                }
+                
+                console.log('Found Firebase key:', firebaseKey);
+                
+                // Create updated sale object
+                const updatedSale = { 
+                    ...currentSale, 
+                    ...updates,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: userSession?.username || 'Admin'
+                };
+                
+                console.log('Updated sale object:', updatedSale);
+                
+                // Save to Firebase
+                const result = await saveToFirebase(`sales/${firebaseKey}`, updatedSale);
+                if (result.success) {
+                    // Update local data
+                    salesData[saleIndex] = updatedSale;
+                    firebaseSales[firebaseKey] = updatedSale;
+                    
+                    // Refresh displays
+                    loadManageData();
+                    calculateYesterdayAnalytics(); // Refresh analytics
+                    
+                    showSuccessToast('Sale updated successfully!');
+                    console.log('Sale updated successfully');
+                } else {
+                    throw new Error('Failed to save to Firebase: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error updating sale:', error);
+                showErrorToast('Failed to update sale: ' + error.message);
             }
         }
 
@@ -5736,26 +6049,58 @@
         }
 
         function calculateYesterdayAnalytics() {
-            // Get yesterday's date
+            // Always show YESTERDAY's data (22/08/2025) regardless of current time
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
-            console.log('Calculating analytics for yesterday:', yesterdayStr);
-            console.log('Total sales data available:', salesData.length);
+            // Calculate next update time (next day at 6:00 AM)
+            const nextUpdateTime = new Date();
+            nextUpdateTime.setDate(nextUpdateTime.getDate() + 1);
+            nextUpdateTime.setHours(6, 0, 0, 0);
             
-            // Filter sales for yesterday from Firebase data
+            console.log('🔍 DASHBOARD ANALYTICS - Calculating for YESTERDAY:', {
+                targetDate: yesterdayStr,
+                currentTime: new Date().toLocaleString(),
+                nextUpdateTime: nextUpdateTime.toLocaleString(),
+                totalSalesInSystem: salesData.length
+            });
+            
+            // Debug: Show all sales data with their dates
+            console.log('📊 ALL SALES DATA IN SYSTEM:');
+            salesData.forEach((sale, index) => {
+                const saleDate = sale.date?.includes('T') ? sale.date.split('T')[0] : sale.date;
+                console.log(`  Sale ${index + 1}: ID=${sale.id}, Date=${saleDate}, User=${sale.user}, Product=${sale.product}, Qty=${sale.qty}`);
+            });
+            
+            // Filter for YESTERDAY's date specifically (22/08/2025)
             const yesterdaySales = salesData.filter(sale => {
-                if (!sale || !sale.date) return false;
+                if (!sale || !sale.date) {
+                    console.log('❌ Skipping invalid sale (no date):', sale);
+                    return false;
+                }
+                
                 const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
                 const isYesterday = saleDate === yesterdayStr;
+                
+                console.log(`🔍 Checking sale: Date=${saleDate}, Target=${yesterdayStr}, Match=${isYesterday}`);
+                
                 if (isYesterday) {
-                    console.log('Found yesterday sale:', sale);
+                    console.log('✅ FOUND YESTERDAY SALE:', {
+                        id: sale.id,
+                        date: saleDate,
+                        user: sale.user,
+                        product: sale.product,
+                        qty: sale.qty,
+                        store: sale.store
+                    });
                 }
+                
                 return isYesterday;
             });
             
-            console.log('Yesterday sales found:', yesterdaySales.length);
+            console.log('🎯 YESTERDAY SALES FOUND:', yesterdaySales.length);
+            console.log('📋 Yesterday sales details:', yesterdaySales);
             
             // Calculate total sales amount
             let totalAmount = 0;
@@ -5865,6 +6210,25 @@
             const bestPerformerElement = document.getElementById('bestPerformer');
             const mostSoldProductElement = document.getElementById('mostSoldProduct');
             
+            // Update subtitle labels to show "Yesterday" with next update time
+            const nextUpdateDisplay = new Date();
+            nextUpdateDisplay.setDate(nextUpdateDisplay.getDate() + 1);
+            nextUpdateDisplay.setHours(6, 0, 0, 0);
+            const updateTimeStr = nextUpdateDisplay.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const subtitleElements = [
+                document.getElementById('revenueSubtitle'),
+                document.getElementById('itemsSubtitle'),
+                document.getElementById('performerSubtitle'),
+                document.getElementById('productSubtitle')
+            ];
+            
+            subtitleElements.forEach(element => {
+                if (element) {
+                    element.textContent = `Yesterday (Updates at ${updateTimeStr})`;
+                }
+            });
+            
             if (totalSalesElement) {
                 totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
                 console.log('Updated total sales element');
@@ -5943,6 +6307,18 @@
                 console.log('Store change listener added');
             }
             
+            // Add date change listener to update totals based on selected date
+            if (dateSelect) {
+                dateSelect.addEventListener('change', function() {
+                    console.log('Date changed to:', this.value);
+                    // Update totals for the new selected date
+                    updateTotalQty();
+                    // Update sales list for the new date
+                    loadSalesList();
+                });
+                console.log('Date change listener added');
+            }
+            
             // Check if user has made first entry and freeze fields
             if (userSession.hasFirstEntry) {
                 freezeDateAndStore();
@@ -5995,6 +6371,8 @@
                 return;
             }
             
+            console.log('Saving sale with selected date:', date);
+            
             // Save defaults to session
             userSession.defaultDate = date;
             userSession.defaultStore = store;
@@ -6004,19 +6382,20 @@
             // Generate continuous ID
             const saleId = generateSaleId();
             
-            // Create sale record
+            // Create sale record with proper date format
             const sale = {
                 id: saleId,
-                date: date,
+                date: date, // Keep the selected date exactly as chosen
                 store: store,
                 product: product,
                 qty: qty,
                 timestamp: new Date().toLocaleString(),
                 user: userSession.username,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                selectedDate: date // Additional field to ensure date is preserved
             };
             
-            console.log('Attempting to save sale:', sale);
+            console.log('Attempting to save sale with date:', sale.date, 'Full sale object:', sale);
             
             try {
                 // Save to Firebase
@@ -6028,7 +6407,7 @@
                     firebaseSales[result.key] = { ...sale, firebaseKey: result.key };
                     salesData.push(sale);
                     
-                    console.log('Sale saved successfully. Updated salesData length:', salesData.length);
+                    console.log('Sale saved successfully with date:', sale.date, 'Updated salesData length:', salesData.length);
                     
                     // Freeze date and store fields after first entry
                     freezeDateAndStore();
@@ -6075,51 +6454,65 @@
         }
 
         function updateTotalQty() {
-            const today = new Date().toISOString().split('T')[0];
+            // Get the selected date from the form (for sales entry page)
+            const dateSelect = document.getElementById('salesDate');
+            let targetDate = new Date().toISOString().split('T')[0]; // Default to today
             
-            console.log('Updating total qty and amount for today (current user only):', {
-                today,
+            if (dateSelect && dateSelect.value) {
+                targetDate = dateSelect.value;
+                console.log('Using selected date from form:', targetDate);
+            } else {
+                console.log('Using today as default date:', targetDate);
+            }
+            
+            console.log('Updating total qty and amount for selected date (current user only):', {
+                targetDate,
                 currentUser: userSession.username,
                 totalSalesData: salesData.length
             });
             
-            // Filter sales for TODAY ONLY AND CURRENT USER ONLY
-            const todaysSales = salesData.filter(sale => {
+            // Filter sales for SELECTED DATE AND CURRENT USER ONLY
+            const selectedDateSales = salesData.filter(sale => {
                 if (!sale || !sale.date) {
                     console.log('Skipping invalid sale:', sale);
                     return false;
                 }
                 
-                // Handle both date formats
-                const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
-                const isToday = saleDate === today;
+                // Handle both date formats and preserve exact date
+                let saleDate = sale.date;
+                if (saleDate.includes('T')) {
+                    saleDate = saleDate.split('T')[0];
+                }
+                
+                const isTargetDate = saleDate === targetDate;
                 const isCurrentUser = sale.user === userSession.username;
                 
                 console.log('Sale check:', {
                     saleId: sale.id,
                     saleDate,
+                    targetDate,
                     saleUser: sale.user,
                     currentUser: userSession.username,
-                    isToday,
+                    isTargetDate,
                     isCurrentUser,
                     qty: sale.qty
                 });
                 
-                return isToday && isCurrentUser;
+                return isTargetDate && isCurrentUser;
             });
             
-            console.log('Filtered today\'s sales (current user only):', todaysSales);
+            console.log('Filtered selected date sales (current user only):', selectedDateSales);
             
             // Default prices for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
-            // Calculate total quantity and amount for today (current user only)
+            // Calculate total quantity and amount for selected date (current user only)
             let totalQty = 0;
             let totalAmount = 0;
             
-            todaysSales.forEach(sale => {
+            selectedDateSales.forEach(sale => {
                 const qty = parseInt(sale.qty);
                 const validQty = isNaN(qty) ? 0 : qty;
                 totalQty += validQty;
@@ -6135,10 +6528,10 @@
                 const saleAmount = price * validQty;
                 totalAmount += saleAmount;
                 
-                console.log(`Adding qty ${validQty} and amount ${saleAmount} from sale ${sale.id} by current user ${sale.user}`);
+                console.log(`Adding qty ${validQty} and amount ${saleAmount} from sale ${sale.id} on ${sale.date} by current user ${sale.user}`);
             });
             
-            console.log('Calculated totals for today (current user only):', { totalQty, totalAmount });
+            console.log('Calculated totals for selected date (current user only):', { totalQty, totalAmount, targetDate });
             
             // Update quantity display
             const qtyElement = document.getElementById('totalQty');
@@ -6549,5 +6942,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9731f5f4c55cd1d0',t:'MTc1NTg2MTQxNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'973811f9f454f9ee',t:'MTc1NTkyNTQ3Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
