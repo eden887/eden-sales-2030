@@ -1980,6 +1980,21 @@
                                 </select>
                             </div>
                             
+                            <div class="form-group" id="dateFilterGroup" style="display: none;">
+                                <label class="form-label">Filter by Date</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                    <select class="form-input" id="dateFilterType" onchange="updateDateFilter()">
+                                        <option value="all">All Dates</option>
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="specific">Specific Date</option>
+                                        <option value="range">Date Range</option>
+                                    </select>
+                                    <input type="date" class="form-input" id="specificDate" style="display: none;" onchange="loadManageData()">
+                                    <input type="date" class="form-input" id="endDate" style="display: none;" onchange="loadManageData()">
+                                </div>
+                            </div>
+                            
                             <div class="data-container">
                                 <div class="data-list" id="dataList">
                                     <!-- Data will be populated by JavaScript -->
@@ -2273,16 +2288,19 @@
                         <h1 class="sales-title">Sales Entry</h1>
                         <div class="user-info">
                             <span class="welcome-text">Welcome, ${userSession.username}</span>
+                            <button class="pdf-download-btn" onclick="downloadSalesPDF()" title="Download Sales PDF">
+                                📄 Download PDF
+                            </button>
                             <button class="logout-btn" onclick="logout()">Logout</button>
                         </div>
                     </div>
                     <div class="stats-row">
-                        <div class="total-qty">
-                            <span class="qty-label">Total Qty Sold Today:</span>
+                        <div class="total-qty highlighted">
+                            <span class="qty-label">📦 Total Qty Sold:</span>
                             <span class="qty-value" id="totalQty">0</span>
                         </div>
-                        <div class="total-amount">
-                            <span class="amount-label">Total Sales Amount Today:</span>
+                        <div class="total-amount highlighted">
+                            <span class="amount-label">💰 Total Revenue:</span>
                             <span class="amount-value" id="totalAmount">0 DHS</span>
                         </div>
                     </div>
@@ -2376,6 +2394,7 @@
                     padding: 16px 24px;
                     border: 1px solid rgba(0, 122, 255, 0.2);
                     border-radius: 16px;
+                    transition: all 0.3s ease;
                 }
 
                 .total-qty {
@@ -2385,6 +2404,17 @@
                 .total-amount {
                     background: rgba(34, 197, 94, 0.15);
                     border-color: rgba(34, 197, 94, 0.2);
+                }
+
+                .highlighted {
+                    box-shadow: 0 8px 32px rgba(0, 122, 255, 0.3);
+                    border-width: 2px;
+                    transform: translateY(-2px);
+                }
+
+                .highlighted.total-amount {
+                    box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
+                    border-color: rgba(34, 197, 94, 0.4);
                 }
 
                 .qty-label, .amount-label {
@@ -2494,6 +2524,25 @@
                     padding: 60px 40px;
                     font-style: italic;
                     font-size: 1.1rem;
+                }
+
+                .pdf-download-btn {
+                    background: rgba(0, 122, 255, 0.15);
+                    border: 1px solid rgba(0, 122, 255, 0.3);
+                    color: #007aff;
+                    padding: 10px 20px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    transition: all 0.2s ease;
+                    margin-right: 12px;
+                }
+
+                .pdf-download-btn:hover {
+                    background: rgba(0, 122, 255, 0.25);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
                 }
 
                 @media (max-width: 768px) {
@@ -4482,13 +4531,21 @@
         function loadManageData() {
             const type = document.getElementById('manageType').value;
             const dataList = document.getElementById('dataList');
+            const dateFilterGroup = document.getElementById('dateFilterGroup');
+            
+            // Show/hide date filter based on data type
+            if (type === 'sales') {
+                dateFilterGroup.style.display = 'block';
+            } else {
+                dateFilterGroup.style.display = 'none';
+            }
             
             let data = [];
             let headers = [];
             
             switch(type) {
                 case 'sales':
-                    data = salesData;
+                    data = getFilteredSalesData();
                     headers = ['Date', 'Employee', 'Store', 'Product', 'Qty', 'Actions'];
                     break;
                 case 'products':
@@ -4578,6 +4635,118 @@
             });
             
             dataList.innerHTML = html;
+        }
+
+        function updateDateFilter() {
+            const dateFilterType = document.getElementById('dateFilterType').value;
+            const specificDate = document.getElementById('specificDate');
+            const endDate = document.getElementById('endDate');
+            
+            // Hide all date inputs first
+            specificDate.style.display = 'none';
+            endDate.style.display = 'none';
+            
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            switch(dateFilterType) {
+                case 'specific':
+                    specificDate.style.display = 'block';
+                    if (!specificDate.value) {
+                        specificDate.value = today;
+                    }
+                    break;
+                case 'range':
+                    specificDate.style.display = 'block';
+                    endDate.style.display = 'block';
+                    specificDate.placeholder = 'Start Date';
+                    if (!specificDate.value) {
+                        specificDate.value = yesterdayStr;
+                    }
+                    if (!endDate.value) {
+                        endDate.value = today;
+                    }
+                    break;
+                case 'today':
+                    specificDate.value = today;
+                    break;
+                case 'yesterday':
+                    specificDate.value = yesterdayStr;
+                    break;
+            }
+            
+            // Reload data with new filter
+            loadManageData();
+        }
+
+        function getFilteredSalesData() {
+            const dateFilterType = document.getElementById('dateFilterType').value;
+            const specificDate = document.getElementById('specificDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            console.log('Filtering sales data:', {
+                filterType: dateFilterType,
+                specificDate,
+                endDate,
+                totalSales: salesData.length
+            });
+            
+            if (dateFilterType === 'all') {
+                return salesData;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            let targetDate = '';
+            let startDate = '';
+            let endDateValue = '';
+            
+            switch(dateFilterType) {
+                case 'today':
+                    targetDate = today;
+                    break;
+                case 'yesterday':
+                    targetDate = yesterdayStr;
+                    break;
+                case 'specific':
+                    targetDate = specificDate;
+                    break;
+                case 'range':
+                    startDate = specificDate;
+                    endDateValue = endDate;
+                    break;
+            }
+            
+            const filteredSales = salesData.filter(sale => {
+                if (!sale || !sale.date) return false;
+                
+                // Handle both date formats
+                let saleDate = sale.date;
+                if (saleDate.includes('T')) {
+                    saleDate = saleDate.split('T')[0];
+                }
+                
+                if (dateFilterType === 'range') {
+                    return saleDate >= startDate && saleDate <= endDateValue;
+                } else {
+                    return saleDate === targetDate;
+                }
+            });
+            
+            console.log('Filtered sales result:', {
+                originalCount: salesData.length,
+                filteredCount: filteredSales.length,
+                filterType: dateFilterType,
+                targetDate: targetDate || `${startDate} to ${endDateValue}`
+            });
+            
+            return filteredSales;
         }
 
         // Delete functions
@@ -5407,118 +5576,107 @@
                 return '<div class="no-data">No data found for the selected criteria</div>';
             }
             
-            console.log('Generating detailed report with data:', data);
-            console.log('Current firebaseStorePrices:', firebaseStorePrices);
+            console.log('Generating compact detailed report with data:', data);
             
-            // Calculate summary statistics
-            const totalSales = data.length;
-            const totalQuantity = data.reduce((sum, sale) => sum + sale.qty, 0);
-            
-            // Calculate total revenue using Firebase prices with proper fallback
+            // Default prices for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
+            // Calculate comprehensive statistics
+            let totalQuantity = 0;
             let totalRevenue = 0;
-            data.forEach(sale => {
+            let totalSales = data.length;
+            
+            // Process each sale for detailed calculations
+            const processedData = data.map(sale => {
                 let price = 0;
                 
                 // First try Firebase store prices
                 if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                    console.log(`Using Firebase price for ${sale.store}/${sale.product}: ${price}`);
                 } else {
                     // Fallback to default prices
                     price = defaultPrices[sale.product] || 0;
-                    console.log(`Using default price for ${sale.product}: ${price}`);
                 }
                 
-                totalRevenue += price * sale.qty;
+                const saleAmount = price * sale.qty;
+                totalQuantity += sale.qty;
+                totalRevenue += saleAmount;
+                
+                return {
+                    ...sale,
+                    unitPrice: price,
+                    totalAmount: saleAmount,
+                    productName: getProductName(sale.product),
+                    employeeName: getEmployeeName(sale.user),
+                    storeName: getStoreName(sale.store)
+                };
             });
             
-            // Get unique values for analysis
-            const uniqueEmployees = [...new Set(data.map(sale => sale.user))];
-            const uniqueProducts = [...new Set(data.map(sale => getProductName(sale.product)))];
-            const uniqueStores = [...new Set(data.map(sale => getStoreName(sale.store)))];
+            // Sort by date (newest first), then by timestamp
+            processedData.sort((a, b) => {
+                const dateCompare = new Date(b.date) - new Date(a.date);
+                if (dateCompare !== 0) return dateCompare;
+                
+                // If same date, sort by timestamp
+                const timeA = a.timestamp || '';
+                const timeB = b.timestamp || '';
+                return timeB.localeCompare(timeA);
+            });
             
             let html = `
-                <div class="report-summary">
+                <div class="report-summary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
                     <div class="summary-card">
-                        <div class="summary-value">${totalSales}</div>
-                        <div class="summary-label">Total Sales</div>
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalSales}</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Sales</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-value">${totalQuantity}</div>
-                        <div class="summary-label">Total Quantity</div>
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalQuantity}</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Quantity</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-value">${totalRevenue.toLocaleString()} DHS</div>
-                        <div class="summary-label">Total Revenue</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-value">${uniqueEmployees.length}</div>
-                        <div class="summary-label">Active Employees</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-value">${uniqueProducts.length}</div>
-                        <div class="summary-label">Products Sold</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-value">${uniqueStores.length}</div>
-                        <div class="summary-label">Active Stores</div>
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalRevenue.toLocaleString()} DHS</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Revenue</div>
                     </div>
                 </div>
                 
-                <table class="report-table">
+                <table class="report-table" style="font-size: 0.85rem;">
                     <thead>
-                        <tr>
-                            <th>Sale ID</th>
-                            <th>Date</th>
-                            <th>Employee</th>
-                            <th>Store</th>
-                            <th>Product</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total Amount</th>
-                            <th>Timestamp</th>
+                        <tr style="background: rgba(0, 122, 255, 0.2);">
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Store</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Employee Name</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Sales Date</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Product</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Qty</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Price</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Entry Time & Date</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
-            data.forEach(sale => {
-                let price = 0;
-                
-                // First try Firebase store prices
-                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    // Fallback to default prices
-                    price = defaultPrices[sale.product] || 0;
-                }
-                
-                const totalAmount = price * sale.qty;
-                const storeName = getStoreName(sale.store);
-                const productName = getProductName(sale.product);
-                
-                console.log(`Report row: Store ${sale.store} -> ${storeName}, Product ${sale.product} -> ${productName}, Price: ${price}`);
-                
+            processedData.forEach(sale => {
                 html += `
                     <tr>
-                        <td>#${sale.id}</td>
-                        <td>${new Date(sale.date).toLocaleDateString()}</td>
-                        <td>${getEmployeeName(sale.user)}</td>
-                        <td>${storeName}</td>
-                        <td>${productName}</td>
-                        <td>${sale.qty}</td>
-                        <td>${price.toLocaleString()} DHS</td>
-                        <td>${totalAmount.toLocaleString()} DHS</td>
-                        <td>${sale.timestamp || 'N/A'}</td>
+                        <td style="padding: 6px;">${sale.storeName}</td>
+                        <td style="padding: 6px;">${sale.employeeName}</td>
+                        <td style="padding: 6px;">${new Date(sale.date).toLocaleDateString()}</td>
+                        <td style="padding: 6px;">${sale.productName}</td>
+                        <td style="padding: 6px; text-align: center; font-weight: bold;">${sale.qty}</td>
+                        <td style="padding: 6px; text-align: right;">${sale.unitPrice.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; font-weight: bold;">${sale.totalAmount.toLocaleString()} DHS</td>
+                        <td style="padding: 6px;">${sale.timestamp || 'N/A'}</td>
                     </tr>
                 `;
             });
             
-            html += '</tbody></table>';
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
             return html;
         }
 
@@ -5718,31 +5876,31 @@
                 
                 // Add BOM for proper UTF-8 encoding
                 let csv = '\uFEFF';
-                csv += '"Sale ID","Date","Employee","Store","Product","Quantity","Unit Price","Total Amount","Timestamp"\r\n';
-                
-                const defaultPrices = {
-                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                };
+                csv += '"Store","Employee Name","Sales Date","Product","Qty","Unit Price","Total","Entry Time & Date"\r\n';
                 
                 data.forEach(sale => {
-                    let price = 0;
-                    
-                    // First try Firebase store prices
-                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                    } else {
-                        // Fallback to default prices
-                        price = defaultPrices[sale.product] || 0;
-                    }
-                    
-                    const totalAmount = price * sale.qty;
                     const storeName = getStoreName(sale.store);
                     const productName = getProductName(sale.product);
                     const employeeName = getEmployeeName(sale.user);
-                    const timestamp = sale.timestamp || 'N/A';
+                    const salesDate = new Date(sale.date).toLocaleDateString();
+                    const entryDateTime = sale.timestamp || 'N/A';
+                    
+                    // Calculate unit price and total
+                    const defaultPrices = {
+                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                    };
+                    
+                    let unitPrice = 0;
+                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                        unitPrice = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    } else {
+                        unitPrice = defaultPrices[sale.product] || 0;
+                    }
+                    
+                    const total = unitPrice * sale.qty;
                     
                     // Properly escape all values
-                    csv += `"${sale.id}","${sale.date}","${employeeName.replace(/"/g, '""')}","${storeName.replace(/"/g, '""')}","${productName.replace(/"/g, '""')}","${sale.qty}","${price}","${totalAmount}","${timestamp.replace(/"/g, '""')}"\r\n`;
+                    csv += `"${storeName.replace(/"/g, '""')}","${employeeName.replace(/"/g, '""')}","${salesDate}","${productName.replace(/"/g, '""')}","${sale.qty}","${unitPrice.toLocaleString()} DHS","${total.toLocaleString()} DHS","${entryDateTime.replace(/"/g, '""')}"\r\n`;
                 });
                 
                 const filename = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
@@ -5825,16 +5983,19 @@
                     
                     const storeName = getStoreName(sale.store);
                     const productName = getProductName(sale.product);
+                    const employeeName = getEmployeeName(sale.user);
+                    const salesDate = new Date(sale.date).toLocaleDateString();
+                    const entryDateTime = sale.timestamp || 'N/A';
                     
                     return [
-                        `#${sale.id}`,
-                        new Date(sale.date).toLocaleDateString(),
-                        getEmployeeName(sale.user),
                         storeName,
+                        employeeName,
+                        salesDate,
                         productName,
-                        sale.qty.toString(),
-                        `${price.toLocaleString()} DHS`,
-                        `${totalAmount.toLocaleString()} DHS`
+                        sale.qty,
+                        price.toLocaleString() + ' DHS',
+                        totalAmount.toLocaleString() + ' DHS',
+                        entryDateTime
                     ];
                 });
                 
@@ -5859,7 +6020,7 @@
                     try {
                         // Add table with autoTable
                         doc.autoTable({
-                            head: [['Sale ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Unit Price', 'Total']],
+                            head: [['Store', 'Employee Name', 'Sales Date', 'Product', 'Qty', 'Unit Price', 'Total', 'Entry Time & Date']],
                             body: tableData,
                             startY: 100,
                             styles: { 
@@ -5891,9 +6052,9 @@
                     // Table headers
                     doc.setFontSize(8);
                     doc.setFont('helvetica', 'bold');
-                    const headers = ['ID', 'Date', 'Employee', 'Store', 'Product', 'Qty', 'Price', 'Total'];
+                    const headers = ['Store', 'Employee', 'Date', 'Product', 'Qty', 'Unit Price', 'Total', 'Entry Time'];
                     let xPosition = 10;
-                    const colWidths = [15, 25, 30, 25, 30, 15, 25, 25];
+                    const colWidths = [25, 25, 20, 30, 15, 25, 25, 35];
                     
                     headers.forEach((header, index) => {
                         doc.text(header, xPosition, yPosition);
@@ -5912,8 +6073,12 @@
                             const cellText = cell.toString();
                             const maxWidth = colWidths[index] - 2;
                             
-                            // Truncate long text
-                            const truncatedText = cellText.length > 12 ? cellText.substring(0, 12) + '...' : cellText;
+                            // Truncate long text based on column width
+                            let maxChars = Math.floor(maxWidth / 2);
+                            if (index === 2) maxChars = 20; // Product-Qty column
+                            if (index === 3) maxChars = 25; // Entry Time column
+                            
+                            const truncatedText = cellText.length > maxChars ? cellText.substring(0, maxChars) + '...' : cellText;
                             doc.text(truncatedText, xPosition, yPosition);
                             xPosition += colWidths[index];
                         });
@@ -6622,12 +6787,51 @@
                 return;
             }
             
-            // Filter sales for CURRENT USER ONLY and sort by ID (newest first)
-            const userSales = salesData.filter(sale => sale.user === userSession.username);
-            const sortedSales = [...userSales].sort((a, b) => (b.id || 0) - (a.id || 0));
+            // Get the selected date from the form
+            const dateSelect = document.getElementById('salesDate');
+            let selectedDate = new Date().toISOString().split('T')[0]; // Default to today
+            
+            if (dateSelect && dateSelect.value) {
+                selectedDate = dateSelect.value;
+            }
+            
+            console.log('Loading sales list for selected date:', selectedDate, 'and user:', userSession.username);
+            
+            // Filter sales for CURRENT USER AND SELECTED DATE ONLY
+            const filteredSales = salesData.filter(sale => {
+                if (!sale || !sale.date) return false;
+                
+                // Handle both date formats
+                let saleDate = sale.date;
+                if (saleDate.includes('T')) {
+                    saleDate = saleDate.split('T')[0];
+                }
+                
+                const isCurrentUser = sale.user === userSession.username;
+                const isSelectedDate = saleDate === selectedDate;
+                
+                console.log('Sale filter check:', {
+                    saleId: sale.id,
+                    saleDate,
+                    selectedDate,
+                    saleUser: sale.user,
+                    currentUser: userSession.username,
+                    isCurrentUser,
+                    isSelectedDate,
+                    included: isCurrentUser && isSelectedDate
+                });
+                
+                return isCurrentUser && isSelectedDate;
+            });
+            
+            // Sort by ID (newest first)
+            const sortedSales = [...filteredSales].sort((a, b) => (b.id || 0) - (a.id || 0));
+            
+            console.log('Filtered sales for selected date:', sortedSales.length);
             
             if (sortedSales.length === 0) {
-                salesList.innerHTML = '<div class="no-sales">No sales recorded by you yet</div>';
+                const selectedDateFormatted = new Date(selectedDate).toLocaleDateString();
+                salesList.innerHTML = `<div class="no-sales">No sales recorded by you on ${selectedDateFormatted}</div>`;
                 return;
             }
             
@@ -6983,6 +7187,122 @@
             console.log('Master data export completed with proper IDs');
         }
 
+        function downloadSalesPDF() {
+            try {
+                console.log('Starting simple sales PDF download...');
+                
+                // Check for jsPDF
+                let jsPDF = null;
+                if (window.jspdf && window.jspdf.jsPDF) {
+                    jsPDF = window.jspdf.jsPDF;
+                } else if (window.jsPDF) {
+                    jsPDF = window.jsPDF;
+                } else {
+                    showErrorToast('PDF library not loaded. Please refresh the page and try again.');
+                    return;
+                }
+                
+                const doc = new jsPDF();
+                
+                // Get current date for filtering (use selected date from form)
+                const dateSelect = document.getElementById('salesDate');
+                const selectedDate = dateSelect ? dateSelect.value : new Date().toISOString().split('T')[0];
+                const selectedDateFormatted = new Date(selectedDate).toLocaleDateString();
+                
+                // Filter sales for current user and selected date
+                const userSales = salesData.filter(sale => {
+                    if (!sale || !sale.date) return false;
+                    
+                    let saleDate = sale.date;
+                    if (saleDate.includes('T')) {
+                        saleDate = saleDate.split('T')[0];
+                    }
+                    
+                    return sale.user === userSession.username && saleDate === selectedDate;
+                });
+                
+                console.log('Filtered sales for PDF:', userSales.length);
+                
+                // Default prices for calculations
+                const defaultPrices = {
+                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                };
+                
+                // Calculate totals
+                let totalQty = 0;
+                let totalAmount = 0;
+                
+                userSales.forEach(sale => {
+                    let price = 0;
+                    
+                    // Get price from Firebase store prices or default prices
+                    if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    } else {
+                        price = defaultPrices[sale.product] || 0;
+                    }
+                    
+                    totalQty += sale.qty;
+                    totalAmount += (price * sale.qty);
+                });
+                
+                // Get store name (assuming single store for the day)
+                const storeName = userSales.length > 0 ? getStoreName(userSales[0].store) : 'No Store';
+                
+                // Simple header - black text only
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Sales Report', 20, 20);
+                
+                // Basic info in simple format
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Sale Date: ' + selectedDateFormatted, 20, 35);
+                doc.text('Employee Name: ' + userSession.username, 20, 45);
+                doc.text('Store Name: ' + storeName, 20, 55);
+                doc.text('Qty Sold: ' + totalQty, 20, 65);
+                doc.text('Total Revenue: ' + totalAmount + ' DHS', 20, 75);
+                
+                // Sales details section
+                if (userSales.length > 0) {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Sales Details:', 20, 95);
+                    
+                    // Simple list format - Product Name, Qty
+                    doc.setFont('helvetica', 'normal');
+                    let yPos = 110;
+                    
+                    userSales.forEach((sale, index) => {
+                        if (yPos > 270) { // New page if needed
+                            doc.addPage();
+                            yPos = 30;
+                        }
+                        
+                        const productName = getProductName(sale.product);
+                        doc.text(productName + ' - Qty: ' + sale.qty, 20, yPos);
+                        
+                        yPos += 12;
+                    });
+                } else {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('No sales recorded for this date.', 20, 95);
+                }
+                
+                // Save with simple filename
+                const filename = userSession.username + '_Sales_' + selectedDate.replace(/-/g, '') + '.pdf';
+                doc.save(filename);
+                
+                showSuccessToast('Sales PDF downloaded successfully!');
+                console.log('Simple sales PDF generated:', filename);
+                
+            } catch (error) {
+                console.error('Error generating sales PDF:', error);
+                showErrorToast('Failed to generate PDF. Please try again.');
+            }
+        }
+
         function logout() {
             // Clear session
             localStorage.removeItem('userSession');
@@ -7003,5 +7323,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97381f7c45e3f9d5',t:'MTc1NTkyNjAzMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9749460bd235f9eb',t:'MTc1NjEwNTg2OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
