@@ -1353,6 +1353,7 @@
         let firebaseStores = {};
         let firebaseSales = {};
         let firebaseStorePrices = {};
+        let firebaseStoreCosts = {};
 
         // Authentication system
         const users = {
@@ -1414,32 +1415,20 @@
                     
                     // First check default users with exact matching
                     console.log('🔑 Checking default users...');
-                    if (users[username]) {
-                        console.log(`Found user ${username}, checking password...`);
-                        console.log(`Expected password: ${users[username].password}`);
-                        console.log(`Provided password: ${password}`);
-                        
-                        if (users[username].password === password) {
-                            authenticatedUser = {
-                                name: users[username].name,
-                                type: users[username].type,
-                                username: username
-                            };
-                            console.log('✅ Default user authenticated:', authenticatedUser);
-                        } else {
-                            console.log('❌ Password mismatch for default user');
-                        }
-                    } else {
-                        console.log(`❌ Default user ${username} not found`);
+                    if (users[username] && users[username].password === password) {
+                        authenticatedUser = {
+                            name: users[username].name,
+                            type: users[username].type,
+                            username: username
+                        };
+                        console.log('✅ Default user authenticated:', authenticatedUser);
                     }
                     
                     // If not found in default users, check Firebase employees
                     if (!authenticatedUser) {
                         console.log('🔍 Checking Firebase employees...');
-                        console.log('Firebase employees data:', firebaseEmployees);
                         
                         const firebaseEmployee = Object.values(firebaseEmployees).find(emp => {
-                            console.log('Checking employee:', emp);
                             return emp && emp.username === username && emp.password === password;
                         });
                         
@@ -1450,21 +1439,11 @@
                                 username: firebaseEmployee.username
                             };
                             console.log('✅ Firebase employee authenticated:', authenticatedUser);
-                        } else {
-                            console.log('❌ No matching Firebase employee found');
                         }
                     }
                     
                     if (authenticatedUser) {
                         console.log('🎉 AUTHENTICATION SUCCESSFUL:', authenticatedUser);
-                        
-                        // Try to authenticate with Firebase (optional)
-                        try {
-                            await auth.signInAnonymously();
-                            console.log('✅ Firebase anonymous auth successful');
-                        } catch (error) {
-                            console.log('⚠️ Firebase auth failed, continuing with local auth:', error);
-                        }
                         
                         showFeedback('Login successful! Redirecting...', 'success');
                         
@@ -1479,20 +1458,12 @@
                         
                     } else {
                         console.log('❌ AUTHENTICATION FAILED for:', username);
-                        console.log('💡 Available login options:');
-                        console.log('   Default users:', Object.keys(users).map(u => `${u}/${users[u].password}`));
-                        console.log('   Firebase employees:', Object.values(firebaseEmployees).map(e => `${e.username}/${e.password}`));
-                        
                         showFeedback('Invalid username or password', 'error');
-                        
-                        // Reset form state
                         resetLoginForm();
                     }
                 } catch (error) {
                     console.error('💥 Login error:', error);
                     showFeedback('Login failed. Please try again.', 'error');
-                    
-                    // Reset form state
                     resetLoginForm();
                 }
             }, 800);
@@ -1533,12 +1504,13 @@
         async function loadFirebaseData() {
             try {
                 // Load all data from Firebase
-                const [salesSnapshot, productsSnapshot, employeesSnapshot, storesSnapshot, pricesSnapshot] = await Promise.all([
+                const [salesSnapshot, productsSnapshot, employeesSnapshot, storesSnapshot, pricesSnapshot, costsSnapshot] = await Promise.all([
                     database.ref('sales').once('value'),
                     database.ref('products').once('value'),
                     database.ref('employees').once('value'),
                     database.ref('stores').once('value'),
-                    database.ref('storePrices').once('value')
+                    database.ref('storePrices').once('value'),
+                    database.ref('storeCosts').once('value')
                 ]);
 
                 firebaseSales = salesSnapshot.val() || {};
@@ -1546,6 +1518,7 @@
                 firebaseEmployees = employeesSnapshot.val() || {};
                 firebaseStores = storesSnapshot.val() || {};
                 firebaseStorePrices = pricesSnapshot.val() || {};
+                firebaseStoreCosts = costsSnapshot.val() || {};
 
                 // Validate and clean Firebase data
                 Object.keys(firebaseProducts).forEach(key => {
@@ -1602,7 +1575,9 @@
                     sales: salesData.length,
                     products: Object.keys(firebaseProducts).length,
                     employees: Object.keys(firebaseEmployees).length,
-                    stores: Object.keys(firebaseStores).length
+                    stores: Object.keys(firebaseStores).length,
+                    prices: Object.keys(firebaseStorePrices).length,
+                    costs: Object.keys(firebaseStoreCosts).length
                 });
                 
                 // Debug: Show all loaded sales with dates
@@ -1619,6 +1594,7 @@
                 firebaseEmployees = {};
                 firebaseStores = {};
                 firebaseStorePrices = {};
+                firebaseStoreCosts = {};
             }
         }
 
@@ -1977,6 +1953,8 @@
                                     <option value="products">Custom Products</option>
                                     <option value="employees">Custom Employees</option>
                                     <option value="stores">Custom Stores</option>
+                                    <option value="prices">Store Prices</option>
+                                    <option value="costs">Store Costs</option>
                                 </select>
                             </div>
                             
@@ -2024,6 +2002,7 @@
                                             <option value="store">Store-wise Report</option>
                                             <option value="monthly">Monthly Report</option>
                                             <option value="daterange">Date Range Report</option>
+                                        <option value="margin">Margin Analysis Report</option>
                                         </select>
                                     </div>
                                     <div class="form-group" id="specificFilterGroup" style="display: none;">
@@ -2153,7 +2132,9 @@
                                         <option value="employees">Employees</option>
                                         <option value="stores">Stores</option>
                                         <option value="prices">Price Settings</option>
+                                        <option value="costs">Cost Settings</option>
                                         <option value="pricing-template">Pricing Template (Sample)</option>
+                                        <option value="cost-template">Cost Template (Sample)</option>
                                         <option value="all">All Data</option>
                                     </select>
                                 </div>
@@ -2177,6 +2158,7 @@
                                         <option value="employees">Employees</option>
                                         <option value="stores">Stores</option>
                                         <option value="pricing">Pricing Data</option>
+                                        <option value="costing">Cost Data</option>
                                     </select>
                                 </div>
                                 
@@ -3221,7 +3203,8 @@
                     database.ref('products').remove(),
                     database.ref('employees').remove(),
                     database.ref('stores').remove(),
-                    database.ref('storePrices').remove()
+                    database.ref('storePrices').remove(),
+                    database.ref('storeCosts').remove()
                 ];
                 
                 await Promise.all(clearPromises);
@@ -3242,6 +3225,7 @@
                 firebaseEmployees = {};
                 firebaseStores = {};
                 firebaseStorePrices = {};
+                firebaseStoreCosts = {};
                 userSession = {};
                 
                 console.log('All data cleared successfully');
@@ -3407,9 +3391,29 @@
                     });
                     filename = 'price_settings';
                     break;
+                case 'costs':
+                    // Convert costs to readable format
+                    data = [];
+                    Object.entries(firebaseStoreCosts).forEach(([storeId, costs]) => {
+                        Object.entries(costs).forEach(([productId, cost]) => {
+                            data.push({
+                                store_id: storeId,
+                                store_name: getStoreName(storeId),
+                                product_id: productId,
+                                product_name: getProductName(productId),
+                                cost: cost
+                            });
+                        });
+                    });
+                    filename = 'cost_settings';
+                    break;
                 case 'pricing-template':
                     data = generatePricingTemplate();
                     filename = 'pricing_template';
+                    break;
+                case 'cost-template':
+                    data = generateCostTemplate();
+                    filename = 'cost_template';
                     break;
                 case 'all':
                     data = {
@@ -3444,7 +3448,8 @@
                             code: store.code || id,
                             type: 'custom'
                         }))],
-                        prices: firebaseStorePrices
+                        prices: firebaseStorePrices,
+                        costs: firebaseStoreCosts
                     };
                     filename = 'all_data';
                     break;
@@ -3582,6 +3587,77 @@
             });
             
             console.log('Generated pricing template with', template.length, 'rows');
+            return template;
+        }
+
+        function generateCostTemplate() {
+            const template = [];
+            
+            console.log('Generating cost template...');
+            console.log('Available Firebase stores:', firebaseStores);
+            console.log('Available Firebase products:', firebaseProducts);
+            
+            // Add default stores with their actual IDs used in the system
+            const defaultStores = [
+                { id: 'store1', name: 'Downtown Store', code: 'STR001' },
+                { id: 'store2', name: 'Mall Store', code: 'STR002' },
+                { id: 'store3', name: 'Airport Store', code: 'STR003' }
+            ];
+            
+            // Add default products with their actual IDs used in the system
+            const defaultProducts = [
+                { id: 'product1', name: 'Laptop Pro 15"', code: 'PRD001' },
+                { id: 'product2', name: 'Smartphone X', code: 'PRD002' },
+                { id: 'product3', name: 'Tablet Air', code: 'PRD003' },
+                { id: 'product4', name: 'Headphones Pro', code: 'PRD004' },
+                { id: 'product5', name: 'Smart Watch', code: 'PRD005' }
+            ];
+            
+            // Get all stores (default + Firebase with readable codes)
+            const allStores = [...defaultStores];
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                allStores.push({
+                    id: firebaseKey, // Use Firebase key for system reference
+                    name: store.name,
+                    code: store.code || store.id || `STR_${store.name.replace(/\s+/g, '_').toUpperCase()}`,
+                    display_id: store.code || store.id || `STR_${store.name.replace(/\s+/g, '_').toUpperCase()}`
+                });
+                console.log(`Added Firebase store: Code=${store.code || store.id}, Name=${store.name}`);
+            });
+            
+            // Get all products (default + Firebase with readable codes)
+            const allProducts = [...defaultProducts];
+            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+                allProducts.push({
+                    id: firebaseKey, // Use Firebase key for system reference
+                    name: product.name,
+                    code: product.code || product.id || `PRD_${product.name.replace(/\s+/g, '_').toUpperCase()}`,
+                    display_id: product.code || product.id || `PRD_${product.name.replace(/\s+/g, '_').toUpperCase()}`
+                });
+                console.log(`Added Firebase product: Code=${product.code || product.id}, Name=${product.name}`);
+            });
+            
+            console.log('Total stores for cost template:', allStores.length);
+            console.log('Total products for cost template:', allProducts.length);
+            
+            // Generate template rows with readable IDs for export
+            allStores.forEach(store => {
+                allProducts.forEach(product => {
+                    const row = {
+                        store_id: store.display_id || store.code || store.id,
+                        store_name: store.name,
+                        product_id: product.display_id || product.code || product.id,
+                        product_name: product.name,
+                        cost: 0,
+                        internal_store_id: store.id, // Keep for system reference
+                        internal_product_id: product.id // Keep for system reference
+                    };
+                    template.push(row);
+                    console.log(`Cost template row: ${row.store_id} (${store.name}) + ${row.product_id} (${product.name})`);
+                });
+            });
+            
+            console.log('Generated cost template with', template.length, 'rows');
             return template;
         }
 
@@ -3749,6 +3825,9 @@
                         case 'pricing':
                             result = await importPricingData(importedData);
                             break;
+                        case 'costing':
+                            result = await importCostingData(importedData);
+                            break;
                         default:
                             throw new Error('Invalid import type selected');
                     }
@@ -3781,6 +3860,10 @@
                             if (priceStoreSelect && priceStoreSelect.value) {
                                 loadStorePrices();
                             }
+                        }
+                        if (importType === 'costing') {
+                            // Refresh cost management if open (when implemented)
+                            console.log('Cost data imported successfully');
                         }
                         
                         // Reload Firebase data to ensure consistency
@@ -4527,6 +4610,184 @@
             }
         }
 
+        async function importCostingData(data) {
+            if (!Array.isArray(data)) throw new Error('Invalid cost data format - expected array');
+            
+            console.log('Importing cost data:', data.length, 'records');
+            console.log('Sample cost data:', data.slice(0, 3));
+            
+            // Validate and process cost data
+            const validCosts = [];
+            data.forEach((row, index) => {
+                console.log(`Processing cost row at index ${index}:`, row);
+                
+                // Check if row is an object
+                if (!row || typeof row !== 'object') {
+                    console.warn(`Skipping invalid cost row at index ${index}: not an object`, row);
+                    return;
+                }
+                
+                // Extract fields with multiple possible names
+                const storeId = row.store_id || row.storeId || row.store || row.internal_store_id;
+                const productId = row.product_id || row.productId || row.product || row.internal_product_id;
+                const cost = row.cost || row.amount || row.price;
+                
+                if (!storeId || !productId || cost === undefined || cost === null) {
+                    console.warn(`Skipping invalid cost row at index ${index}: missing required fields`, {
+                        storeId, productId, cost
+                    });
+                    return;
+                }
+                
+                const numericCost = parseFloat(cost);
+                if (isNaN(numericCost) || numericCost < 0) {
+                    console.warn(`Skipping cost row with invalid cost at index ${index}:`, cost);
+                    return;
+                }
+                
+                validCosts.push({
+                    storeId: storeId,
+                    productId: productId,
+                    cost: numericCost
+                });
+                
+                console.log(`Valid cost row added:`, { storeId, productId, cost: numericCost });
+            });
+            
+            if (validCosts.length === 0) {
+                throw new Error('No valid cost records found. Please check that your data has store_id, product_id, and cost fields.');
+            }
+            
+            console.log('Valid cost records to import:', validCosts.length);
+            
+            // Create mapping from readable IDs to internal Firebase keys
+            const storeIdMap = {};
+            const productIdMap = {};
+            
+            // Map default stores
+            const defaultStoreMap = {
+                'STR001': 'store1', 'store1': 'store1',
+                'STR002': 'store2', 'store2': 'store2', 
+                'STR003': 'store3', 'store3': 'store3'
+            };
+            Object.assign(storeIdMap, defaultStoreMap);
+            
+            // Map default products
+            const defaultProductMap = {
+                'PRD001': 'product1', 'product1': 'product1',
+                'PRD002': 'product2', 'product2': 'product2',
+                'PRD003': 'product3', 'product3': 'product3',
+                'PRD004': 'product4', 'product4': 'product4',
+                'PRD005': 'product5', 'product5': 'product5'
+            };
+            Object.assign(productIdMap, defaultProductMap);
+            
+            // Map Firebase stores (code/display_id to Firebase key)
+            Object.entries(firebaseStores).forEach(([firebaseKey, store]) => {
+                const code = store.code || store.id || `STR_${store.name.replace(/\s+/g, '_').toUpperCase()}`;
+                storeIdMap[code] = firebaseKey;
+                storeIdMap[firebaseKey] = firebaseKey; // Also map Firebase key to itself
+            });
+            
+            // Map Firebase products (code/display_id to Firebase key)
+            Object.entries(firebaseProducts).forEach(([firebaseKey, product]) => {
+                const code = product.code || product.id || `PRD_${product.name.replace(/\s+/g, '_').toUpperCase()}`;
+                productIdMap[code] = firebaseKey;
+                productIdMap[firebaseKey] = firebaseKey; // Also map Firebase key to itself
+            });
+            
+            console.log('Store ID mapping for costs:', storeIdMap);
+            console.log('Product ID mapping for costs:', productIdMap);
+            
+            // Process cost data with ID mapping
+            const newCosts = {};
+            let successCount = 0;
+            let errorCount = 0;
+            let addedCount = 0;
+            let updatedCount = 0;
+            
+            validCosts.forEach(row => {
+                // Map to internal IDs
+                const internalStoreId = storeIdMap[row.storeId] || row.storeId;
+                const internalProductId = productIdMap[row.productId] || row.productId;
+                
+                if (!internalStoreId) {
+                    console.warn(`Could not map store ID: ${row.storeId}`);
+                    errorCount++;
+                    return;
+                }
+                
+                if (!internalProductId) {
+                    console.warn(`Could not map product ID: ${row.productId}`);
+                    errorCount++;
+                    return;
+                }
+                
+                // Check if this combination already exists
+                const existingCost = firebaseStoreCosts[internalStoreId] && firebaseStoreCosts[internalStoreId][internalProductId];
+                const hasExisting = existingCost !== undefined && existingCost !== null;
+                
+                if (!newCosts[internalStoreId]) {
+                    newCosts[internalStoreId] = {};
+                }
+                newCosts[internalStoreId][internalProductId] = row.cost;
+                successCount++;
+                
+                // Track if this is an update or addition
+                if (hasExisting) {
+                    updatedCount++;
+                    console.log(`Updated existing cost: ${row.storeId} -> ${internalStoreId}, ${row.productId} -> ${internalProductId}, Old: ${existingCost}, New: ${row.cost}`);
+                } else {
+                    addedCount++;
+                    console.log(`Added new cost: ${row.storeId} -> ${internalStoreId}, ${row.productId} -> ${internalProductId}, Cost: ${row.cost}`);
+                }
+            });
+            
+            console.log('Processed new costs with internal IDs:', newCosts);
+            console.log('Cost import statistics:', { successCount, errorCount, addedCount, updatedCount });
+            
+            // Merge with existing costs
+            const finalCosts = JSON.parse(JSON.stringify(firebaseStoreCosts)); // Deep copy existing
+            
+            Object.keys(newCosts).forEach(storeId => {
+                if (!finalCosts[storeId]) {
+                    finalCosts[storeId] = {};
+                }
+                Object.assign(finalCosts[storeId], newCosts[storeId]);
+            });
+            
+            console.log('Final costs to save:', finalCosts);
+            
+            // Save to Firebase
+            try {
+                const result = await saveToFirebase('storeCosts', finalCosts);
+                if (!result.success) {
+                    throw new Error('Failed to save to Firebase: ' + result.error);
+                }
+                
+                // Update local data
+                firebaseStoreCosts = finalCosts;
+                
+                console.log('Successfully saved cost data to Firebase');
+                
+                // Force reload of Firebase data to ensure consistency
+                await loadFirebaseData();
+                
+                return {
+                    success: true,
+                    count: successCount,
+                    errors: errorCount,
+                    added: addedCount,
+                    updated: updatedCount,
+                    error: errorCount > 0 ? `${errorCount} cost records failed to import` : null
+                };
+                
+            } catch (error) {
+                console.error('Error saving cost data:', error);
+                throw new Error('Failed to save cost data to Firebase: ' + error.message);
+            }
+        }
+
         // Data management functions
         function loadManageData() {
             const type = document.getElementById('manageType').value;
@@ -4560,10 +4821,24 @@
                     data = Object.values(firebaseStores);
                     headers = ['Store Code', 'Store Name', 'Created', 'Actions'];
                     break;
+                case 'prices':
+                    data = getPriceManagementData();
+                    headers = ['Store', 'Product', 'Price (DHS)', 'Actions'];
+                    break;
+                case 'costs':
+                    data = getCostManagementData();
+                    headers = ['Store', 'Product', 'Cost (DHS)', 'Actions'];
+                    break;
             }
             
             if (data.length === 0) {
-                dataList.innerHTML = '<div class="no-data">No data available</div>';
+                let noDataMessage = 'No data available';
+                if (type === 'prices') {
+                    noDataMessage = 'No price settings found. Use "Manage Prices" to set product prices.';
+                } else if (type === 'costs') {
+                    noDataMessage = 'No cost settings found. Import cost data or set costs manually.';
+                }
+                dataList.innerHTML = `<div class="no-data">${noDataMessage}</div>`;
                 return;
             }
             
@@ -4626,6 +4901,28 @@
                             <div>
                                 <button class="btn-edit" onclick="editStore('${storeKey}')">Edit</button>
                                 <button class="btn-delete" onclick="deleteStore('${storeKey}')">Delete</button>
+                            </div>
+                        `;
+                        break;
+                    case 'prices':
+                        html += `
+                            <div>${item.storeName}</div>
+                            <div>${item.productName}</div>
+                            <div>${item.price.toLocaleString()}</div>
+                            <div>
+                                <button class="btn-edit" onclick="editPrice('${item.storeId}', '${item.productId}', ${item.price})">Edit</button>
+                                <button class="btn-delete" onclick="deletePrice('${item.storeId}', '${item.productId}')">Delete</button>
+                            </div>
+                        `;
+                        break;
+                    case 'costs':
+                        html += `
+                            <div>${item.storeName}</div>
+                            <div>${item.productName}</div>
+                            <div>${item.cost.toLocaleString()}</div>
+                            <div>
+                                <button class="btn-edit" onclick="editCost('${item.storeId}', '${item.productId}', ${item.cost})">Edit</button>
+                                <button class="btn-delete" onclick="deleteCost('${item.storeId}', '${item.productId}')">Delete</button>
                             </div>
                         `;
                         break;
@@ -4747,6 +5044,199 @@
             });
             
             return filteredSales;
+        }
+
+        // Price and Cost Management Data Functions
+        function getPriceManagementData() {
+            const priceData = [];
+            
+            Object.entries(firebaseStorePrices).forEach(([storeId, prices]) => {
+                Object.entries(prices).forEach(([productId, price]) => {
+                    if (price > 0) { // Only show non-zero prices
+                        priceData.push({
+                            storeId: storeId,
+                            productId: productId,
+                            storeName: getStoreName(storeId),
+                            productName: getProductName(productId),
+                            price: parseFloat(price)
+                        });
+                    }
+                });
+            });
+            
+            // Sort by store name, then product name
+            priceData.sort((a, b) => {
+                if (a.storeName !== b.storeName) {
+                    return a.storeName.localeCompare(b.storeName);
+                }
+                return a.productName.localeCompare(b.productName);
+            });
+            
+            return priceData;
+        }
+
+        function getCostManagementData() {
+            const costData = [];
+            
+            Object.entries(firebaseStoreCosts).forEach(([storeId, costs]) => {
+                Object.entries(costs).forEach(([productId, cost]) => {
+                    if (cost > 0) { // Only show non-zero costs
+                        costData.push({
+                            storeId: storeId,
+                            productId: productId,
+                            storeName: getStoreName(storeId),
+                            productName: getProductName(productId),
+                            cost: parseFloat(cost)
+                        });
+                    }
+                });
+            });
+            
+            // Sort by store name, then product name
+            costData.sort((a, b) => {
+                if (a.storeName !== b.storeName) {
+                    return a.storeName.localeCompare(b.storeName);
+                }
+                return a.productName.localeCompare(b.productName);
+            });
+            
+            return costData;
+        }
+
+        // Price Management Functions
+        function editPrice(storeId, productId, currentPrice) {
+            const storeName = getStoreName(storeId);
+            const productName = getProductName(productId);
+            
+            const newPrice = prompt(`Edit price for ${productName} at ${storeName}:\n\nCurrent price: ${currentPrice} DHS\nEnter new price:`, currentPrice);
+            
+            if (newPrice !== null && newPrice !== '') {
+                const price = parseFloat(newPrice);
+                if (isNaN(price) || price < 0) {
+                    showErrorToast('Please enter a valid price (0 or greater)');
+                    return;
+                }
+                
+                updatePrice(storeId, productId, price);
+            }
+        }
+
+        async function updatePrice(storeId, productId, newPrice) {
+            try {
+                if (!firebaseStorePrices[storeId]) {
+                    firebaseStorePrices[storeId] = {};
+                }
+                
+                firebaseStorePrices[storeId][productId] = newPrice;
+                
+                const result = await saveToFirebase('storePrices', firebaseStorePrices);
+                if (result.success) {
+                    loadManageData(); // Refresh the display
+                    showSuccessToast('Price updated successfully!');
+                } else {
+                    showErrorToast('Failed to update price. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error updating price:', error);
+                showErrorToast('Failed to update price. Please try again.');
+            }
+        }
+
+        async function deletePrice(storeId, productId) {
+            const storeName = getStoreName(storeId);
+            const productName = getProductName(productId);
+            
+            if (confirm(`Are you sure you want to delete the price for ${productName} at ${storeName}?`)) {
+                try {
+                    if (firebaseStorePrices[storeId] && firebaseStorePrices[storeId][productId]) {
+                        delete firebaseStorePrices[storeId][productId];
+                        
+                        // Clean up empty store objects
+                        if (Object.keys(firebaseStorePrices[storeId]).length === 0) {
+                            delete firebaseStorePrices[storeId];
+                        }
+                        
+                        const result = await saveToFirebase('storePrices', firebaseStorePrices);
+                        if (result.success) {
+                            loadManageData(); // Refresh the display
+                            showSuccessToast('Price deleted successfully!');
+                        } else {
+                            showErrorToast('Failed to delete price. Please try again.');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error deleting price:', error);
+                    showErrorToast('Failed to delete price. Please try again.');
+                }
+            }
+        }
+
+        // Cost Management Functions
+        function editCost(storeId, productId, currentCost) {
+            const storeName = getStoreName(storeId);
+            const productName = getProductName(productId);
+            
+            const newCost = prompt(`Edit cost for ${productName} at ${storeName}:\n\nCurrent cost: ${currentCost} DHS\nEnter new cost:`, currentCost);
+            
+            if (newCost !== null && newCost !== '') {
+                const cost = parseFloat(newCost);
+                if (isNaN(cost) || cost < 0) {
+                    showErrorToast('Please enter a valid cost (0 or greater)');
+                    return;
+                }
+                
+                updateCost(storeId, productId, cost);
+            }
+        }
+
+        async function updateCost(storeId, productId, newCost) {
+            try {
+                if (!firebaseStoreCosts[storeId]) {
+                    firebaseStoreCosts[storeId] = {};
+                }
+                
+                firebaseStoreCosts[storeId][productId] = newCost;
+                
+                const result = await saveToFirebase('storeCosts', firebaseStoreCosts);
+                if (result.success) {
+                    loadManageData(); // Refresh the display
+                    showSuccessToast('Cost updated successfully!');
+                } else {
+                    showErrorToast('Failed to update cost. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error updating cost:', error);
+                showErrorToast('Failed to update cost. Please try again.');
+            }
+        }
+
+        async function deleteCost(storeId, productId) {
+            const storeName = getStoreName(storeId);
+            const productName = getProductName(productId);
+            
+            if (confirm(`Are you sure you want to delete the cost for ${productName} at ${storeName}?`)) {
+                try {
+                    if (firebaseStoreCosts[storeId] && firebaseStoreCosts[storeId][productId]) {
+                        delete firebaseStoreCosts[storeId][productId];
+                        
+                        // Clean up empty store objects
+                        if (Object.keys(firebaseStoreCosts[storeId]).length === 0) {
+                            delete firebaseStoreCosts[storeId];
+                        }
+                        
+                        const result = await saveToFirebase('storeCosts', firebaseStoreCosts);
+                        if (result.success) {
+                            loadManageData(); // Refresh the display
+                            showSuccessToast('Cost deleted successfully!');
+                        } else {
+                            showErrorToast('Failed to delete cost. Please try again.');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error deleting cost:', error);
+                    showErrorToast('Failed to delete cost. Please try again.');
+                }
+            }
         }
 
         // Delete functions
@@ -5558,6 +6048,9 @@
                 case 'daterange':
                     reportHTML = generateDateRangeReport(filteredData);
                     break;
+                case 'margin':
+                    reportHTML = generateMarginReport(filteredData);
+                    break;
             }
             
             document.getElementById('reportResults').innerHTML = reportHTML;
@@ -5685,14 +6178,24 @@
                 return '<div class="no-data">No data found for the selected criteria</div>';
             }
             
-            console.log('Generating summary report with data:', data);
+            console.log('Generating management summary report with data:', data);
             console.log('Current firebaseStorePrices:', firebaseStorePrices);
             
-            // Group data by different dimensions
+            // Get date range for the report
+            const dates = [...new Set(data.map(sale => sale.date))].sort();
+            const startDate = dates[0];
+            const endDate = dates[dates.length - 1];
+            const reportPeriod = startDate === endDate ? 
+                new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+            
+            // Group data by employee and date
             const byEmployee = {};
-            const byProduct = {};
-            const byStore = {};
             const byDate = {};
+            const byStore = {};
+            let grandTotalQty = 0;
+            let grandTotalRevenue = 0;
+            let grandTotalSales = data.length;
             
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
@@ -5701,147 +6204,258 @@
             data.forEach(sale => {
                 let price = 0;
                 
-                // First try Firebase store prices
+                // Get price from Firebase store prices or default prices
                 if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                    console.log(`Using Firebase price for ${sale.store}/${sale.product}: ${price}`);
                 } else {
-                    // Fallback to default prices
                     price = defaultPrices[sale.product] || 0;
-                    console.log(`Using default price for ${sale.product}: ${price}`);
                 }
                 
                 const revenue = price * sale.qty;
+                grandTotalQty += sale.qty;
+                grandTotalRevenue += revenue;
                 
                 // By employee
                 if (!byEmployee[sale.user]) {
-                    byEmployee[sale.user] = { qty: 0, revenue: 0, sales: 0 };
+                    byEmployee[sale.user] = { qty: 0, revenue: 0, sales: 0, stores: new Set() };
                 }
                 byEmployee[sale.user].qty += sale.qty;
                 byEmployee[sale.user].revenue += revenue;
                 byEmployee[sale.user].sales += 1;
+                byEmployee[sale.user].stores.add(getStoreName(sale.store));
                 
-                // By product
-                const productName = getProductName(sale.product);
-                console.log(`Product mapping: ${sale.product} -> ${productName}`);
-                if (!byProduct[productName]) {
-                    byProduct[productName] = { qty: 0, revenue: 0, sales: 0 };
+                // By date
+                if (!byDate[sale.date]) {
+                    byDate[sale.date] = { qty: 0, revenue: 0, sales: 0, employees: new Set() };
                 }
-                byProduct[productName].qty += sale.qty;
-                byProduct[productName].revenue += revenue;
-                byProduct[productName].sales += 1;
+                byDate[sale.date].qty += sale.qty;
+                byDate[sale.date].revenue += revenue;
+                byDate[sale.date].sales += 1;
+                byDate[sale.date].employees.add(sale.user);
                 
                 // By store
                 const storeName = getStoreName(sale.store);
-                console.log(`Store mapping: ${sale.store} -> ${storeName}`);
                 if (!byStore[storeName]) {
                     byStore[storeName] = { qty: 0, revenue: 0, sales: 0 };
                 }
                 byStore[storeName].qty += sale.qty;
                 byStore[storeName].revenue += revenue;
                 byStore[storeName].sales += 1;
-                
-                // By date
-                if (!byDate[sale.date]) {
-                    byDate[sale.date] = { qty: 0, revenue: 0, sales: 0 };
-                }
-                byDate[sale.date].qty += sale.qty;
-                byDate[sale.date].revenue += revenue;
-                byDate[sale.date].sales += 1;
             });
+            
+            // Sort employees by total quantity sold (descending)
+            const sortedEmployees = Object.entries(byEmployee).sort((a, b) => b[1].qty - a[1].qty);
+            
+            // Sort dates chronologically
+            const sortedDates = Object.entries(byDate).sort((a, b) => new Date(a[0]) - new Date(b[0]));
             
             let html = `
-                <h4 style="color: white; margin-bottom: 16px;">📊 Employee Performance</h4>
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Employee</th>
-                            <th>Sales Count</th>
-                            <th>Total Quantity</th>
-                            <th>Total Revenue</th>
-                            <th>Avg Sale Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <!-- Executive Summary Header -->
+                <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 24px; border-radius: 12px; margin-bottom: 32px; text-align: center;">
+                    <h2 style="color: white; font-size: 1.8rem; font-weight: bold; margin: 0 0 8px 0;">📊 EDEN SALES SUMMARY REPORT</h2>
+                    <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; margin: 0 0 16px 0;">${reportPeriod}</p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+                        <div style="background: rgba(255, 255, 255, 0.15); padding: 16px; border-radius: 8px;">
+                            <div style="color: white; font-size: 2rem; font-weight: bold;">${grandTotalSales}</div>
+                            <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem;">Total Transactions</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.15); padding: 16px; border-radius: 8px;">
+                            <div style="color: white; font-size: 2rem; font-weight: bold;">${grandTotalQty.toLocaleString()}</div>
+                            <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem;">Total Units Sold</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.15); padding: 16px; border-radius: 8px;">
+                            <div style="color: white; font-size: 2rem; font-weight: bold;">${grandTotalRevenue.toLocaleString()} DHS</div>
+                            <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem;">Total Revenue</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employee Performance Section -->
+                <div style="background: rgba(28, 28, 30, 0.8); border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid rgba(99, 99, 102, 0.2);">
+                    <h3 style="color: #ffffff; font-size: 1.4rem; font-weight: bold; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;">
+                        👥 Employee Performance Summary
+                    </h3>
+                    <table class="report-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(59, 130, 246, 0.2);">
+                                <th style="padding: 12px; text-align: left; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Rank</th>
+                                <th style="padding: 12px; text-align: left; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Employee Name</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Total Qty Sold</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Total Revenue</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Transactions</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Avg per Sale</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
-            Object.entries(byEmployee).forEach(([employee, stats]) => {
-                const avgSaleValue = stats.revenue / stats.sales;
+            sortedEmployees.forEach(([employee, stats], index) => {
+                const avgPerSale = stats.revenue / stats.sales;
+                const performancePercent = ((stats.qty / grandTotalQty) * 100);
+                const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                const rowBg = index % 2 === 0 ? 'rgba(99, 99, 102, 0.05)' : 'transparent';
+                
                 html += `
-                    <tr>
-                        <td>${employee}</td>
-                        <td>${stats.sales}</td>
-                        <td>${stats.qty}</td>
-                        <td>${stats.revenue.toLocaleString()} DHS</td>
-                        <td>${avgSaleValue.toLocaleString()} DHS</td>
+                    <tr style="background: ${rowBg};">
+                        <td style="padding: 12px; font-size: 1.1rem; font-weight: bold;">${rankIcon}</td>
+                        <td style="padding: 12px; color: #ffffff; font-weight: 600;">${employee}</td>
+                        <td style="padding: 12px; text-align: center; color: #3b82f6; font-weight: bold; font-size: 1.1rem;">${stats.qty.toLocaleString()}</td>
+                        <td style="padding: 12px; text-align: center; color: #10b981; font-weight: bold;">${stats.revenue.toLocaleString()} DHS</td>
+                        <td style="padding: 12px; text-align: center; color: rgba(255, 255, 255, 0.9);">${stats.sales}</td>
+                        <td style="padding: 12px; text-align: center; color: rgba(255, 255, 255, 0.9);">${avgPerSale.toLocaleString()} DHS</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div style="background: linear-gradient(90deg, #3b82f6 0%, #3b82f6 ${performancePercent}%, rgba(99, 99, 102, 0.2) ${performancePercent}%); 
+                                        height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; 
+                                        color: white; font-size: 0.8rem; font-weight: bold;">
+                                ${performancePercent.toFixed(1)}%
+                            </div>
+                        </td>
                     </tr>
                 `;
             });
             
             html += `
-                    </tbody>
-                </table>
-                
-                <h4 style="color: white; margin: 24px 0 16px;">📦 Product Performance</h4>
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Sales Count</th>
-                            <th>Total Quantity</th>
-                            <th>Total Revenue</th>
-                            <th>Avg Quantity per Sale</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Daily Performance Section -->
+                <div style="background: rgba(28, 28, 30, 0.8); border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid rgba(99, 99, 102, 0.2);">
+                    <h3 style="color: #ffffff; font-size: 1.4rem; font-weight: bold; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;">
+                        📅 Daily Sales Performance
+                    </h3>
+                    <table class="report-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(16, 185, 129, 0.2);">
+                                <th style="padding: 12px; text-align: left; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Sales Date</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Total Qty Sold</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Total Revenue</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Transactions</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Active Employees</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Avg per Transaction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
-            Object.entries(byProduct).forEach(([product, stats]) => {
-                const avgQtyPerSale = stats.qty / stats.sales;
+            sortedDates.forEach(([date, stats], index) => {
+                const avgPerTransaction = stats.revenue / stats.sales;
+                const rowBg = index % 2 === 0 ? 'rgba(99, 99, 102, 0.05)' : 'transparent';
+                const formattedDate = new Date(date).toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                
                 html += `
-                    <tr>
-                        <td>${product}</td>
-                        <td>${stats.sales}</td>
-                        <td>${stats.qty}</td>
-                        <td>${stats.revenue.toLocaleString()} DHS</td>
-                        <td>${avgQtyPerSale.toFixed(1)}</td>
+                    <tr style="background: ${rowBg};">
+                        <td style="padding: 12px; color: #ffffff; font-weight: 600;">${formattedDate}</td>
+                        <td style="padding: 12px; text-align: center; color: #3b82f6; font-weight: bold; font-size: 1.1rem;">${stats.qty.toLocaleString()}</td>
+                        <td style="padding: 12px; text-align: center; color: #10b981; font-weight: bold;">${stats.revenue.toLocaleString()} DHS</td>
+                        <td style="padding: 12px; text-align: center; color: rgba(255, 255, 255, 0.9);">${stats.sales}</td>
+                        <td style="padding: 12px; text-align: center; color: rgba(255, 255, 255, 0.9);">${stats.employees.size}</td>
+                        <td style="padding: 12px; text-align: center; color: rgba(255, 255, 255, 0.9);">${avgPerTransaction.toLocaleString()} DHS</td>
                     </tr>
                 `;
             });
             
             html += `
-                    </tbody>
-                </table>
-                
-                <h4 style="color: white; margin: 24px 0 16px;">🏪 Store Performance</h4>
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Store</th>
-                            <th>Sales Count</th>
-                            <th>Total Quantity</th>
-                            <th>Total Revenue</th>
-                            <th>Avg Daily Sales</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Store Performance Section -->
+                <div style="background: rgba(28, 28, 30, 0.8); border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid rgba(99, 99, 102, 0.2);">
+                    <h3 style="color: #ffffff; font-size: 1.4rem; font-weight: bold; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;">
+                        🏪 Store Performance Summary
+                    </h3>
+                    <table class="report-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(168, 85, 247, 0.2);">
+                                <th style="padding: 12px; text-align: left; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(168, 85, 247, 0.3);">Store Name</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(168, 85, 247, 0.3);">Total Qty Sold</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(168, 85, 247, 0.3);">Total Revenue</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(168, 85, 247, 0.3);">Transactions</th>
+                                <th style="padding: 12px; text-align: center; font-weight: bold; color: #ffffff; border-bottom: 2px solid rgba(168, 85, 247, 0.3);">Market Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
-            Object.entries(byStore).forEach(([store, stats]) => {
-                const uniqueDays = [...new Set(data.filter(sale => getStoreName(sale.store) === store).map(sale => sale.date))].length;
-                const avgDailySales = stats.sales / uniqueDays;
+            // Sort stores by quantity sold
+            const sortedStores = Object.entries(byStore).sort((a, b) => b[1].qty - a[1].qty);
+            
+            sortedStores.forEach(([store, stats], index) => {
+                const marketShare = ((stats.qty / grandTotalQty) * 100);
+                const rowBg = index % 2 === 0 ? 'rgba(99, 99, 102, 0.05)' : 'transparent';
+                
                 html += `
-                    <tr>
-                        <td>${store}</td>
-                        <td>${stats.sales}</td>
-                        <td>${stats.qty}</td>
-                        <td>${stats.revenue.toLocaleString()} DHS</td>
-                        <td>${avgDailySales.toFixed(1)}</td>
+                    <tr style="background: ${rowBg};">
+                        <td style="padding: 12px; color: #ffffff; font-weight: 600;">${store}</td>
+                        <td style="padding: 12px; text-align: center; color: #3b82f6; font-weight: bold; font-size: 1.1rem;">${stats.qty.toLocaleString()}</td>
+                        <td style="padding: 12px; text-align: center; color: #10b981; font-weight: bold;">${stats.revenue.toLocaleString()} DHS</td>
+                        <td style="padding: 12px; text-align: center; color: rgba(255, 255, 255, 0.9);">${stats.sales}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div style="background: linear-gradient(90deg, #a855f7 0%, #a855f7 ${marketShare}%, rgba(99, 99, 102, 0.2) ${marketShare}%); 
+                                        height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; 
+                                        color: white; font-size: 0.8rem; font-weight: bold;">
+                                ${marketShare.toFixed(1)}%
+                            </div>
+                        </td>
                     </tr>
                 `;
             });
             
-            html += '</tbody></table>';
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Key Insights Section -->
+                <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 20px; border-radius: 12px; margin-top: 24px;">
+                    <h3 style="color: white; font-size: 1.3rem; font-weight: bold; margin: 0 0 16px 0;">💡 Key Performance Insights</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; color: white;">
+                        <div>
+                            <strong>🏆 Top Performer:</strong><br>
+                            ${sortedEmployees.length > 0 ? `${sortedEmployees[0][0]} with ${sortedEmployees[0][1].qty.toLocaleString()} units sold` : 'No data'}
+                        </div>
+                        <div>
+                            <strong>📈 Best Sales Day:</strong><br>
+                            ${sortedDates.length > 0 ? 
+                                (() => {
+                                    const bestDay = sortedDates.reduce((max, current) => current[1].qty > max[1].qty ? current : max);
+                                    return `${new Date(bestDay[0]).toLocaleDateString()} (${bestDay[1].qty.toLocaleString()} units)`;
+                                })()
+                                : 'No data'}
+                        </div>
+                        <div>
+                            <strong>💰 Average Revenue per Day:</strong><br>
+                            ${sortedDates.length > 0 ? (grandTotalRevenue / sortedDates.length).toLocaleString() : '0'} DHS
+                        </div>
+                        <div>
+                            <strong>📊 Average Units per Transaction:</strong><br>
+                            ${grandTotalSales > 0 ? (grandTotalQty / grandTotalSales).toFixed(1) : '0'} units
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Footer -->
+                <div style="text-align: center; margin-top: 32px; padding: 16px; border-top: 1px solid rgba(99, 99, 102, 0.2);">
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin: 0;">
+                        Report generated on ${new Date().toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })} | EDEN Sales Management System
+                    </p>
+                </div>
+            `;
+            
             return html;
         }
 
@@ -5863,6 +6477,171 @@
 
         function generateDateRangeReport(data) {
             return generateDetailedReport(data);
+        }
+
+        function generateMarginReport(data) {
+            if (data.length === 0) {
+                return '<div class="no-data">No data found for the selected criteria</div>';
+            }
+            
+            console.log('Generating margin analysis report with data:', data);
+            console.log('Current firebaseStorePrices:', firebaseStorePrices);
+            console.log('Current firebaseStoreCosts:', firebaseStoreCosts);
+            
+            // Default prices and costs for fallback
+            const defaultPrices = {
+                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+            };
+            
+            const defaultCosts = {
+                'product1': 1800, 'product2': 800, 'product3': 500, 'product4': 150, 'product5': 250
+            };
+            
+            // Calculate comprehensive margin statistics
+            let totalQuantity = 0;
+            let totalRevenue = 0;
+            let totalCost = 0;
+            let totalMargin = 0;
+            let totalSales = data.length;
+            
+            // Process each sale for detailed margin calculations
+            const processedData = data.map(sale => {
+                let price = 0;
+                let cost = 0;
+                
+                // Get price from Firebase store prices or default prices
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                } else {
+                    price = defaultPrices[sale.product] || 0;
+                }
+                
+                // Get cost from Firebase store costs or default costs
+                if (firebaseStoreCosts && firebaseStoreCosts[sale.store] && firebaseStoreCosts[sale.store][sale.product]) {
+                    cost = parseFloat(firebaseStoreCosts[sale.store][sale.product]) || 0;
+                } else {
+                    cost = defaultCosts[sale.product] || 0;
+                }
+                
+                const saleRevenue = price * sale.qty;
+                const saleCost = cost * sale.qty;
+                const saleMargin = saleRevenue - saleCost;
+                const marginPercentage = saleRevenue > 0 ? ((saleMargin / saleRevenue) * 100) : 0;
+                
+                totalQuantity += sale.qty;
+                totalRevenue += saleRevenue;
+                totalCost += saleCost;
+                totalMargin += saleMargin;
+                
+                return {
+                    ...sale,
+                    unitPrice: price,
+                    unitCost: cost,
+                    unitMargin: price - cost,
+                    unitMarginPercent: price > 0 ? (((price - cost) / price) * 100) : 0,
+                    totalRevenue: saleRevenue,
+                    totalCost: saleCost,
+                    totalMargin: saleMargin,
+                    marginPercentage: marginPercentage,
+                    productName: getProductName(sale.product),
+                    employeeName: getEmployeeName(sale.user),
+                    storeName: getStoreName(sale.store)
+                };
+            });
+            
+            // Sort by margin percentage (highest first)
+            processedData.sort((a, b) => b.marginPercentage - a.marginPercentage);
+            
+            const overallMarginPercent = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
+            
+            let html = `
+                <div class="report-summary" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px;">
+                    <div class="summary-card">
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalRevenue.toLocaleString()} DHS</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Revenue</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #ff6b35;">${totalCost.toLocaleString()} DHS</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Cost</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: ${totalMargin >= 0 ? '#22c55e' : '#ef4444'};">${totalMargin.toLocaleString()} DHS</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Margin</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: ${overallMarginPercent >= 0 ? '#22c55e' : '#ef4444'};">${overallMarginPercent.toFixed(1)}%</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Margin %</div>
+                    </div>
+                </div>
+                
+                <table class="report-table" style="font-size: 0.85rem;">
+                    <thead>
+                        <tr style="background: rgba(0, 122, 255, 0.2);">
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Store</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Employee</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Date</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Product</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Qty</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Price</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Cost</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Margin</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Revenue</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Cost</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Margin</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Margin %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            processedData.forEach(sale => {
+                const marginColor = sale.marginPercentage >= 0 ? '#22c55e' : '#ef4444';
+                html += `
+                    <tr>
+                        <td style="padding: 6px;">${sale.storeName}</td>
+                        <td style="padding: 6px;">${sale.employeeName}</td>
+                        <td style="padding: 6px;">${new Date(sale.date).toLocaleDateString()}</td>
+                        <td style="padding: 6px;">${sale.productName}</td>
+                        <td style="padding: 6px; text-align: center; font-weight: bold;">${sale.qty}</td>
+                        <td style="padding: 6px; text-align: right;">${sale.unitPrice.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right;">${sale.unitCost.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; color: ${sale.unitMargin >= 0 ? '#22c55e' : '#ef4444'}; font-weight: bold;">${sale.unitMargin.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; font-weight: bold;">${sale.totalRevenue.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right;">${sale.totalCost.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; color: ${marginColor}; font-weight: bold;">${sale.totalMargin.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; color: ${marginColor}; font-weight: bold;">${sale.marginPercentage.toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 24px; padding: 16px; background: rgba(0, 122, 255, 0.1); border-radius: 8px;">
+                    <h4 style="color: #ffffff; margin-bottom: 12px;">📊 Margin Analysis Summary</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; color: rgba(255, 255, 255, 0.9);">
+                        <div>
+                            <strong>Best Performing Sale:</strong><br>
+                            ${processedData.length > 0 ? `${processedData[0].productName} - ${processedData[0].marginPercentage.toFixed(1)}% margin` : 'No data'}
+                        </div>
+                        <div>
+                            <strong>Average Margin per Sale:</strong><br>
+                            ${totalSales > 0 ? (totalMargin / totalSales).toLocaleString() : '0'} DHS
+                        </div>
+                        <div>
+                            <strong>Total Units Sold:</strong><br>
+                            ${totalQuantity.toLocaleString()} units
+                        </div>
+                        <div>
+                            <strong>Average Margin per Unit:</strong><br>
+                            ${totalQuantity > 0 ? (totalMargin / totalQuantity).toLocaleString() : '0'} DHS
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
         }
 
         function exportReportCSV() {
@@ -6275,7 +7054,7 @@
         }
 
         function calculateYesterdayAnalytics() {
-            // Always show YESTERDAY's data (22/08/2025) regardless of current time
+            // Always show YESTERDAY's data regardless of current time
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -6292,193 +7071,230 @@
                 totalSalesInSystem: salesData.length
             });
             
-            // Debug: Show all sales data with their dates
-            console.log('📊 ALL SALES DATA IN SYSTEM:');
-            salesData.forEach((sale, index) => {
-                const saleDate = sale.date?.includes('T') ? sale.date.split('T')[0] : sale.date;
-                console.log(`  Sale ${index + 1}: ID=${sale.id}, Date=${saleDate}, User=${sale.user}, Product=${sale.product}, Qty=${sale.qty}`);
-            });
-            
-            // Filter for YESTERDAY's date specifically (22/08/2025)
-            const yesterdaySales = salesData.filter(sale => {
-                if (!sale || !sale.date) {
-                    console.log('❌ Skipping invalid sale (no date):', sale);
-                    return false;
-                }
+            // Force reload Firebase data first to ensure we have latest data
+            loadFirebaseData().then(() => {
+                console.log('📊 REFRESHED SALES DATA - Total sales:', salesData.length);
                 
-                const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
-                const isYesterday = saleDate === yesterdayStr;
+                // Debug: Show all sales data with their dates
+                console.log('📊 ALL SALES DATA IN SYSTEM:');
+                salesData.forEach((sale, index) => {
+                    const saleDate = sale.date?.includes('T') ? sale.date.split('T')[0] : sale.date;
+                    console.log(`  Sale ${index + 1}: ID=${sale.id}, Date=${saleDate}, User=${sale.user}, Product=${sale.product}, Qty=${sale.qty}`);
+                });
                 
-                console.log(`🔍 Checking sale: Date=${saleDate}, Target=${yesterdayStr}, Match=${isYesterday}`);
+                // Filter for YESTERDAY's date specifically
+                const yesterdaySales = salesData.filter(sale => {
+                    if (!sale || !sale.date) {
+                        console.log('❌ Skipping invalid sale (no date):', sale);
+                        return false;
+                    }
+                    
+                    const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
+                    const isYesterday = saleDate === yesterdayStr;
+                    
+                    console.log(`🔍 Checking sale: Date=${saleDate}, Target=${yesterdayStr}, Match=${isYesterday}`);
+                    
+                    if (isYesterday) {
+                        console.log('✅ FOUND YESTERDAY SALE:', {
+                            id: sale.id,
+                            date: saleDate,
+                            user: sale.user,
+                            product: sale.product,
+                            qty: sale.qty,
+                            store: sale.store
+                        });
+                    }
+                    
+                    return isYesterday;
+                });
                 
-                if (isYesterday) {
-                    console.log('✅ FOUND YESTERDAY SALE:', {
+                console.log('🎯 YESTERDAY SALES FOUND:', yesterdaySales.length);
+                console.log('📋 Yesterday sales details:', yesterdaySales);
+                
+                // Calculate total sales amount
+                let totalAmount = 0;
+                let totalQty = 0;
+                const userSales = {};
+                const productSales = {};
+                
+                // Default prices for fallback
+                const defaultPrices = {
+                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                };
+                
+                yesterdaySales.forEach(sale => {
+                    const qty = parseInt(sale.qty);
+                    if (isNaN(qty) || qty <= 0) return;
+                    
+                    console.log('Processing sale:', {
                         id: sale.id,
-                        date: saleDate,
                         user: sale.user,
                         product: sale.product,
-                        qty: sale.qty,
+                        qty: qty,
                         store: sale.store
                     });
-                }
-                
-                return isYesterday;
-            });
-            
-            console.log('🎯 YESTERDAY SALES FOUND:', yesterdaySales.length);
-            console.log('📋 Yesterday sales details:', yesterdaySales);
-            
-            // Calculate total sales amount
-            let totalAmount = 0;
-            let totalQty = 0;
-            const userSales = {};
-            const productSales = {};
-            
-            // Default prices for fallback
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
-            
-            yesterdaySales.forEach(sale => {
-                const qty = parseInt(sale.qty);
-                if (isNaN(qty)) return;
-                
-                console.log('Processing sale:', {
-                    id: sale.id,
-                    user: sale.user,
-                    product: sale.product,
-                    qty: qty,
-                    store: sale.store
-                });
-                
-                // Get price from Firebase store prices or default prices
-                let price = 0;
-                if (firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    price = defaultPrices[sale.product] || 0;
-                }
-                
-                const saleAmount = price * qty;
-                totalAmount += saleAmount;
-                totalQty += qty;
-                
-                // Track sales by user for best performer (use actual user name)
-                const userName = sale.user || 'Unknown User';
-                if (!userSales[userName]) {
-                    userSales[userName] = { amount: 0, qty: 0 };
-                }
-                userSales[userName].amount += saleAmount;
-                userSales[userName].qty += qty;
-                
-                // Track product sales for most sold product (use actual product name)
-                const productName = getProductName(sale.product);
-                console.log(`Product mapping for analytics: ${sale.product} -> ${productName}`);
-                
-                // Only track valid product names
-                if (productName && 
-                    productName !== 'No Product Selected' && 
-                    !productName.includes('undefined') && 
-                    !productName.includes('null')) {
-                    if (!productSales[productName]) {
-                        productSales[productName] = 0;
+                    
+                    // Get price from Firebase store prices or default prices
+                    let price = 0;
+                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                        console.log(`Using Firebase price: ${price} for ${sale.product} at ${sale.store}`);
+                    } else {
+                        price = defaultPrices[sale.product] || 0;
+                        console.log(`Using default price: ${price} for ${sale.product}`);
                     }
-                    productSales[productName] += qty;
-                } else {
-                    console.warn(`Skipping invalid product name: ${productName} for product ID: ${sale.product}`);
+                    
+                    const saleAmount = price * qty;
+                    totalAmount += saleAmount;
+                    totalQty += qty;
+                    
+                    console.log(`Sale calculation: ${qty} × ${price} = ${saleAmount}`);
+                    
+                    // Track sales by user for best performer (use actual user name)
+                    const userName = sale.user || 'Unknown User';
+                    if (!userSales[userName]) {
+                        userSales[userName] = { amount: 0, qty: 0 };
+                    }
+                    userSales[userName].amount += saleAmount;
+                    userSales[userName].qty += qty;
+                    
+                    // Track product sales for most sold product (use actual product name)
+                    const productName = getProductName(sale.product);
+                    console.log(`Product mapping for analytics: ${sale.product} -> ${productName}`);
+                    
+                    // Only track valid product names
+                    if (productName && 
+                        productName !== 'No Product Selected' && 
+                        !productName.includes('undefined') && 
+                        !productName.includes('null') &&
+                        !productName.startsWith('Product ')) {
+                        if (!productSales[productName]) {
+                            productSales[productName] = 0;
+                        }
+                        productSales[productName] += qty;
+                        console.log(`Added ${qty} to ${productName}, total now: ${productSales[productName]}`);
+                    } else {
+                        console.warn(`Skipping invalid product name: ${productName} for product ID: ${sale.product}`);
+                    }
+                });
+                
+                console.log('Final calculations:', {
+                    totalAmount,
+                    totalQty,
+                    userSales,
+                    productSales
+                });
+                
+                // Find best performer by revenue
+                let bestPerformer = 'No Data';
+                let maxSales = 0;
+                
+                Object.entries(userSales).forEach(([user, stats]) => {
+                    console.log(`Checking user ${user} with amount ${stats.amount}`);
+                    if (stats.amount > maxSales) {
+                        maxSales = stats.amount;
+                        bestPerformer = user;
+                    }
+                });
+                
+                // Find most sold product by quantity
+                let mostSoldProduct = 'No Data';
+                let maxQty = 0;
+                
+                Object.entries(productSales).forEach(([product, qty]) => {
+                    console.log(`Checking product ${product} with qty ${qty}`);
+                    if (qty > maxQty) {
+                        maxQty = qty;
+                        mostSoldProduct = `${product} (${qty} units)`;
+                    }
+                });
+                
+                console.log('Final analytics results:', {
+                    bestPerformer,
+                    mostSoldProduct,
+                    totalAmount,
+                    totalQty
+                });
+                
+                // Update display elements if they exist
+                const totalSalesElement = document.getElementById('totalSalesAmount');
+                const totalQtyElement = document.getElementById('totalQtySold');
+                const bestPerformerElement = document.getElementById('bestPerformer');
+                const mostSoldProductElement = document.getElementById('mostSoldProduct');
+                
+                // Update subtitle labels to show "Yesterday" with next update time
+                const nextUpdateDisplay = new Date();
+                nextUpdateDisplay.setDate(nextUpdateDisplay.getDate() + 1);
+                nextUpdateDisplay.setHours(6, 0, 0, 0);
+                const updateTimeStr = nextUpdateDisplay.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                const subtitleElements = [
+                    document.getElementById('revenueSubtitle'),
+                    document.getElementById('itemsSubtitle'),
+                    document.getElementById('performerSubtitle'),
+                    document.getElementById('productSubtitle')
+                ];
+                
+                subtitleElements.forEach(element => {
+                    if (element) {
+                        element.textContent = `Yesterday (Updates at ${updateTimeStr})`;
+                    }
+                });
+                
+                // Update all display elements with animation
+                if (totalSalesElement) {
+                    totalSalesElement.style.transition = 'all 0.3s ease';
+                    totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
+                    totalSalesElement.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        totalSalesElement.style.transform = 'scale(1)';
+                    }, 300);
+                    console.log('Updated total sales element to:', totalAmount);
                 }
                 
-                console.log('Updated tracking:', {
-                    userName,
-                    userAmount: userSales[userName].amount,
-                    productName,
-                    productQty: productSales[productName]
+                if (totalQtyElement) {
+                    totalQtyElement.style.transition = 'all 0.3s ease';
+                    totalQtyElement.textContent = totalQty.toString();
+                    totalQtyElement.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        totalQtyElement.style.transform = 'scale(1)';
+                    }, 300);
+                    console.log('Updated total qty element to:', totalQty);
+                }
+                
+                if (bestPerformerElement) {
+                    bestPerformerElement.style.transition = 'all 0.3s ease';
+                    bestPerformerElement.textContent = bestPerformer;
+                    bestPerformerElement.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        bestPerformerElement.style.transform = 'scale(1)';
+                    }, 300);
+                    console.log('Updated best performer element to:', bestPerformer);
+                }
+                
+                if (mostSoldProductElement) {
+                    mostSoldProductElement.style.transition = 'all 0.3s ease';
+                    mostSoldProductElement.textContent = mostSoldProduct;
+                    mostSoldProductElement.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        mostSoldProductElement.style.transform = 'scale(1)';
+                    }, 300);
+                    console.log('Updated most sold product element to:', mostSoldProduct);
+                }
+                
+                console.log('✅ ANALYTICS UPDATED SUCCESSFULLY:', {
+                    yesterdayStr,
+                    salesCount: yesterdaySales.length,
+                    totalAmount,
+                    totalQty,
+                    bestPerformer,
+                    mostSoldProduct
                 });
-            });
-            
-            console.log('Final user sales:', userSales);
-            console.log('Final product sales:', productSales);
-            
-            // Find best performer by revenue
-            let bestPerformer = 'No Data';
-            let maxSales = 0;
-            
-            Object.entries(userSales).forEach(([user, stats]) => {
-                console.log(`Checking user ${user} with amount ${stats.amount}`);
-                if (stats.amount > maxSales) {
-                    maxSales = stats.amount;
-                    bestPerformer = user;
-                }
-            });
-            
-            // Find most sold product by quantity
-            let mostSoldProduct = 'No Data';
-            let maxQty = 0;
-            
-            Object.entries(productSales).forEach(([product, qty]) => {
-                console.log(`Checking product ${product} with qty ${qty}`);
-                if (qty > maxQty) {
-                    maxQty = qty;
-                    mostSoldProduct = `${product} (${qty} units)`;
-                }
-            });
-            
-            console.log('Final results:', {
-                bestPerformer,
-                mostSoldProduct,
-                totalAmount,
-                totalQty
-            });
-            
-            // Update display elements if they exist
-            const totalSalesElement = document.getElementById('totalSalesAmount');
-            const totalQtyElement = document.getElementById('totalQtySold');
-            const bestPerformerElement = document.getElementById('bestPerformer');
-            const mostSoldProductElement = document.getElementById('mostSoldProduct');
-            
-            // Update subtitle labels to show "Yesterday" with next update time
-            const nextUpdateDisplay = new Date();
-            nextUpdateDisplay.setDate(nextUpdateDisplay.getDate() + 1);
-            nextUpdateDisplay.setHours(6, 0, 0, 0);
-            const updateTimeStr = nextUpdateDisplay.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            const subtitleElements = [
-                document.getElementById('revenueSubtitle'),
-                document.getElementById('itemsSubtitle'),
-                document.getElementById('performerSubtitle'),
-                document.getElementById('productSubtitle')
-            ];
-            
-            subtitleElements.forEach(element => {
-                if (element) {
-                    element.textContent = `Yesterday (Updates at ${updateTimeStr})`;
-                }
-            });
-            
-            if (totalSalesElement) {
-                totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
-                console.log('Updated total sales element');
-            }
-            if (totalQtyElement) {
-                totalQtyElement.textContent = totalQty.toString();
-                console.log('Updated total qty element');
-            }
-            if (bestPerformerElement) {
-                bestPerformerElement.textContent = bestPerformer;
-                console.log('Updated best performer element to:', bestPerformer);
-            }
-            if (mostSoldProductElement) {
-                mostSoldProductElement.textContent = mostSoldProduct;
-                console.log('Updated most sold product element to:', mostSoldProduct);
-            }
-            
-            console.log('Analytics Updated Successfully:', {
-                yesterdayStr,
-                salesCount: yesterdaySales.length,
-                totalAmount,
-                totalQty,
-                bestPerformer,
-                mostSoldProduct
+                
+            }).catch(error => {
+                console.error('❌ Error refreshing Firebase data for analytics:', error);
+                // Still try to calculate with existing data
+                console.log('Falling back to existing data...');
             });
         }
 
@@ -7178,6 +7994,42 @@
                 });
             });
             
+            csv += '\n\n';
+            
+            // Store Costs Section with readable IDs
+            csv += 'STORE COSTS DATA\n';
+            csv += 'Store ID,Store Name,Product ID,Product Name,Cost (DHS)\n';
+            
+            Object.entries(masterData.storeCosts || {}).forEach(([storeId, costs]) => {
+                const storeName = getStoreName(storeId);
+                
+                // Get readable store ID
+                let readableStoreId = storeId;
+                if (storeId === 'store1') readableStoreId = 'STR001';
+                else if (storeId === 'store2') readableStoreId = 'STR002';
+                else if (storeId === 'store3') readableStoreId = 'STR003';
+                else if (firebaseStores[storeId]) {
+                    readableStoreId = firebaseStores[storeId].code || firebaseStores[storeId].id || `STR_${firebaseStores[storeId].name.replace(/\s+/g, '_').toUpperCase()}`;
+                }
+                
+                Object.entries(costs).forEach(([productId, cost]) => {
+                    const productName = getProductName(productId);
+                    
+                    // Get readable product ID
+                    let readableProductId = productId;
+                    if (productId === 'product1') readableProductId = 'PRD001';
+                    else if (productId === 'product2') readableProductId = 'PRD002';
+                    else if (productId === 'product3') readableProductId = 'PRD003';
+                    else if (productId === 'product4') readableProductId = 'PRD004';
+                    else if (productId === 'product5') readableProductId = 'PRD005';
+                    else if (firebaseProducts[productId]) {
+                        readableProductId = firebaseProducts[productId].code || firebaseProducts[productId].id || `PRD_${firebaseProducts[productId].name.replace(/\s+/g, '_').toUpperCase()}`;
+                    }
+                    
+                    csv += `${readableStoreId},"${storeName}",${readableProductId},"${productName}",${cost}\n`;
+                });
+            });
+            
             console.log('Generated CSV with proper IDs');
             
             // Export CSV using improved download function
@@ -7323,5 +8175,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9749460bd235f9eb',t:'MTc1NjEwNTg2OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9766319a4722f9d1',t:'MTc1NjQwOTExOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
