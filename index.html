@@ -6612,7 +6612,8 @@
             
             try {
                 console.log('Starting PDF export...');
-                console.log('Checking jsPDF availability...');
+                console.log('Report type:', window.currentReportType);
+                console.log('Data length:', window.currentReportData.length);
                 
                 // Multiple ways to check for jsPDF
                 let jsPDF = null;
@@ -6627,7 +6628,6 @@
                     console.log('Found jsPDF in global scope');
                 } else {
                     console.error('jsPDF not found in any expected location');
-                    console.log('Available window properties:', Object.keys(window).filter(key => key.toLowerCase().includes('pdf')));
                     showErrorToast('PDF library not loaded. Please refresh the page and try again.');
                     return;
                 }
@@ -6635,82 +6635,255 @@
                 const doc = new jsPDF();
                 console.log('jsPDF instance created successfully');
                 
-                // Add title
-                doc.setFontSize(20);
-                doc.setFont('helvetica', 'bold');
-                doc.text('EDEN Sales Report', 20, 20);
+                // Get the current report HTML content for PDF-friendly formatting
+                const reportResults = document.getElementById('reportResults');
+                const reportHTML = reportResults ? reportResults.innerHTML : '';
                 
-                // Add generation date
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 35);
-                doc.text(`Report Type: ${window.currentReportType || 'Detailed'}`, 20, 45);
+                // Check if this is a summary report (contains the special PDF-friendly formatting)
+                const isSummaryReport = reportHTML.includes('EDEN SALES SUMMARY REPORT') || 
+                                       window.currentReportType === 'summary' ||
+                                       window.currentReportType === 'product' ||
+                                       window.currentReportType === 'employee' ||
+                                       window.currentReportType === 'store' ||
+                                       window.currentReportType === 'monthly';
                 
-                // Prepare table data
-                const data = window.currentReportData;
-                console.log('Preparing PDF data for', data.length, 'records');
-                
-                const defaultPrices = {
-                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                };
-                
-                // Calculate summary
-                let totalQty = 0;
-                let totalRevenue = 0;
-                
-                const tableData = data.map(sale => {
-                    let price = 0;
+                if (isSummaryReport) {
+                    console.log('Generating PDF for summary report...');
                     
-                    // First try Firebase store prices
-                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                    // Extract data from the current report display
+                    const data = window.currentReportData;
+                    
+                    // Get date range for the report
+                    const dates = [...new Set(data.map(sale => sale.date))].sort();
+                    const startDate = dates[0];
+                    const endDate = dates[dates.length - 1];
+                    const reportPeriod = startDate === endDate ? 
+                        new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                        `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+                    
+                    // Calculate comprehensive statistics
+                    const defaultPrices = {
+                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                    };
+                    
+                    let grandTotalQty = 0;
+                    let grandTotalRevenue = 0;
+                    let grandTotalSales = data.length;
+                    const byEmployee = {};
+                    const byDate = {};
+                    
+                    data.forEach(sale => {
+                        let price = 0;
+                        
+                        // Get price from Firebase store prices or default prices
+                        if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                            price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                        } else {
+                            price = defaultPrices[sale.product] || 0;
+                        }
+                        
+                        const revenue = price * sale.qty;
+                        grandTotalQty += sale.qty;
+                        grandTotalRevenue += revenue;
+                        
+                        // By employee
+                        if (!byEmployee[sale.user]) {
+                            byEmployee[sale.user] = { qty: 0, revenue: 0, sales: 0 };
+                        }
+                        byEmployee[sale.user].qty += sale.qty;
+                        byEmployee[sale.user].revenue += revenue;
+                        byEmployee[sale.user].sales += 1;
+                        
+                        // By date
+                        if (!byDate[sale.date]) {
+                            byDate[sale.date] = { qty: 0, revenue: 0, sales: 0, employees: new Set() };
+                        }
+                        byDate[sale.date].qty += sale.qty;
+                        byDate[sale.date].revenue += revenue;
+                        byDate[sale.date].sales += 1;
+                        byDate[sale.date].employees.add(sale.user);
+                    });
+                    
+                    // Sort employees by total quantity sold (descending)
+                    const sortedEmployees = Object.entries(byEmployee).sort((a, b) => b[1].qty - a[1].qty);
+                    const sortedDates = Object.entries(byDate).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+                    
+                    // Create PDF with summary report format
+                    doc.setFontSize(16);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('EDEN SALES SUMMARY REPORT', 105, 20, { align: 'center' });
+                    
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(reportPeriod, 105, 30, { align: 'center' });
+                    
+                    // Summary totals
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('SUMMARY TOTALS', 20, 50);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Total Transactions: ${grandTotalSales}`, 20, 60);
+                    doc.text(`Total Units Sold: ${grandTotalQty.toLocaleString()}`, 20, 70);
+                    doc.text(`Total Revenue: ${grandTotalRevenue.toLocaleString()} DHS`, 20, 80);
+                    
+                    // Employee Performance Table
+                    if (typeof doc.autoTable === 'function') {
+                        const employeeTableData = sortedEmployees.map(([employee, stats], index) => {
+                            const avgPerSale = stats.revenue / stats.sales;
+                            return [
+                                index + 1,
+                                employee,
+                                stats.qty.toLocaleString(),
+                                stats.revenue.toLocaleString(),
+                                stats.sales,
+                                avgPerSale.toLocaleString()
+                            ];
+                        });
+                        
+                        doc.autoTable({
+                            head: [['Rank', 'Employee Name', 'Qty Sold', 'Revenue (DHS)', 'Transactions', 'Avg Per Sale']],
+                            body: employeeTableData,
+                            startY: 95,
+                            styles: { fontSize: 8, cellPadding: 3 },
+                            headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+                            alternateRowStyles: { fillColor: [245, 245, 245] },
+                            margin: { left: 20, right: 20 }
+                        });
+                        
+                        // Daily Summary Table
+                        const dailyTableData = sortedDates.map(([date, stats]) => {
+                            const formattedDate = new Date(date).toLocaleDateString('en-US', { 
+                                weekday: 'short', 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                            });
+                            return [
+                                formattedDate,
+                                stats.qty.toLocaleString(),
+                                stats.revenue.toLocaleString(),
+                                stats.sales,
+                                stats.employees.size
+                            ];
+                        });
+                        
+                        const finalY = doc.lastAutoTable.finalY || 150;
+                        
+                        doc.autoTable({
+                            head: [['Sales Date', 'Total Qty', 'Total Revenue', 'Transactions', 'Employees']],
+                            body: dailyTableData,
+                            startY: finalY + 20,
+                            styles: { fontSize: 8, cellPadding: 3 },
+                            headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+                            alternateRowStyles: { fillColor: [245, 245, 245] },
+                            margin: { left: 20, right: 20 }
+                        });
+                        
+                        // Footer
+                        const pageCount = doc.internal.getNumberOfPages();
+                        for (let i = 1; i <= pageCount; i++) {
+                            doc.setPage(i);
+                            doc.setFontSize(8);
+                            doc.setFont('helvetica', 'normal');
+                            doc.text(`Page ${i} of ${pageCount}`, 180, 290);
+                            doc.text(`Generated on ${new Date().toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })} | EDEN Sales Management System`, 20, 290);
+                        }
                     } else {
-                        // Fallback to default prices
-                        price = defaultPrices[sale.product] || 0;
+                        // Fallback without autoTable
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('EMPLOYEE PERFORMANCE', 20, 100);
+                        
+                        let yPos = 115;
+                        doc.setFont('helvetica', 'normal');
+                        sortedEmployees.forEach(([employee, stats], index) => {
+                            if (yPos > 270) {
+                                doc.addPage();
+                                yPos = 30;
+                            }
+                            doc.text(`${index + 1}. ${employee}: ${stats.qty} units, ${stats.revenue.toLocaleString()} DHS`, 20, yPos);
+                            yPos += 10;
+                        });
                     }
                     
-                    const totalAmount = price * sale.qty;
-                    totalQty += sale.qty;
-                    totalRevenue += totalAmount;
+                } else {
+                    console.log('Generating PDF for detailed report...');
                     
-                    const storeName = getStoreName(sale.store);
-                    const productName = getProductName(sale.product);
-                    const employeeName = getEmployeeName(sale.user);
-                    const salesDate = new Date(sale.date).toLocaleDateString();
-                    const entryDateTime = sale.timestamp || 'N/A';
+                    // Original detailed report logic
+                    const data = window.currentReportData;
+                    const defaultPrices = {
+                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                    };
                     
-                    return [
-                        storeName,
-                        employeeName,
-                        salesDate,
-                        productName,
-                        sale.qty,
-                        price.toLocaleString() + ' DHS',
-                        totalAmount.toLocaleString() + ' DHS',
-                        entryDateTime
-                    ];
-                });
-                
-                // Add summary section
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Summary', 20, 60);
-                
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Total Sales: ${data.length}`, 20, 70);
-                doc.text(`Total Quantity: ${totalQty}`, 20, 80);
-                doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 90);
-                
-                // Check if autoTable is available
-                console.log('Checking autoTable availability...');
-                console.log('doc.autoTable type:', typeof doc.autoTable);
-                
-                if (typeof doc.autoTable === 'function') {
-                    console.log('Using autoTable for PDF generation...');
+                    // Add title
+                    doc.setFontSize(20);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('EDEN Sales Report', 20, 20);
                     
-                    try {
-                        // Add table with autoTable
+                    // Add generation date
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 35);
+                    doc.text(`Report Type: ${window.currentReportType || 'Detailed'}`, 20, 45);
+                    
+                    // Calculate summary
+                    let totalQty = 0;
+                    let totalRevenue = 0;
+                    
+                    const tableData = data.map(sale => {
+                        let price = 0;
+                        
+                        // First try Firebase store prices
+                        if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                            price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                        } else {
+                            // Fallback to default prices
+                            price = defaultPrices[sale.product] || 0;
+                        }
+                        
+                        const totalAmount = price * sale.qty;
+                        totalQty += sale.qty;
+                        totalRevenue += totalAmount;
+                        
+                        const storeName = getStoreName(sale.store);
+                        const productName = getProductName(sale.product);
+                        const employeeName = getEmployeeName(sale.user);
+                        const salesDate = new Date(sale.date).toLocaleDateString();
+                        const entryDateTime = sale.timestamp || 'N/A';
+                        
+                        return [
+                            storeName,
+                            employeeName,
+                            salesDate,
+                            productName,
+                            sale.qty,
+                            price.toLocaleString() + ' DHS',
+                            totalAmount.toLocaleString() + ' DHS',
+                            entryDateTime
+                        ];
+                    });
+                    
+                    // Add summary section
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Summary', 20, 60);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Total Sales: ${data.length}`, 20, 70);
+                    doc.text(`Total Quantity: ${totalQty}`, 20, 80);
+                    doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 90);
+                    
+                    // Add table with autoTable if available
+                    if (typeof doc.autoTable === 'function') {
                         doc.autoTable({
                             head: [['Store', 'Employee Name', 'Sales Date', 'Product', 'Qty', 'Unit Price', 'Total', 'Entry Time & Date']],
                             body: tableData,
@@ -6729,75 +6902,7 @@
                             },
                             margin: { top: 100, left: 10, right: 10 }
                         });
-                        console.log('autoTable completed successfully');
-                    } catch (autoTableError) {
-                        console.error('autoTable failed:', autoTableError);
-                        throw new Error('autoTable plugin error: ' + autoTableError.message);
                     }
-                } else {
-                    console.log('autoTable not available, using basic table...');
-                    
-                    // Fallback: Create basic table manually
-                    let yPosition = 110;
-                    const lineHeight = 6;
-                    
-                    // Table headers
-                    doc.setFontSize(8);
-                    doc.setFont('helvetica', 'bold');
-                    const headers = ['Store', 'Employee', 'Date', 'Product', 'Qty', 'Unit Price', 'Total', 'Entry Time'];
-                    let xPosition = 10;
-                    const colWidths = [25, 25, 20, 30, 15, 25, 25, 35];
-                    
-                    headers.forEach((header, index) => {
-                        doc.text(header, xPosition, yPosition);
-                        xPosition += colWidths[index];
-                    });
-                    
-                    yPosition += lineHeight;
-                    
-                    // Table data (limit to first 30 rows to avoid page overflow)
-                    doc.setFont('helvetica', 'normal');
-                    const limitedData = tableData.slice(0, 30);
-                    
-                    limitedData.forEach(row => {
-                        xPosition = 10;
-                        row.forEach((cell, index) => {
-                            const cellText = cell.toString();
-                            const maxWidth = colWidths[index] - 2;
-                            
-                            // Truncate long text based on column width
-                            let maxChars = Math.floor(maxWidth / 2);
-                            if (index === 2) maxChars = 20; // Product-Qty column
-                            if (index === 3) maxChars = 25; // Entry Time column
-                            
-                            const truncatedText = cellText.length > maxChars ? cellText.substring(0, maxChars) + '...' : cellText;
-                            doc.text(truncatedText, xPosition, yPosition);
-                            xPosition += colWidths[index];
-                        });
-                        yPosition += lineHeight;
-                        
-                        // Check if we need a new page
-                        if (yPosition > 280) {
-                            doc.addPage();
-                            yPosition = 20;
-                        }
-                    });
-                    
-                    if (tableData.length > 30) {
-                        yPosition += 10;
-                        doc.setFont('helvetica', 'italic');
-                        doc.text(`... and ${tableData.length - 30} more records`, 10, yPosition);
-                    }
-                }
-                
-                // Add footer
-                const pageCount = doc.internal.getNumberOfPages();
-                for (let i = 1; i <= pageCount; i++) {
-                    doc.setPage(i);
-                    doc.setFontSize(8);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(`Page ${i} of ${pageCount}`, 180, 290);
-                    doc.text('Generated by EDEN Sales Management System', 20, 290);
                 }
                 
                 // Save the PDF
@@ -8088,5 +8193,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97663f67f353f9d1',t:'MTc1NjQwOTY4My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9766468b11b8f9d1',t:'MTc1NjQwOTk3NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
