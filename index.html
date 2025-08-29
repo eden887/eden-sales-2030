@@ -6777,69 +6777,14 @@
                         new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
                         `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
                     
-                    // Default prices and costs for fallback - EXACT same as dashboard
-                    const defaultPrices = {
-                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                    };
-                    
-                    const defaultCosts = {
-                        'product1': 1800, 'product2': 800, 'product3': 500, 'product4': 150, 'product5': 250
-                    };
-                    
-                    // Calculate comprehensive margin statistics - EXACT same logic as dashboard
-                    let totalQuantity = 0;
-                    let totalRevenue = 0;
-                    let totalCost = 0;
-                    let totalMargin = 0;
-                    let totalSales = data.length;
-                    
-                    // Process each sale for detailed margin calculations - EXACT same as dashboard
-                    const processedData = data.map(sale => {
-                        let price = 0;
-                        let cost = 0;
-                        
-                        // Get price from Firebase store prices or default prices - EXACT same logic
-                        if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                            price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                        } else {
-                            price = defaultPrices[sale.product] || 0;
-                        }
-                        
-                        // Get cost from Firebase store costs or default costs - EXACT same logic
-                        if (firebaseStoreCosts && firebaseStoreCosts[sale.store] && firebaseStoreCosts[sale.store][sale.product]) {
-                            cost = parseFloat(firebaseStoreCosts[sale.store][sale.product]) || 0;
-                        } else {
-                            cost = defaultCosts[sale.product] || 0;
-                        }
-                        
-                        const saleRevenue = price * sale.qty;
-                        const saleCost = cost * sale.qty;
-                        const saleMargin = saleRevenue - saleCost;
-                        const marginPercentage = saleRevenue > 0 ? ((saleMargin / saleRevenue) * 100) : 0;
-                        
-                        totalQuantity += sale.qty;
-                        totalRevenue += saleRevenue;
-                        totalCost += saleCost;
-                        totalMargin += saleMargin;
-                        
-                        return {
-                            ...sale,
-                            unitPrice: price,
-                            unitCost: cost,
-                            unitMargin: price - cost,
-                            unitMarginPercent: price > 0 ? (((price - cost) / price) * 100) : 0,
-                            totalRevenue: saleRevenue,
-                            totalCost: saleCost,
-                            totalMargin: saleMargin,
-                            marginPercentage: marginPercentage,
-                            productName: getProductName(sale.product),
-                            employeeName: getEmployeeName(sale.user),
-                            storeName: getStoreName(sale.store)
-                        };
-                    });
-                    
-                    // Sort by margin percentage (highest first) - EXACT same as dashboard
-                    processedData.sort((a, b) => b.marginPercentage - a.marginPercentage);
+                    // Use EXACT same calculation logic as dashboard and report
+                    const { 
+                        grandTotalQty: totalQuantity, 
+                        grandTotalRevenue: totalRevenue, 
+                        grandTotalCost: totalCost, 
+                        grandTotalMargin: totalMargin, 
+                        sortedEmployees 
+                    } = calculateMarginData(data);
                     
                     const overallMarginPercent = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
                     
@@ -6863,42 +6808,38 @@
                     doc.text(`Total Margin: ${totalMargin.toLocaleString()} DHS`, 20, 80);
                     doc.text(`Overall Margin %: ${overallMarginPercent.toFixed(1)}%`, 20, 90);
                     
-                    // Margin Analysis Table - EXACT same data as dashboard
+                    // Employee Margin Performance Table - EXACT same data as dashboard
                     if (typeof doc.autoTable === 'function') {
-                        const marginTableData = processedData.map(sale => {
+                        const marginTableData = sortedEmployees.map(([employee, stats], index) => {
+                            const marginPercent = stats.revenue > 0 ? ((stats.margin / stats.revenue) * 100) : 0;
                             return [
-                                sale.storeName,
-                                sale.employeeName,
-                                new Date(sale.date).toLocaleDateString(),
-                                sale.productName,
-                                sale.qty,
-                                sale.unitPrice.toLocaleString(),
-                                sale.unitCost.toLocaleString(),
-                                sale.unitMargin.toLocaleString(),
-                                sale.totalRevenue.toLocaleString(),
-                                sale.totalCost.toLocaleString(),
-                                sale.totalMargin.toLocaleString(),
-                                sale.marginPercentage.toFixed(1) + '%'
+                                index + 1,
+                                employee,
+                                stats.qty.toLocaleString(),
+                                stats.revenue.toLocaleString(),
+                                stats.cost.toLocaleString(),
+                                stats.margin.toLocaleString(),
+                                marginPercent.toFixed(1) + '%',
+                                stats.sales
                             ];
                         });
                         
                         doc.autoTable({
-                            head: [['Store', 'Employee', 'Date', 'Product', 'Qty', 'Unit Price', 'Unit Cost', 'Unit Margin', 'Total Revenue', 'Total Cost', 'Total Margin', 'Margin %']],
+                            head: [['Rank', 'Employee Name', 'Total Qty Sold', 'Total Revenue', 'Total Cost', 'Total Margin', 'Margin %', 'Transactions']],
                             body: marginTableData,
                             startY: 105,
-                            styles: { fontSize: 6, cellPadding: 2 },
+                            styles: { fontSize: 8, cellPadding: 3 },
                             headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
                             alternateRowStyles: { fillColor: [245, 245, 245] },
                             margin: { left: 10, right: 10 },
                             columnStyles: {
-                                4: { halign: 'center' }, // Qty
-                                5: { halign: 'right' },  // Unit Price
-                                6: { halign: 'right' },  // Unit Cost
-                                7: { halign: 'right' },  // Unit Margin
-                                8: { halign: 'right' },  // Total Revenue
-                                9: { halign: 'right' },  // Total Cost
-                                10: { halign: 'right' }, // Total Margin
-                                11: { halign: 'right' }  // Margin %
+                                0: { halign: 'center' }, // Rank
+                                2: { halign: 'center' }, // Qty
+                                3: { halign: 'right' },  // Revenue
+                                4: { halign: 'right' },  // Cost
+                                5: { halign: 'right' },  // Margin
+                                6: { halign: 'right' },  // Margin %
+                                7: { halign: 'center' }  // Transactions
                             }
                         });
                         
@@ -6910,8 +6851,8 @@
                         doc.text('MARGIN ANALYSIS SUMMARY', 20, finalY + 20);
                         
                         doc.setFont('helvetica', 'normal');
-                        doc.text(`Best Performing Sale: ${processedData.length > 0 ? `${processedData[0].productName} - ${processedData[0].marginPercentage.toFixed(1)}% margin` : 'No data'}`, 20, finalY + 35);
-                        doc.text(`Average Margin per Sale: ${totalSales > 0 ? (totalMargin / totalSales).toLocaleString() : '0'} DHS`, 20, finalY + 45);
+                        doc.text(`Best Performing Employee: ${sortedEmployees.length > 0 ? `${sortedEmployees[0][0]} - ${sortedEmployees[0][1].margin.toLocaleString()} DHS margin` : 'No data'}`, 20, finalY + 35);
+                        doc.text(`Average Margin per Employee: ${sortedEmployees.length > 0 ? (totalMargin / sortedEmployees.length).toLocaleString() : '0'} DHS`, 20, finalY + 45);
                         doc.text(`Total Units Sold: ${totalQuantity.toLocaleString()} units`, 20, finalY + 55);
                         doc.text(`Average Margin per Unit: ${totalQuantity > 0 ? (totalMargin / totalQuantity).toLocaleString() : '0'} DHS`, 20, finalY + 65);
                         
@@ -8506,5 +8447,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976a151a9461f9db',t:'MTc1NjQ0OTg5My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976a22a092b3f9db',t:'MTc1NjQ1MDQ0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
