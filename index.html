@@ -6051,12 +6051,16 @@
             console.log('Available Firebase employees:', firebaseEmployees);
             console.log('Available sales data for employee extraction:', salesData.length);
             
+            // Hidden employees list - these will not appear in reports
+            const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
+            
             specificFilter.innerHTML = '<option value="">All Employees</option>';
             
-            // Get unique employee names from actual sales data
-            const uniqueEmployees = [...new Set(salesData.map(sale => sale.user))].filter(user => user && user.trim() !== '');
+            // Get unique employee names from actual sales data (excluding hidden ones)
+            const uniqueEmployees = [...new Set(salesData.map(sale => sale.user))]
+                .filter(user => user && user.trim() !== '' && !hiddenEmployees.includes(user));
             
-            console.log('Unique employees from sales data:', uniqueEmployees);
+            console.log('Unique employees from sales data (excluding hidden):', uniqueEmployees);
             
             // Add employees from sales data first (these are the ones who actually made sales)
             uniqueEmployees.forEach(employeeName => {
@@ -6064,24 +6068,15 @@
                 specificFilter.innerHTML += `<option value="${employeeName}">${employeeName}</option>`;
             });
             
-            // Also add Firebase employees if they're not already included
+            // Also add Firebase employees if they're not already included (excluding hidden ones)
             Object.values(firebaseEmployees).forEach(employee => {
-                if (employee.name && !uniqueEmployees.includes(employee.name)) {
+                if (employee.name && !uniqueEmployees.includes(employee.name) && !hiddenEmployees.includes(employee.name)) {
                     console.log(`Adding Firebase employee option: ${employee.name}`);
                     specificFilter.innerHTML += `<option value="${employee.name}">${employee.name}</option>`;
                 }
             });
             
-            // Add default employees if they're not already included
-            const defaultEmployees = ['Administrator', 'Sales User'];
-            defaultEmployees.forEach(empName => {
-                if (!uniqueEmployees.includes(empName)) {
-                    console.log(`Adding default employee option: ${empName}`);
-                    specificFilter.innerHTML += `<option value="${empName}">${empName}</option>`;
-                }
-            });
-            
-            console.log('Employee filter populated with total options:', specificFilter.options.length - 1);
+            console.log('Employee filter populated with total options (excluding hidden employees):', specificFilter.options.length - 1);
         }
 
         function populateStoreFilter() {
@@ -6180,6 +6175,12 @@
             
             console.log('Generating compact detailed report with data:', data);
             
+            // Hidden employees list - these will not appear in reports
+            const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
+            
+            // Filter data to exclude hidden employees
+            const filteredData = data.filter(sale => !hiddenEmployees.includes(sale.user));
+            
             // Default prices for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
@@ -6188,10 +6189,10 @@
             // Calculate comprehensive statistics
             let totalQuantity = 0;
             let totalRevenue = 0;
-            let totalSales = data.length;
+            let totalSales = filteredData.length;
             
             // Process each sale for detailed calculations
-            const processedData = data.map(sale => {
+            const processedData = filteredData.map(sale => {
                 let price = 0;
                 
                 // First try Firebase store prices
@@ -6298,6 +6299,28 @@
                 new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
                 `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
             
+            // Hidden employees list - these will not appear in reports
+            const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
+            
+            // Get all possible employees (default + Firebase) excluding hidden ones
+            const allEmployees = new Set();
+            
+            // Add Firebase employees (excluding hidden ones)
+            Object.values(firebaseEmployees).forEach(employee => {
+                if (employee.name && !hiddenEmployees.includes(employee.name)) {
+                    allEmployees.add(employee.name);
+                }
+            });
+            
+            // Add employees from sales data (excluding hidden ones)
+            data.forEach(sale => {
+                if (sale.user && !hiddenEmployees.includes(sale.user)) {
+                    allEmployees.add(sale.user);
+                }
+            });
+            
+            console.log('All employees found (excluding hidden):', Array.from(allEmployees));
+            
             // Group data by employee
             const byEmployee = {};
             let grandTotalQty = 0;
@@ -6308,7 +6331,18 @@
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
+            // Initialize all employees with zero stats
+            allEmployees.forEach(employeeName => {
+                byEmployee[employeeName] = { qty: 0, revenue: 0, sales: 0, isAbsent: true };
+            });
+            
+            // Process actual sales data (excluding hidden employees)
             data.forEach(sale => {
+                // Skip sales from hidden employees
+                if (hiddenEmployees.includes(sale.user)) {
+                    return;
+                }
+                
                 let price = 0;
                 
                 // Get price from Firebase store prices or default prices
@@ -6322,17 +6356,23 @@
                 grandTotalQty += sale.qty;
                 grandTotalRevenue += revenue;
                 
-                // By employee
-                if (!byEmployee[sale.user]) {
-                    byEmployee[sale.user] = { qty: 0, revenue: 0, sales: 0 };
+                // Mark employee as present and update stats
+                if (byEmployee[sale.user]) {
+                    byEmployee[sale.user].qty += sale.qty;
+                    byEmployee[sale.user].revenue += revenue;
+                    byEmployee[sale.user].sales += 1;
+                    byEmployee[sale.user].isAbsent = false;
                 }
-                byEmployee[sale.user].qty += sale.qty;
-                byEmployee[sale.user].revenue += revenue;
-                byEmployee[sale.user].sales += 1;
             });
             
-            // Sort employees by total quantity sold (descending)
-            const sortedEmployees = Object.entries(byEmployee).sort((a, b) => b[1].qty - a[1].qty);
+            // Sort employees: present employees by quantity (descending), then absent employees
+            const presentEmployees = Object.entries(byEmployee).filter(([name, stats]) => !stats.isAbsent);
+            const absentEmployees = Object.entries(byEmployee).filter(([name, stats]) => stats.isAbsent);
+            
+            presentEmployees.sort((a, b) => b[1].qty - a[1].qty);
+            absentEmployees.sort((a, b) => a[0].localeCompare(b[0])); // Sort absent employees alphabetically
+            
+            const sortedEmployees = [...presentEmployees, ...absentEmployees];
             
             let html = `
                 <!-- Clean Header for PDF -->
@@ -6375,20 +6415,33 @@
             `;
             
             sortedEmployees.forEach(([employee, stats], index) => {
-                const avgPerSale = stats.revenue / stats.sales;
                 const rankNumber = index + 1;
                 const rowBg = index % 2 === 0 ? '#f8f9fa' : '#ffffff';
                 
-                html += `
-                    <tr style="background: ${rowBg};">
-                        <td style="padding: 8px; border: 1px solid #000; font-size: 11px; font-weight: bold; text-align: center;">${rankNumber}</td>
-                        <td style="padding: 8px; color: #000; font-weight: 600; border: 1px solid #000; font-size: 11px;">${employee}</td>
-                        <td style="padding: 8px; text-align: center; color: #000; font-weight: bold; font-size: 12px; border: 1px solid #000;">${stats.qty.toLocaleString()}</td>
-                        <td style="padding: 8px; text-align: center; color: #000; font-weight: bold; border: 1px solid #000; font-size: 11px;">${stats.revenue.toLocaleString()}</td>
-                        <td style="padding: 8px; text-align: center; color: #000; border: 1px solid #000; font-size: 11px;">${stats.sales}</td>
-                        <td style="padding: 8px; text-align: center; color: #000; border: 1px solid #000; font-size: 11px;">${avgPerSale.toLocaleString()}</td>
-                    </tr>
-                `;
+                if (stats.isAbsent) {
+                    // Display absent employee with special styling
+                    html += `
+                        <tr style="background: ${rowBg};">
+                            <td style="padding: 8px; border: 1px solid #000; font-size: 11px; font-weight: bold; text-align: center;">-</td>
+                            <td style="padding: 8px; color: #666; font-weight: 600; border: 1px solid #000; font-size: 11px;">${employee}</td>
+                            <td style="padding: 8px; text-align: center; color: #d00; font-weight: bold; font-size: 12px; border: 1px solid #000;" colspan="4">ABSENT / WEEK OFF</td>
+                        </tr>
+                    `;
+                } else {
+                    // Display present employee with normal stats
+                    const avgPerSale = stats.sales > 0 ? (stats.revenue / stats.sales) : 0;
+                    
+                    html += `
+                        <tr style="background: ${rowBg};">
+                            <td style="padding: 8px; border: 1px solid #000; font-size: 11px; font-weight: bold; text-align: center;">${rankNumber}</td>
+                            <td style="padding: 8px; color: #000; font-weight: 600; border: 1px solid #000; font-size: 11px;">${employee}</td>
+                            <td style="padding: 8px; text-align: center; color: #000; font-weight: bold; font-size: 12px; border: 1px solid #000;">${stats.qty.toLocaleString()}</td>
+                            <td style="padding: 8px; text-align: center; color: #000; font-weight: bold; border: 1px solid #000; font-size: 11px;">${stats.revenue.toLocaleString()}</td>
+                            <td style="padding: 8px; text-align: center; color: #000; border: 1px solid #000; font-size: 11px;">${stats.sales}</td>
+                            <td style="padding: 8px; text-align: center; color: #000; border: 1px solid #000; font-size: 11px;">${avgPerSale.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
             });
             
             html += `
@@ -6595,14 +6648,20 @@
                 new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
                 `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
             
-            // Use shared calculation function
+            // Hidden employees list - these will not appear in reports
+            const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
+            
+            // Filter data to exclude hidden employees
+            const filteredData = data.filter(sale => !hiddenEmployees.includes(sale.user));
+            
+            // Use shared calculation function with filtered data
             const {
                 grandTotalQty,
                 grandTotalRevenue,
                 grandTotalCost,
                 grandTotalMargin,
                 sortedEmployees
-            } = calculateMarginData(data);
+            } = calculateMarginData(filteredData);
             
             const overallMarginPercent = grandTotalRevenue > 0 ? ((grandTotalMargin / grandTotalRevenue) * 100) : 0;
             
@@ -7319,6 +7378,19 @@
                 totalSalesInSystem: salesData.length
             });
             
+            // Hidden employees list - these will not appear in dashboard analytics
+            const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
+            
+            // Get all possible employees (Firebase only, excluding hidden ones)
+            const allEmployees = new Set();
+            
+            // Add Firebase employees (excluding hidden ones)
+            Object.values(firebaseEmployees).forEach(employee => {
+                if (employee.name && !hiddenEmployees.includes(employee.name)) {
+                    allEmployees.add(employee.name);
+                }
+            });
+            
             // Filter for YESTERDAY's date specifically with enhanced validation
             const yesterdaySales = salesData.filter(sale => {
                 if (!sale || !sale.date) {
@@ -7349,12 +7421,22 @@
             const userSales = {};
             const productSales = {};
             
+            // Initialize all employees
+            allEmployees.forEach(employeeName => {
+                userSales[employeeName] = { amount: 0, qty: 0, isAbsent: true };
+            });
+            
             // Default prices for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
             yesterdaySales.forEach(sale => {
+                // Skip sales from hidden employees
+                if (hiddenEmployees.includes(sale.user)) {
+                    return;
+                }
+                
                 const qty = parseInt(sale.qty);
                 if (isNaN(qty) || qty <= 0) return;
                 
@@ -7370,13 +7452,14 @@
                 totalAmount += saleAmount;
                 totalQty += qty;
                 
-                // Track sales by user for best performer (use actual user name)
+                // Track sales by user for best performer (use actual user name, excluding hidden)
                 const userName = sale.user || 'Unknown User';
                 if (!userSales[userName]) {
-                    userSales[userName] = { amount: 0, qty: 0 };
+                    userSales[userName] = { amount: 0, qty: 0, isAbsent: true };
                 }
                 userSales[userName].amount += saleAmount;
                 userSales[userName].qty += qty;
+                userSales[userName].isAbsent = false; // Mark as present
                 
                 // Track product sales for most sold product (use actual product name)
                 const productName = getProductName(sale.product);
@@ -7394,16 +7477,29 @@
                 }
             });
             
-            // Find best performer by revenue
+            // Find best performer by revenue (only among present employees)
             let bestPerformer = 'No Data';
             let maxSales = 0;
             
             Object.entries(userSales).forEach(([user, stats]) => {
-                if (stats.amount > maxSales) {
+                if (!stats.isAbsent && stats.amount > maxSales) {
                     maxSales = stats.amount;
                     bestPerformer = user;
                 }
             });
+            
+            // Count absent employees
+            const absentEmployees = Object.entries(userSales).filter(([user, stats]) => stats.isAbsent);
+            if (absentEmployees.length > 0) {
+                const absentCount = absentEmployees.length;
+                const absentNames = absentEmployees.map(([name]) => name).join(', ');
+                console.log(`📊 ABSENT EMPLOYEES (${absentCount}):`, absentNames);
+                
+                // If best performer is "No Data" but we have absent employees, show absent info
+                if (bestPerformer === 'No Data' && absentCount > 0) {
+                    bestPerformer = `All ${absentCount} employees absent`;
+                }
+            }
             
             // Find most sold product by quantity
             let mostSoldProduct = 'No Data';
@@ -8437,5 +8533,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976a2ba3a585f9db',t:'MTc1NjQ1MDgxNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976b6893c7fef9db',t:'MTc1NjQ2Mzc5OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
