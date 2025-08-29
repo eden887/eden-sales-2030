@@ -6506,9 +6506,17 @@
                 return '<div class="no-data">No data found for the selected criteria</div>';
             }
             
-            console.log('Generating margin analysis report with data:', data);
+            console.log('Generating employee margin summary report with data:', data);
             console.log('Current firebaseStorePrices:', firebaseStorePrices);
             console.log('Current firebaseStoreCosts:', firebaseStoreCosts);
+            
+            // Get date range for the report
+            const dates = [...new Set(data.map(sale => sale.date))].sort();
+            const startDate = dates[0];
+            const endDate = dates[dates.length - 1];
+            const reportPeriod = startDate === endDate ? 
+                new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
             
             // Default prices and costs for fallback
             const defaultPrices = {
@@ -6519,15 +6527,14 @@
                 'product1': 1800, 'product2': 800, 'product3': 500, 'product4': 150, 'product5': 250
             };
             
-            // Calculate comprehensive margin statistics
-            let totalQuantity = 0;
-            let totalRevenue = 0;
-            let totalCost = 0;
-            let totalMargin = 0;
-            let totalSales = data.length;
+            // Group data by employee for summary
+            const byEmployee = {};
+            let grandTotalQty = 0;
+            let grandTotalRevenue = 0;
+            let grandTotalCost = 0;
+            let grandTotalMargin = 0;
             
-            // Process each sale for detailed margin calculations
-            const processedData = data.map(sale => {
+            data.forEach(sale => {
                 let price = 0;
                 let cost = 0;
                 
@@ -6548,118 +6555,117 @@
                 const saleRevenue = price * sale.qty;
                 const saleCost = cost * sale.qty;
                 const saleMargin = saleRevenue - saleCost;
-                const marginPercentage = saleRevenue > 0 ? ((saleMargin / saleRevenue) * 100) : 0;
                 
-                totalQuantity += sale.qty;
-                totalRevenue += saleRevenue;
-                totalCost += saleCost;
-                totalMargin += saleMargin;
+                grandTotalQty += sale.qty;
+                grandTotalRevenue += saleRevenue;
+                grandTotalCost += saleCost;
+                grandTotalMargin += saleMargin;
                 
-                return {
-                    ...sale,
-                    unitPrice: price,
-                    unitCost: cost,
-                    unitMargin: price - cost,
-                    unitMarginPercent: price > 0 ? (((price - cost) / price) * 100) : 0,
-                    totalRevenue: saleRevenue,
-                    totalCost: saleCost,
-                    totalMargin: saleMargin,
-                    marginPercentage: marginPercentage,
-                    productName: getProductName(sale.product),
-                    employeeName: getEmployeeName(sale.user),
-                    storeName: getStoreName(sale.store)
-                };
+                // Group by employee
+                if (!byEmployee[sale.user]) {
+                    byEmployee[sale.user] = { 
+                        qty: 0, 
+                        revenue: 0, 
+                        cost: 0, 
+                        margin: 0, 
+                        sales: 0 
+                    };
+                }
+                byEmployee[sale.user].qty += sale.qty;
+                byEmployee[sale.user].revenue += saleRevenue;
+                byEmployee[sale.user].cost += saleCost;
+                byEmployee[sale.user].margin += saleMargin;
+                byEmployee[sale.user].sales += 1;
             });
             
-            // Sort by margin percentage (highest first)
-            processedData.sort((a, b) => b.marginPercentage - a.marginPercentage);
+            // Sort employees by total margin (highest first)
+            const sortedEmployees = Object.entries(byEmployee).sort((a, b) => b[1].margin - a[1].margin);
             
-            const overallMarginPercent = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
+            const overallMarginPercent = grandTotalRevenue > 0 ? ((grandTotalMargin / grandTotalRevenue) * 100) : 0;
             
             let html = `
-                <div class="report-summary" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px;">
-                    <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalRevenue.toLocaleString()} DHS</div>
-                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Revenue</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #ff6b35;">${totalCost.toLocaleString()} DHS</div>
-                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Cost</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: ${totalMargin >= 0 ? '#22c55e' : '#ef4444'};">${totalMargin.toLocaleString()} DHS</div>
-                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Margin</div>
-                    </div>
-                    <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: ${overallMarginPercent >= 0 ? '#22c55e' : '#ef4444'};">${overallMarginPercent.toFixed(1)}%</div>
-                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Margin %</div>
+                <!-- Clean Header for PDF -->
+                <div style="text-align: center; margin-bottom: 30px; padding: 20px; border: 2px solid #000; background: #f8f9fa;">
+                    <h1 style="color: #000; font-size: 24px; font-weight: bold; margin: 0 0 10px 0;">EDEN MARGIN ANALYSIS REPORT</h1>
+                    <h2 style="color: #333; font-size: 16px; margin: 0 0 15px 0;">${reportPeriod}</h2>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 15px;">
+                        <div style="text-align: center; padding: 10px; border: 1px solid #ccc;">
+                            <div style="color: #000; font-size: 20px; font-weight: bold;">${grandTotalQty.toLocaleString()}</div>
+                            <div style="color: #666; font-size: 12px;">Total Qty Sold</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; border: 1px solid #ccc;">
+                            <div style="color: #000; font-size: 20px; font-weight: bold;">${grandTotalRevenue.toLocaleString()} DHS</div>
+                            <div style="color: #666; font-size: 12px;">Total Revenue</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; border: 1px solid #ccc;">
+                            <div style="color: #000; font-size: 20px; font-weight: bold;">${grandTotalCost.toLocaleString()} DHS</div>
+                            <div style="color: #666; font-size: 12px;">Total Cost</div>
+                        </div>
+                        <div style="text-align: center; padding: 10px; border: 1px solid #ccc;">
+                            <div style="color: ${grandTotalMargin >= 0 ? '#000' : '#d00'}; font-size: 20px; font-weight: bold;">${grandTotalMargin.toLocaleString()} DHS (${overallMarginPercent.toFixed(1)}%)</div>
+                            <div style="color: #666; font-size: 12px;">Total Margin</div>
+                        </div>
                     </div>
                 </div>
-                
-                <table class="report-table" style="font-size: 0.85rem;">
-                    <thead>
-                        <tr style="background: rgba(0, 122, 255, 0.2);">
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Store</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Employee</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Date</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Product</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Qty</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Price</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Cost</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Margin</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Revenue</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Cost</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Margin</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Margin %</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+
+                <!-- Employee Margin Performance Table - PDF Friendly -->
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #000; font-size: 18px; font-weight: bold; margin: 0 0 15px 0; text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px;">
+                        EMPLOYEE MARGIN PERFORMANCE
+                    </h3>
+                    <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+                        <thead>
+                            <tr style="background: #e9ecef;">
+                                <th style="padding: 10px; text-align: left; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">RANK</th>
+                                <th style="padding: 10px; text-align: left; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">EMPLOYEE NAME</th>
+                                <th style="padding: 10px; text-align: center; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">TOTAL QTY SOLD</th>
+                                <th style="padding: 10px; text-align: center; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">TOTAL REVENUE</th>
+                                <th style="padding: 10px; text-align: center; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">TOTAL COST</th>
+                                <th style="padding: 10px; text-align: center; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">TOTAL MARGIN</th>
+                                <th style="padding: 10px; text-align: center; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">MARGIN %</th>
+                                <th style="padding: 10px; text-align: center; font-weight: bold; color: #000; border: 1px solid #000; font-size: 12px;">TRANSACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
-            processedData.forEach(sale => {
-                const marginColor = sale.marginPercentage >= 0 ? '#22c55e' : '#ef4444';
+            sortedEmployees.forEach(([employee, stats], index) => {
+                const marginPercent = stats.revenue > 0 ? ((stats.margin / stats.revenue) * 100) : 0;
+                const rankNumber = index + 1;
+                const rowBg = index % 2 === 0 ? '#f8f9fa' : '#ffffff';
+                const marginColor = stats.margin >= 0 ? '#000' : '#d00';
+                
                 html += `
-                    <tr>
-                        <td style="padding: 6px;">${sale.storeName}</td>
-                        <td style="padding: 6px;">${sale.employeeName}</td>
-                        <td style="padding: 6px;">${new Date(sale.date).toLocaleDateString()}</td>
-                        <td style="padding: 6px;">${sale.productName}</td>
-                        <td style="padding: 6px; text-align: center; font-weight: bold;">${sale.qty}</td>
-                        <td style="padding: 6px; text-align: right;">${sale.unitPrice.toLocaleString()} DHS</td>
-                        <td style="padding: 6px; text-align: right;">${sale.unitCost.toLocaleString()} DHS</td>
-                        <td style="padding: 6px; text-align: right; color: ${sale.unitMargin >= 0 ? '#22c55e' : '#ef4444'}; font-weight: bold;">${sale.unitMargin.toLocaleString()} DHS</td>
-                        <td style="padding: 6px; text-align: right; font-weight: bold;">${sale.totalRevenue.toLocaleString()} DHS</td>
-                        <td style="padding: 6px; text-align: right;">${sale.totalCost.toLocaleString()} DHS</td>
-                        <td style="padding: 6px; text-align: right; color: ${marginColor}; font-weight: bold;">${sale.totalMargin.toLocaleString()} DHS</td>
-                        <td style="padding: 6px; text-align: right; color: ${marginColor}; font-weight: bold;">${sale.marginPercentage.toFixed(1)}%</td>
+                    <tr style="background: ${rowBg};">
+                        <td style="padding: 8px; border: 1px solid #000; font-size: 11px; font-weight: bold; text-align: center;">${rankNumber}</td>
+                        <td style="padding: 8px; color: #000; font-weight: 600; border: 1px solid #000; font-size: 11px;">${employee}</td>
+                        <td style="padding: 8px; text-align: center; color: #000; font-weight: bold; font-size: 12px; border: 1px solid #000;">${stats.qty.toLocaleString()}</td>
+                        <td style="padding: 8px; text-align: center; color: #000; font-weight: bold; border: 1px solid #000; font-size: 11px;">${stats.revenue.toLocaleString()} DHS</td>
+                        <td style="padding: 8px; text-align: center; color: #000; border: 1px solid #000; font-size: 11px;">${stats.cost.toLocaleString()} DHS</td>
+                        <td style="padding: 8px; text-align: center; color: ${marginColor}; font-weight: bold; border: 1px solid #000; font-size: 11px;">${stats.margin.toLocaleString()} DHS</td>
+                        <td style="padding: 8px; text-align: center; color: ${marginColor}; font-weight: bold; border: 1px solid #000; font-size: 11px;">${marginPercent.toFixed(1)}%</td>
+                        <td style="padding: 8px; text-align: center; color: #000; border: 1px solid #000; font-size: 11px;">${stats.sales}</td>
                     </tr>
                 `;
             });
             
             html += `
-                    </tbody>
-                </table>
-                
-                <div style="margin-top: 24px; padding: 16px; background: rgba(0, 122, 255, 0.1); border-radius: 8px;">
-                    <h4 style="color: #ffffff; margin-bottom: 12px;">📊 Margin Analysis Summary</h4>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; color: rgba(255, 255, 255, 0.9);">
-                        <div>
-                            <strong>Best Performing Sale:</strong><br>
-                            ${processedData.length > 0 ? `${processedData[0].productName} - ${processedData[0].marginPercentage.toFixed(1)}% margin` : 'No data'}
-                        </div>
-                        <div>
-                            <strong>Average Margin per Sale:</strong><br>
-                            ${totalSales > 0 ? (totalMargin / totalSales).toLocaleString() : '0'} DHS
-                        </div>
-                        <div>
-                            <strong>Total Units Sold:</strong><br>
-                            ${totalQuantity.toLocaleString()} units
-                        </div>
-                        <div>
-                            <strong>Average Margin per Unit:</strong><br>
-                            ${totalQuantity > 0 ? (totalMargin / totalQuantity).toLocaleString() : '0'} DHS
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Report Footer - PDF Friendly -->
+                <div style="text-align: center; margin-top: 25px; padding: 10px; border-top: 1px solid #000;">
+                    <p style="color: #666; font-size: 10px; margin: 0;">
+                        Report generated on ${new Date().toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })} | EDEN Sales Management System
+                    </p>
                 </div>
             `;
             
@@ -6748,7 +6754,8 @@
                 const reportResults = document.getElementById('reportResults');
                 const reportHTML = reportResults ? reportResults.innerHTML : '';
                 
-                // Check if this is a summary report (contains the special PDF-friendly formatting)
+                // Check report type for proper handling
+                const isMarginReport = window.currentReportType === 'margin';
                 const isSummaryReport = reportHTML.includes('EDEN SALES SUMMARY REPORT') || 
                                        window.currentReportType === 'summary' ||
                                        window.currentReportType === 'product' ||
@@ -6756,7 +6763,193 @@
                                        window.currentReportType === 'store' ||
                                        window.currentReportType === 'monthly';
                 
-                if (isSummaryReport) {
+                if (isMarginReport) {
+                    console.log('Generating PDF for margin analysis report...');
+                    
+                    // Extract data from the current report display - EXACT same processing as dashboard
+                    const data = window.currentReportData;
+                    
+                    // Get date range for the report
+                    const dates = [...new Set(data.map(sale => sale.date))].sort();
+                    const startDate = dates[0];
+                    const endDate = dates[dates.length - 1];
+                    const reportPeriod = startDate === endDate ? 
+                        new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                        `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+                    
+                    // Default prices and costs for fallback - EXACT same as dashboard
+                    const defaultPrices = {
+                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+                    };
+                    
+                    const defaultCosts = {
+                        'product1': 1800, 'product2': 800, 'product3': 500, 'product4': 150, 'product5': 250
+                    };
+                    
+                    // Calculate comprehensive margin statistics - EXACT same logic as dashboard
+                    let totalQuantity = 0;
+                    let totalRevenue = 0;
+                    let totalCost = 0;
+                    let totalMargin = 0;
+                    let totalSales = data.length;
+                    
+                    // Process each sale for detailed margin calculations - EXACT same as dashboard
+                    const processedData = data.map(sale => {
+                        let price = 0;
+                        let cost = 0;
+                        
+                        // Get price from Firebase store prices or default prices - EXACT same logic
+                        if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                            price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                        } else {
+                            price = defaultPrices[sale.product] || 0;
+                        }
+                        
+                        // Get cost from Firebase store costs or default costs - EXACT same logic
+                        if (firebaseStoreCosts && firebaseStoreCosts[sale.store] && firebaseStoreCosts[sale.store][sale.product]) {
+                            cost = parseFloat(firebaseStoreCosts[sale.store][sale.product]) || 0;
+                        } else {
+                            cost = defaultCosts[sale.product] || 0;
+                        }
+                        
+                        const saleRevenue = price * sale.qty;
+                        const saleCost = cost * sale.qty;
+                        const saleMargin = saleRevenue - saleCost;
+                        const marginPercentage = saleRevenue > 0 ? ((saleMargin / saleRevenue) * 100) : 0;
+                        
+                        totalQuantity += sale.qty;
+                        totalRevenue += saleRevenue;
+                        totalCost += saleCost;
+                        totalMargin += saleMargin;
+                        
+                        return {
+                            ...sale,
+                            unitPrice: price,
+                            unitCost: cost,
+                            unitMargin: price - cost,
+                            unitMarginPercent: price > 0 ? (((price - cost) / price) * 100) : 0,
+                            totalRevenue: saleRevenue,
+                            totalCost: saleCost,
+                            totalMargin: saleMargin,
+                            marginPercentage: marginPercentage,
+                            productName: getProductName(sale.product),
+                            employeeName: getEmployeeName(sale.user),
+                            storeName: getStoreName(sale.store)
+                        };
+                    });
+                    
+                    // Sort by margin percentage (highest first) - EXACT same as dashboard
+                    processedData.sort((a, b) => b.marginPercentage - a.marginPercentage);
+                    
+                    const overallMarginPercent = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
+                    
+                    // Create PDF with margin analysis format
+                    doc.setFontSize(16);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('EDEN MARGIN ANALYSIS REPORT', 105, 20, { align: 'center' });
+                    
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(reportPeriod, 105, 30, { align: 'center' });
+                    
+                    // Summary totals - EXACT same calculations as dashboard
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('MARGIN SUMMARY', 20, 50);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 60);
+                    doc.text(`Total Cost: ${totalCost.toLocaleString()} DHS`, 20, 70);
+                    doc.text(`Total Margin: ${totalMargin.toLocaleString()} DHS`, 20, 80);
+                    doc.text(`Overall Margin %: ${overallMarginPercent.toFixed(1)}%`, 20, 90);
+                    
+                    // Margin Analysis Table - EXACT same data as dashboard
+                    if (typeof doc.autoTable === 'function') {
+                        const marginTableData = processedData.map(sale => {
+                            return [
+                                sale.storeName,
+                                sale.employeeName,
+                                new Date(sale.date).toLocaleDateString(),
+                                sale.productName,
+                                sale.qty,
+                                sale.unitPrice.toLocaleString(),
+                                sale.unitCost.toLocaleString(),
+                                sale.unitMargin.toLocaleString(),
+                                sale.totalRevenue.toLocaleString(),
+                                sale.totalCost.toLocaleString(),
+                                sale.totalMargin.toLocaleString(),
+                                sale.marginPercentage.toFixed(1) + '%'
+                            ];
+                        });
+                        
+                        doc.autoTable({
+                            head: [['Store', 'Employee', 'Date', 'Product', 'Qty', 'Unit Price', 'Unit Cost', 'Unit Margin', 'Total Revenue', 'Total Cost', 'Total Margin', 'Margin %']],
+                            body: marginTableData,
+                            startY: 105,
+                            styles: { fontSize: 6, cellPadding: 2 },
+                            headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+                            alternateRowStyles: { fillColor: [245, 245, 245] },
+                            margin: { left: 10, right: 10 },
+                            columnStyles: {
+                                4: { halign: 'center' }, // Qty
+                                5: { halign: 'right' },  // Unit Price
+                                6: { halign: 'right' },  // Unit Cost
+                                7: { halign: 'right' },  // Unit Margin
+                                8: { halign: 'right' },  // Total Revenue
+                                9: { halign: 'right' },  // Total Cost
+                                10: { halign: 'right' }, // Total Margin
+                                11: { halign: 'right' }  // Margin %
+                            }
+                        });
+                        
+                        // Analysis Summary - EXACT same as dashboard
+                        const finalY = doc.lastAutoTable.finalY || 200;
+                        
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('MARGIN ANALYSIS SUMMARY', 20, finalY + 20);
+                        
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(`Best Performing Sale: ${processedData.length > 0 ? `${processedData[0].productName} - ${processedData[0].marginPercentage.toFixed(1)}% margin` : 'No data'}`, 20, finalY + 35);
+                        doc.text(`Average Margin per Sale: ${totalSales > 0 ? (totalMargin / totalSales).toLocaleString() : '0'} DHS`, 20, finalY + 45);
+                        doc.text(`Total Units Sold: ${totalQuantity.toLocaleString()} units`, 20, finalY + 55);
+                        doc.text(`Average Margin per Unit: ${totalQuantity > 0 ? (totalMargin / totalQuantity).toLocaleString() : '0'} DHS`, 20, finalY + 65);
+                        
+                        // Footer
+                        const pageCount = doc.internal.getNumberOfPages();
+                        for (let i = 1; i <= pageCount; i++) {
+                            doc.setPage(i);
+                            doc.setFontSize(8);
+                            doc.setFont('helvetica', 'normal');
+                            doc.text(`Page ${i} of ${pageCount}`, 180, 290);
+                            doc.text(`Generated on ${new Date().toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })} | EDEN Sales Management System`, 20, 290);
+                        }
+                    } else {
+                        // Fallback without autoTable for margin report
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('MARGIN DETAILS', 20, 110);
+                        
+                        let yPos = 125;
+                        doc.setFont('helvetica', 'normal');
+                        processedData.slice(0, 10).forEach((sale, index) => { // Show top 10 for space
+                            if (yPos > 270) {
+                                doc.addPage();
+                                yPos = 30;
+                            }
+                            doc.text(`${index + 1}. ${sale.productName}: ${sale.marginPercentage.toFixed(1)}% margin (${sale.totalMargin.toLocaleString()} DHS)`, 20, yPos);
+                            yPos += 10;
+                        });
+                    }
+                    
+                } else if (isSummaryReport) {
                     console.log('Generating PDF for summary report...');
                     
                     // Extract data from the current report display
@@ -8313,5 +8506,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9769cca4d682f9db',t:'MTc1NjQ0NjkyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976a151a9461f9db',t:'MTc1NjQ0OTg5My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
