@@ -6976,6 +6976,31 @@
                         new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
                         `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
                     
+                    // Hidden employees list - these will not appear in reports
+                    const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
+                    
+                    // Filter data to exclude hidden employees
+                    const filteredData = data.filter(sale => !hiddenEmployees.includes(sale.user));
+                    
+                    // Get all possible employees (default + Firebase) excluding hidden ones
+                    const allEmployees = new Set();
+                    
+                    // Add Firebase employees (excluding hidden ones)
+                    Object.values(firebaseEmployees).forEach(employee => {
+                        if (employee.name && !hiddenEmployees.includes(employee.name)) {
+                            allEmployees.add(employee.name);
+                        }
+                    });
+                    
+                    // Add employees from sales data (excluding hidden ones)
+                    filteredData.forEach(sale => {
+                        if (sale.user && !hiddenEmployees.includes(sale.user)) {
+                            allEmployees.add(sale.user);
+                        }
+                    });
+                    
+                    console.log('All employees found (excluding hidden):', Array.from(allEmployees));
+                    
                     // Calculate comprehensive statistics
                     const defaultPrices = {
                         'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
@@ -6983,10 +7008,16 @@
                     
                     let grandTotalQty = 0;
                     let grandTotalRevenue = 0;
-                    let grandTotalSales = data.length;
+                    let grandTotalSales = filteredData.length;
                     const byEmployee = {};
                     
-                    data.forEach(sale => {
+                    // Initialize all employees with zero stats
+                    allEmployees.forEach(employeeName => {
+                        byEmployee[employeeName] = { qty: 0, revenue: 0, sales: 0, isAbsent: true };
+                    });
+                    
+                    // Process actual sales data (excluding hidden employees)
+                    filteredData.forEach(sale => {
                         let price = 0;
                         
                         // Get price from Firebase store prices or default prices
@@ -7000,19 +7031,25 @@
                         grandTotalQty += sale.qty;
                         grandTotalRevenue += revenue;
                         
-                        // By employee
-                        if (!byEmployee[sale.user]) {
-                            byEmployee[sale.user] = { qty: 0, revenue: 0, sales: 0 };
+                        // Mark employee as present and update stats
+                        if (byEmployee[sale.user]) {
+                            byEmployee[sale.user].qty += sale.qty;
+                            byEmployee[sale.user].revenue += revenue;
+                            byEmployee[sale.user].sales += 1;
+                            byEmployee[sale.user].isAbsent = false;
                         }
-                        byEmployee[sale.user].qty += sale.qty;
-                        byEmployee[sale.user].revenue += revenue;
-                        byEmployee[sale.user].sales += 1;
                     });
                     
-                    // Sort employees by total quantity sold (descending)
-                    const sortedEmployees = Object.entries(byEmployee).sort((a, b) => b[1].qty - a[1].qty);
+                    // Sort employees: present employees by quantity (descending), then absent employees
+                    const presentEmployees = Object.entries(byEmployee).filter(([name, stats]) => !stats.isAbsent);
+                    const absentEmployees = Object.entries(byEmployee).filter(([name, stats]) => stats.isAbsent);
                     
-                    console.log('Summary calculations:', { grandTotalQty, grandTotalRevenue, employeeCount: sortedEmployees.length });
+                    presentEmployees.sort((a, b) => b[1].qty - a[1].qty);
+                    absentEmployees.sort((a, b) => a[0].localeCompare(b[0])); // Sort absent employees alphabetically
+                    
+                    const sortedEmployees = [...presentEmployees, ...absentEmployees];
+                    
+                    console.log('Summary calculations:', { grandTotalQty, grandTotalRevenue, employeeCount: sortedEmployees.length, presentCount: presentEmployees.length, absentCount: absentEmployees.length });
                     
                     // Create PDF with summary report format
                     doc.setFontSize(16);
@@ -7035,18 +7072,31 @@
                     
                     // Employee Performance Table
                     if (typeof doc.autoTable === 'function' && sortedEmployees.length > 0) {
-                        console.log('Creating employee performance table');
+                        console.log('Creating employee performance table with absent employees');
                         
                         const employeeTableData = sortedEmployees.map(([employee, stats], index) => {
-                            const avgPerSale = stats.sales > 0 ? (stats.revenue / stats.sales) : 0;
-                            return [
-                                index + 1,
-                                employee,
-                                stats.qty.toLocaleString(),
-                                `${stats.revenue.toLocaleString()} DHS`,
-                                stats.sales,
-                                `${avgPerSale.toLocaleString()} DHS`
-                            ];
+                            if (stats.isAbsent) {
+                                // Display absent employee with special formatting
+                                return [
+                                    '-',
+                                    employee,
+                                    'ABSENT / WEEK OFF',
+                                    'ABSENT / WEEK OFF',
+                                    'ABSENT / WEEK OFF',
+                                    'ABSENT / WEEK OFF'
+                                ];
+                            } else {
+                                // Display present employee with normal stats
+                                const avgPerSale = stats.sales > 0 ? (stats.revenue / stats.sales) : 0;
+                                return [
+                                    index + 1,
+                                    employee,
+                                    stats.qty.toLocaleString(),
+                                    `${stats.revenue.toLocaleString()} DHS`,
+                                    stats.sales,
+                                    `${avgPerSale.toLocaleString()} DHS`
+                                ];
+                            }
                         });
                         
                         doc.autoTable({
@@ -7056,13 +7106,20 @@
                             styles: { fontSize: 8, cellPadding: 2 },
                             headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
                             alternateRowStyles: { fillColor: [245, 245, 245] },
-                            margin: { left: 10, right: 10 }
+                            margin: { left: 10, right: 10 },
+                            didParseCell: function(data) {
+                                // Style absent employee rows differently
+                                if (data.row.raw && data.row.raw[2] === 'ABSENT / WEEK OFF') {
+                                    data.cell.styles.textColor = [200, 0, 0]; // Red text for absent employees
+                                    data.cell.styles.fontStyle = 'bold';
+                                }
+                            }
                         });
                         
-                        console.log('Employee table created successfully');
+                        console.log('Employee table created successfully with absent employees');
                     } else {
                         // Fallback without autoTable
-                        console.log('Using fallback for employee performance');
+                        console.log('Using fallback for employee performance with absent employees');
                         doc.setFontSize(10);
                         doc.setFont('helvetica', 'bold');
                         doc.text('EMPLOYEE PERFORMANCE', 20, 100);
@@ -7074,7 +7131,12 @@
                                 doc.addPage();
                                 yPos = 30;
                             }
-                            doc.text(`${index + 1}. ${employee}: ${stats.qty} units, ${stats.revenue.toLocaleString()} DHS`, 20, yPos);
+                            
+                            if (stats.isAbsent) {
+                                doc.text(`${index + 1}. ${employee}: ABSENT / WEEK OFF`, 20, yPos);
+                            } else {
+                                doc.text(`${index + 1}. ${employee}: ${stats.qty} units, ${stats.revenue.toLocaleString()} DHS`, 20, yPos);
+                            }
                             yPos += 10;
                         });
                     }
@@ -7381,16 +7443,6 @@
             // Hidden employees list - these will not appear in dashboard analytics
             const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
             
-            // Get all possible employees (Firebase only, excluding hidden ones)
-            const allEmployees = new Set();
-            
-            // Add Firebase employees (excluding hidden ones)
-            Object.values(firebaseEmployees).forEach(employee => {
-                if (employee.name && !hiddenEmployees.includes(employee.name)) {
-                    allEmployees.add(employee.name);
-                }
-            });
-            
             // Filter for YESTERDAY's date specifically with enhanced validation
             const yesterdaySales = salesData.filter(sale => {
                 if (!sale || !sale.date) {
@@ -7415,28 +7467,45 @@
             
             console.log('🎯 YESTERDAY SALES FOUND:', yesterdaySales.length);
             
+            // Filter out hidden employees from yesterday's sales
+            const filteredYesterdaySales = yesterdaySales.filter(sale => !hiddenEmployees.includes(sale.user));
+            
+            console.log('🎯 YESTERDAY SALES (excluding hidden employees):', filteredYesterdaySales.length);
+            
             // Calculate total sales amount
             let totalAmount = 0;
             let totalQty = 0;
             const userSales = {};
             const productSales = {};
             
-            // Initialize all employees
-            allEmployees.forEach(employeeName => {
-                userSales[employeeName] = { amount: 0, qty: 0, isAbsent: true };
-            });
-            
             // Default prices for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
-            yesterdaySales.forEach(sale => {
-                // Skip sales from hidden employees
-                if (hiddenEmployees.includes(sale.user)) {
-                    return;
+            // Get all possible employees (Firebase only, excluding hidden ones) for tracking absent employees
+            const allEmployees = new Set();
+            
+            // Add Firebase employees (excluding hidden ones)
+            Object.values(firebaseEmployees).forEach(employee => {
+                if (employee.name && !hiddenEmployees.includes(employee.name)) {
+                    allEmployees.add(employee.name);
                 }
-                
+            });
+            
+            // Add employees from sales data (excluding hidden ones)
+            filteredYesterdaySales.forEach(sale => {
+                if (sale.user && !hiddenEmployees.includes(sale.user)) {
+                    allEmployees.add(sale.user);
+                }
+            });
+            
+            // Initialize all employees
+            allEmployees.forEach(employeeName => {
+                userSales[employeeName] = { amount: 0, qty: 0, isAbsent: true };
+            });
+            
+            filteredYesterdaySales.forEach(sale => {
                 const qty = parseInt(sale.qty);
                 if (isNaN(qty) || qty <= 0) return;
                 
@@ -7477,13 +7546,13 @@
                 }
             });
             
-            // Find best performer by revenue (only among present employees)
+            // Find best performer by quantity sold (matching PDF format)
             let bestPerformer = 'No Data';
-            let maxSales = 0;
+            let maxQty = 0;
             
             Object.entries(userSales).forEach(([user, stats]) => {
-                if (!stats.isAbsent && stats.amount > maxSales) {
-                    maxSales = stats.amount;
+                if (!stats.isAbsent && stats.qty > maxQty) {
+                    maxQty = stats.qty;
                     bestPerformer = user;
                 }
             });
@@ -7503,11 +7572,11 @@
             
             // Find most sold product by quantity
             let mostSoldProduct = 'No Data';
-            let maxQty = 0;
+            let maxProductQty = 0;
             
             Object.entries(productSales).forEach(([product, qty]) => {
-                if (qty > maxQty) {
-                    maxQty = qty;
+                if (qty > maxProductQty) {
+                    maxProductQty = qty;
                     mostSoldProduct = `${product} (${qty} units)`;
                 }
             });
@@ -7555,13 +7624,15 @@
                 mostSoldProductElement.textContent = mostSoldProduct;
             }
             
-            console.log('✅ ANALYTICS UPDATED INSTANTLY:', {
+            console.log('✅ ANALYTICS UPDATED INSTANTLY (excluding hidden employees):', {
                 yesterdayStr,
-                salesCount: yesterdaySales.length,
+                totalSalesCount: yesterdaySales.length,
+                filteredSalesCount: filteredYesterdaySales.length,
                 totalAmount,
                 totalQty,
                 bestPerformer,
-                mostSoldProduct
+                mostSoldProduct,
+                hiddenEmployeesExcluded: hiddenEmployees
             });
         }
 
@@ -8533,5 +8604,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976b6893c7fef9db',t:'MTc1NjQ2Mzc5OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976b7903e510f9db',t:'MTc1NjQ2NDQ3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
