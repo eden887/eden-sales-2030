@@ -1544,8 +1544,8 @@
 
                 // Convert Firebase objects to arrays for compatibility and ensure proper structure
                 salesData = Object.values(firebaseSales).map(sale => {
-                    // Preserve the exact date as saved, don't modify it
-                    let saleDate = sale.date || sale.selectedDate;
+                    // Preserve the EXACT date as saved - no modifications
+                    let saleDate = sale.date || sale.saleDate || sale.selectedDate;
                     
                     // If no date found, use current date as fallback
                     if (!saleDate) {
@@ -1553,22 +1553,40 @@
                         console.warn('Sale missing date, using current date as fallback:', sale);
                     }
                     
-                    // Ensure date is in YYYY-MM-DD format
-                    if (saleDate.includes('T')) {
+                    // CRITICAL: Only clean format if it contains time, preserve YYYY-MM-DD exactly
+                    if (typeof saleDate === 'string' && saleDate.includes('T')) {
                         saleDate = saleDate.split('T')[0];
                     }
                     
-                    return {
+                    // Validate date format
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(saleDate)) {
+                        console.error('Invalid date format detected:', saleDate, 'for sale:', sale);
+                        saleDate = new Date().toISOString().split('T')[0];
+                    }
+                    
+                    const processedSale = {
                         id: sale.id || Date.now() + Math.random(),
-                        date: saleDate, // Use the preserved date
+                        date: saleDate, // EXACT preserved date
                         store: sale.store || 'store1',
                         product: sale.product || 'product1',
                         qty: parseInt(sale.qty) || 0,
                         user: sale.user || 'Unknown User',
                         timestamp: sale.timestamp || new Date().toLocaleString(),
                         createdAt: sale.createdAt || new Date().toISOString(),
-                        selectedDate: sale.selectedDate // Preserve original selected date
+                        saleDate: sale.saleDate, // Preserve backup date field
+                        entryTimestamp: sale.entryTimestamp, // Preserve entry timestamp
+                        firebaseKey: sale.firebaseKey // Preserve Firebase key for updates
                     };
+                    
+                    console.log('📊 PROCESSED SALE:', {
+                        id: processedSale.id,
+                        originalDate: sale.date,
+                        processedDate: processedSale.date,
+                        user: processedSale.user,
+                        qty: processedSale.qty
+                    });
+                    
+                    return processedSale;
                 }).filter(sale => sale.qty > 0); // Remove invalid sales with 0 quantity
                 
                 console.log('🔥 FIREBASE DATA LOADED SUCCESSFULLY:', {
@@ -1736,6 +1754,9 @@
                         <h1 class="admin-title">Dashboard</h1>
                         <div class="user-info">
                             <span class="welcome-text">Welcome back, ${userSession.username}</span>
+                            <button class="master-export-btn" onclick="manualRefreshDashboard()" title="Refresh Dashboard Data">
+                                🔄
+                            </button>
                             <button class="master-export-btn" onclick="exportMasterData()" title="Export All Data (CSV)">
                                 📊
                             </button>
@@ -2570,23 +2591,9 @@
             console.log('📊 Current salesData length:', salesData.length);
             console.log('🔥 Current Firebase sales:', Object.keys(firebaseSales).length);
             
-            // Force reload Firebase data first, then calculate analytics
-            loadFirebaseData().then(() => {
-                console.log('✅ Firebase data reloaded, now calculating analytics...');
-                console.log('📊 Updated salesData length:', salesData.length);
-                
-                // Calculate analytics after data is fully loaded
-                setTimeout(() => {
-                    calculateYesterdayAnalytics();
-                }, 500);
-            }).catch(error => {
-                console.error('❌ Error loading Firebase data:', error);
-                // Still try to calculate with existing data
-                setTimeout(() => {
-                    calculateYesterdayAnalytics();
-                }, 500);
-            });
-
+            // Calculate analytics IMMEDIATELY with existing data
+            calculateYesterdayAnalytics();
+            
             // Initialize form handlers
             initializeFormHandlers();
             
@@ -2596,6 +2603,108 @@
             
             // Set up automatic refresh at 6:00 AM daily
             setupDailyRefresh();
+            
+            // Set up real-time dashboard updates
+            setupRealTimeDashboardUpdates();
+            
+            // Load fresh Firebase data in background (non-blocking)
+            loadFirebaseData().then(() => {
+                console.log('✅ Firebase data refreshed in background');
+                console.log('📊 Updated salesData length:', salesData.length);
+                
+                // Recalculate analytics with fresh data
+                calculateYesterdayAnalytics();
+            }).catch(error => {
+                console.error('❌ Error loading Firebase data in background:', error);
+            });
+        }
+        
+        function setupRealTimeDashboardUpdates() {
+            // Set up Firebase listener for real-time sales updates
+            if (database && database.ref) {
+                console.log('🔄 Setting up real-time dashboard updates...');
+                
+                // Listen for new sales being added
+                database.ref('sales').on('child_added', (snapshot) => {
+                    const newSale = snapshot.val();
+                    const firebaseKey = snapshot.key;
+                    
+                    console.log('🆕 NEW SALE DETECTED:', newSale);
+                    
+                    // Check if this sale is not already in our local data
+                    const existingSale = salesData.find(sale => 
+                        sale.id === newSale.id || 
+                        (sale.firebaseKey && sale.firebaseKey === firebaseKey)
+                    );
+                    
+                    if (!existingSale && newSale.id && newSale.qty > 0) {
+                        // Add to local data with preserved date
+                        const processedSale = {
+                            id: newSale.id,
+                            date: newSale.date || newSale.saleDate,
+                            store: newSale.store,
+                            product: newSale.product,
+                            qty: parseInt(newSale.qty),
+                            user: newSale.user,
+                            timestamp: newSale.timestamp,
+                            createdAt: newSale.createdAt,
+                            firebaseKey: firebaseKey
+                        };
+                        
+                        salesData.push(processedSale);
+                        firebaseSales[firebaseKey] = { ...newSale, firebaseKey };
+                        
+                        console.log('✅ Added new sale to local data:', processedSale);
+                        
+                        // Update dashboard analytics immediately
+                        setTimeout(() => {
+                            calculateYesterdayAnalytics();
+                        }, 100);
+                    }
+                });
+                
+                // Listen for sales being updated
+                database.ref('sales').on('child_changed', (snapshot) => {
+                    const updatedSale = snapshot.val();
+                    const firebaseKey = snapshot.key;
+                    
+                    console.log('🔄 SALE UPDATED:', updatedSale);
+                    
+                    // Update local data
+                    const saleIndex = salesData.findIndex(sale => 
+                        sale.id === updatedSale.id || 
+                        (sale.firebaseKey && sale.firebaseKey === firebaseKey)
+                    );
+                    
+                    if (saleIndex !== -1) {
+                        salesData[saleIndex] = {
+                            ...salesData[saleIndex],
+                            ...updatedSale,
+                            date: updatedSale.date || updatedSale.saleDate,
+                            firebaseKey: firebaseKey
+                        };
+                        
+                        firebaseSales[firebaseKey] = { ...updatedSale, firebaseKey };
+                        
+                        console.log('✅ Updated sale in local data');
+                        
+                        // Update dashboard analytics
+                        setTimeout(() => {
+                            calculateYesterdayAnalytics();
+                        }, 100);
+                    }
+                });
+                
+                // Global function for manual dashboard updates
+                window.triggerAdminDashboardUpdate = function() {
+                    console.log('🔄 Manual dashboard update triggered');
+                    loadFirebaseData().then(() => {
+                        calculateYesterdayAnalytics();
+                    });
+                };
+                
+                console.log('✅ Real-time dashboard updates configured');
+            }
         }
         
         function setupDailyRefresh() {
@@ -7072,247 +7181,167 @@
         }
 
         function calculateYesterdayAnalytics() {
-            // Always show YESTERDAY's data regardless of current time
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
+            // Always show YESTERDAY's data (one day before current date)
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
-            // Calculate next update time (next day at 6:00 AM)
-            const nextUpdateTime = new Date();
-            nextUpdateTime.setDate(nextUpdateTime.getDate() + 1);
-            nextUpdateTime.setHours(6, 0, 0, 0);
-            
             console.log('🔍 DASHBOARD ANALYTICS - Calculating for YESTERDAY:', {
-                targetDate: yesterdayStr,
+                today: today.toISOString().split('T')[0],
+                yesterday: yesterdayStr,
+                yesterdayFormatted: yesterday.toLocaleDateString(),
                 currentTime: new Date().toLocaleString(),
-                nextUpdateTime: nextUpdateTime.toLocaleString(),
                 totalSalesInSystem: salesData.length
             });
             
-            // Force reload Firebase data first to ensure we have latest data
-            loadFirebaseData().then(() => {
-                console.log('📊 REFRESHED SALES DATA - Total sales:', salesData.length);
-                
-                // Debug: Show all sales data with their dates
-                console.log('📊 ALL SALES DATA IN SYSTEM:');
-                salesData.forEach((sale, index) => {
-                    const saleDate = sale.date?.includes('T') ? sale.date.split('T')[0] : sale.date;
-                    console.log(`  Sale ${index + 1}: ID=${sale.id}, Date=${saleDate}, User=${sale.user}, Product=${sale.product}, Qty=${sale.qty}`);
-                });
-                
-                // Filter for YESTERDAY's date specifically
-                const yesterdaySales = salesData.filter(sale => {
-                    if (!sale || !sale.date) {
-                        console.log('❌ Skipping invalid sale (no date):', sale);
-                        return false;
-                    }
-                    
-                    const saleDate = sale.date.includes('T') ? sale.date.split('T')[0] : sale.date;
-                    const isYesterday = saleDate === yesterdayStr;
-                    
-                    console.log(`🔍 Checking sale: Date=${saleDate}, Target=${yesterdayStr}, Match=${isYesterday}`);
-                    
-                    if (isYesterday) {
-                        console.log('✅ FOUND YESTERDAY SALE:', {
-                            id: sale.id,
-                            date: saleDate,
-                            user: sale.user,
-                            product: sale.product,
-                            qty: sale.qty,
-                            store: sale.store
-                        });
-                    }
-                    
-                    return isYesterday;
-                });
-                
-                console.log('🎯 YESTERDAY SALES FOUND:', yesterdaySales.length);
-                console.log('📋 Yesterday sales details:', yesterdaySales);
-                
-                // Calculate total sales amount
-                let totalAmount = 0;
-                let totalQty = 0;
-                const userSales = {};
-                const productSales = {};
-                
-                // Default prices for fallback
-                const defaultPrices = {
-                    'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                };
-                
-                yesterdaySales.forEach(sale => {
-                    const qty = parseInt(sale.qty);
-                    if (isNaN(qty) || qty <= 0) return;
-                    
-                    console.log('Processing sale:', {
-                        id: sale.id,
-                        user: sale.user,
-                        product: sale.product,
-                        qty: qty,
-                        store: sale.store
-                    });
-                    
-                    // Get price from Firebase store prices or default prices
-                    let price = 0;
-                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                        price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                        console.log(`Using Firebase price: ${price} for ${sale.product} at ${sale.store}`);
-                    } else {
-                        price = defaultPrices[sale.product] || 0;
-                        console.log(`Using default price: ${price} for ${sale.product}`);
-                    }
-                    
-                    const saleAmount = price * qty;
-                    totalAmount += saleAmount;
-                    totalQty += qty;
-                    
-                    console.log(`Sale calculation: ${qty} × ${price} = ${saleAmount}`);
-                    
-                    // Track sales by user for best performer (use actual user name)
-                    const userName = sale.user || 'Unknown User';
-                    if (!userSales[userName]) {
-                        userSales[userName] = { amount: 0, qty: 0 };
-                    }
-                    userSales[userName].amount += saleAmount;
-                    userSales[userName].qty += qty;
-                    
-                    // Track product sales for most sold product (use actual product name)
-                    const productName = getProductName(sale.product);
-                    console.log(`Product mapping for analytics: ${sale.product} -> ${productName}`);
-                    
-                    // Only track valid product names
-                    if (productName && 
-                        productName !== 'No Product Selected' && 
-                        !productName.includes('undefined') && 
-                        !productName.includes('null') &&
-                        !productName.startsWith('Product ')) {
-                        if (!productSales[productName]) {
-                            productSales[productName] = 0;
-                        }
-                        productSales[productName] += qty;
-                        console.log(`Added ${qty} to ${productName}, total now: ${productSales[productName]}`);
-                    } else {
-                        console.warn(`Skipping invalid product name: ${productName} for product ID: ${sale.product}`);
-                    }
-                });
-                
-                console.log('Final calculations:', {
-                    totalAmount,
-                    totalQty,
-                    userSales,
-                    productSales
-                });
-                
-                // Find best performer by revenue
-                let bestPerformer = 'No Data';
-                let maxSales = 0;
-                
-                Object.entries(userSales).forEach(([user, stats]) => {
-                    console.log(`Checking user ${user} with amount ${stats.amount}`);
-                    if (stats.amount > maxSales) {
-                        maxSales = stats.amount;
-                        bestPerformer = user;
-                    }
-                });
-                
-                // Find most sold product by quantity
-                let mostSoldProduct = 'No Data';
-                let maxQty = 0;
-                
-                Object.entries(productSales).forEach(([product, qty]) => {
-                    console.log(`Checking product ${product} with qty ${qty}`);
-                    if (qty > maxQty) {
-                        maxQty = qty;
-                        mostSoldProduct = `${product} (${qty} units)`;
-                    }
-                });
-                
-                console.log('Final analytics results:', {
-                    bestPerformer,
-                    mostSoldProduct,
-                    totalAmount,
-                    totalQty
-                });
-                
-                // Update display elements if they exist
-                const totalSalesElement = document.getElementById('totalSalesAmount');
-                const totalQtyElement = document.getElementById('totalQtySold');
-                const bestPerformerElement = document.getElementById('bestPerformer');
-                const mostSoldProductElement = document.getElementById('mostSoldProduct');
-                
-                // Update subtitle labels to show "Yesterday" with next update time
-                const nextUpdateDisplay = new Date();
-                nextUpdateDisplay.setDate(nextUpdateDisplay.getDate() + 1);
-                nextUpdateDisplay.setHours(6, 0, 0, 0);
-                const updateTimeStr = nextUpdateDisplay.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                const subtitleElements = [
-                    document.getElementById('revenueSubtitle'),
-                    document.getElementById('itemsSubtitle'),
-                    document.getElementById('performerSubtitle'),
-                    document.getElementById('productSubtitle')
-                ];
-                
-                subtitleElements.forEach(element => {
-                    if (element) {
-                        element.textContent = `Yesterday (Updates at ${updateTimeStr})`;
-                    }
-                });
-                
-                // Update all display elements with animation
-                if (totalSalesElement) {
-                    totalSalesElement.style.transition = 'all 0.3s ease';
-                    totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
-                    totalSalesElement.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        totalSalesElement.style.transform = 'scale(1)';
-                    }, 300);
-                    console.log('Updated total sales element to:', totalAmount);
+            // Filter for YESTERDAY's date specifically with enhanced validation
+            const yesterdaySales = salesData.filter(sale => {
+                if (!sale || !sale.date) {
+                    return false;
                 }
                 
-                if (totalQtyElement) {
-                    totalQtyElement.style.transition = 'all 0.3s ease';
-                    totalQtyElement.textContent = totalQty.toString();
-                    totalQtyElement.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        totalQtyElement.style.transform = 'scale(1)';
-                    }, 300);
-                    console.log('Updated total qty element to:', totalQty);
+                // Get the sale date - try multiple fields for date
+                let saleDate = sale.date || sale.saleDate;
+                
+                // Clean the date format if needed
+                if (typeof saleDate === 'string' && saleDate.includes('T')) {
+                    saleDate = saleDate.split('T')[0];
                 }
                 
-                if (bestPerformerElement) {
-                    bestPerformerElement.style.transition = 'all 0.3s ease';
-                    bestPerformerElement.textContent = bestPerformer;
-                    bestPerformerElement.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        bestPerformerElement.style.transform = 'scale(1)';
-                    }, 300);
-                    console.log('Updated best performer element to:', bestPerformer);
+                // Validate date format
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(saleDate)) {
+                    return false;
                 }
                 
-                if (mostSoldProductElement) {
-                    mostSoldProductElement.style.transition = 'all 0.3s ease';
-                    mostSoldProductElement.textContent = mostSoldProduct;
-                    mostSoldProductElement.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        mostSoldProductElement.style.transform = 'scale(1)';
-                    }, 300);
-                    console.log('Updated most sold product element to:', mostSoldProduct);
+                return saleDate === yesterdayStr;
+            });
+            
+            console.log('🎯 YESTERDAY SALES FOUND:', yesterdaySales.length);
+            
+            // Calculate total sales amount
+            let totalAmount = 0;
+            let totalQty = 0;
+            const userSales = {};
+            const productSales = {};
+            
+            // Default prices for fallback
+            const defaultPrices = {
+                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
+            };
+            
+            yesterdaySales.forEach(sale => {
+                const qty = parseInt(sale.qty);
+                if (isNaN(qty) || qty <= 0) return;
+                
+                // Get price from Firebase store prices or default prices
+                let price = 0;
+                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
+                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
+                } else {
+                    price = defaultPrices[sale.product] || 0;
                 }
                 
-                console.log('✅ ANALYTICS UPDATED SUCCESSFULLY:', {
-                    yesterdayStr,
-                    salesCount: yesterdaySales.length,
-                    totalAmount,
-                    totalQty,
-                    bestPerformer,
-                    mostSoldProduct
-                });
+                const saleAmount = price * qty;
+                totalAmount += saleAmount;
+                totalQty += qty;
                 
-            }).catch(error => {
-                console.error('❌ Error refreshing Firebase data for analytics:', error);
-                // Still try to calculate with existing data
-                console.log('Falling back to existing data...');
+                // Track sales by user for best performer (use actual user name)
+                const userName = sale.user || 'Unknown User';
+                if (!userSales[userName]) {
+                    userSales[userName] = { amount: 0, qty: 0 };
+                }
+                userSales[userName].amount += saleAmount;
+                userSales[userName].qty += qty;
+                
+                // Track product sales for most sold product (use actual product name)
+                const productName = getProductName(sale.product);
+                
+                // Only track valid product names
+                if (productName && 
+                    productName !== 'No Product Selected' && 
+                    !productName.includes('undefined') && 
+                    !productName.includes('null') &&
+                    !productName.startsWith('Product ')) {
+                    if (!productSales[productName]) {
+                        productSales[productName] = 0;
+                    }
+                    productSales[productName] += qty;
+                }
+            });
+            
+            // Find best performer by revenue
+            let bestPerformer = 'No Data';
+            let maxSales = 0;
+            
+            Object.entries(userSales).forEach(([user, stats]) => {
+                if (stats.amount > maxSales) {
+                    maxSales = stats.amount;
+                    bestPerformer = user;
+                }
+            });
+            
+            // Find most sold product by quantity
+            let mostSoldProduct = 'No Data';
+            let maxQty = 0;
+            
+            Object.entries(productSales).forEach(([product, qty]) => {
+                if (qty > maxQty) {
+                    maxQty = qty;
+                    mostSoldProduct = `${product} (${qty} units)`;
+                }
+            });
+            
+            // Update display elements if they exist
+            const totalSalesElement = document.getElementById('totalSalesAmount');
+            const totalQtyElement = document.getElementById('totalQtySold');
+            const bestPerformerElement = document.getElementById('bestPerformer');
+            const mostSoldProductElement = document.getElementById('mostSoldProduct');
+            
+            // Update subtitle labels to show "Yesterday" with date
+            const yesterdayFormatted = yesterday.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            const subtitleElements = [
+                document.getElementById('revenueSubtitle'),
+                document.getElementById('itemsSubtitle'),
+                document.getElementById('performerSubtitle'),
+                document.getElementById('productSubtitle')
+            ];
+            
+            subtitleElements.forEach(element => {
+                if (element) {
+                    element.textContent = `Yesterday (${yesterdayFormatted})`;
+                }
+            });
+            
+            // Update all display elements instantly
+            if (totalSalesElement) {
+                totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
+            }
+            
+            if (totalQtyElement) {
+                totalQtyElement.textContent = totalQty.toString();
+            }
+            
+            if (bestPerformerElement) {
+                bestPerformerElement.textContent = bestPerformer;
+            }
+            
+            if (mostSoldProductElement) {
+                mostSoldProductElement.textContent = mostSoldProduct;
+            }
+            
+            console.log('✅ ANALYTICS UPDATED INSTANTLY:', {
+                yesterdayStr,
+                salesCount: yesterdaySales.length,
+                totalAmount,
+                totalQty,
+                bestPerformer,
+                mostSoldProduct
             });
         }
 
@@ -7323,7 +7352,7 @@
             console.log('Current userSession:', userSession);
             console.log('Current salesData length:', salesData.length);
             
-            // Initialize date options (today and yesterday only)
+            // Initialize date options (today and yesterday only) with strict validation
             const dateSelect = document.getElementById('salesDate');
             const today = new Date();
             const yesterday = new Date(today);
@@ -7332,10 +7361,33 @@
             const todayStr = today.toISOString().split('T')[0];
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
+            console.log('🗓️ INITIALIZING SALES ENTRY DATES:', {
+                today: todayStr,
+                yesterday: yesterdayStr,
+                todayFormatted: today.toLocaleDateString(),
+                yesterdayFormatted: yesterday.toLocaleDateString()
+            });
+            
             dateSelect.innerHTML = `
                 <option value="${todayStr}">Today (${today.toLocaleDateString()})</option>
                 <option value="${yesterdayStr}">Yesterday (${yesterday.toLocaleDateString()})</option>
             `;
+            
+            // Add validation to prevent date manipulation
+            dateSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                console.log('📅 Date selection changed to:', selectedValue);
+                
+                // Validate that only allowed dates are selected
+                if (selectedValue !== todayStr && selectedValue !== yesterdayStr) {
+                    console.error('❌ Invalid date selected:', selectedValue);
+                    showErrorToast('Invalid date selected. Only today and yesterday are allowed.');
+                    this.value = todayStr; // Reset to today
+                    return;
+                }
+                
+                console.log('✅ Valid date selected:', selectedValue);
+            });
             
             // Load custom products and stores first
             updateProductSelects();
@@ -7431,10 +7483,23 @@
                 return;
             }
             
-            console.log('Saving sale with selected date:', date);
+            // Validate date format and ensure it's exactly what was selected
+            const selectedDate = date; // This is already in YYYY-MM-DD format from date input
+            console.log('Saving sale with EXACT selected date:', selectedDate);
+            
+            // Validate that the date is not in the future
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            if (selectedDate !== today && selectedDate !== yesterdayStr) {
+                showErrorToast('Sales can only be entered for today or yesterday');
+                return;
+            }
             
             // Save defaults to session
-            userSession.defaultDate = date;
+            userSession.defaultDate = selectedDate;
             userSession.defaultStore = store;
             userSession.hasFirstEntry = true;
             localStorage.setItem('userSession', JSON.stringify(userSession));
@@ -7442,32 +7507,46 @@
             // Generate continuous ID
             const saleId = generateSaleId();
             
-            // Create sale record with proper date format
+            // Create sale record with EXACT date preservation
             const sale = {
                 id: saleId,
-                date: date, // Keep the selected date exactly as chosen
+                date: selectedDate, // EXACT date from form - no conversion
                 store: store,
                 product: product,
                 qty: qty,
                 timestamp: new Date().toLocaleString(),
                 user: userSession.username,
                 createdAt: new Date().toISOString(),
-                selectedDate: date // Additional field to ensure date is preserved
+                saleDate: selectedDate, // Backup field to ensure date integrity
+                entryTimestamp: Date.now() // Unix timestamp for precise tracking
             };
             
-            console.log('Attempting to save sale with date:', sale.date, 'Full sale object:', sale);
+            console.log('🔒 SALE OBJECT WITH LOCKED DATE:', {
+                id: sale.id,
+                date: sale.date,
+                saleDate: sale.saleDate,
+                user: sale.user,
+                product: sale.product,
+                qty: sale.qty,
+                store: sale.store
+            });
             
             try {
-                // Save to Firebase
+                // Save to Firebase with date validation
                 const result = await pushToFirebase('sales', sale);
                 console.log('Firebase save result:', result);
                 
                 if (result.success) {
-                    // Update local data immediately
-                    firebaseSales[result.key] = { ...sale, firebaseKey: result.key };
-                    salesData.push(sale);
+                    // Update local data immediately with exact same object
+                    const savedSale = { ...sale, firebaseKey: result.key };
+                    firebaseSales[result.key] = savedSale;
+                    salesData.push(savedSale);
                     
-                    console.log('Sale saved successfully with date:', sale.date, 'Updated salesData length:', salesData.length);
+                    console.log('✅ SALE SAVED WITH PRESERVED DATE:', {
+                        savedDate: savedSale.date,
+                        originalDate: selectedDate,
+                        match: savedSale.date === selectedDate
+                    });
                     
                     // Freeze date and store fields after first entry
                     freezeDateAndStore();
@@ -7479,6 +7558,11 @@
                     // Update display immediately
                     updateTotalQty();
                     loadSalesList();
+                    
+                    // Trigger real-time admin dashboard update if needed
+                    if (typeof window.triggerAdminDashboardUpdate === 'function') {
+                        window.triggerAdminDashboardUpdate();
+                    }
                     
                     // Show success feedback
                     showSalesSuccess();
@@ -8173,6 +8257,42 @@
             }
         }
 
+        function manualRefreshDashboard() {
+            console.log('🔄 Manual dashboard refresh initiated...');
+            
+            // Show loading state
+            const refreshBtn = document.querySelector('[onclick="manualRefreshDashboard()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '⏳';
+            refreshBtn.disabled = true;
+            
+            // Force reload Firebase data and recalculate analytics
+            loadFirebaseData().then(() => {
+                console.log('✅ Firebase data refreshed');
+                
+                // Recalculate analytics
+                calculateYesterdayAnalytics();
+                
+                // Reset button
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+                
+                // Show success message
+                showSuccessToast('Dashboard data refreshed successfully!');
+                
+                console.log('✅ Manual dashboard refresh completed');
+            }).catch(error => {
+                console.error('❌ Error during manual refresh:', error);
+                
+                // Reset button
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+                
+                // Show error message
+                showErrorToast('Failed to refresh dashboard data. Please try again.');
+            });
+        }
+
         function logout() {
             // Clear session
             localStorage.removeItem('userSession');
@@ -8193,5 +8313,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9766468b11b8f9d1',t:'MTc1NjQwOTk3NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9769cca4d682f9db',t:'MTc1NjQ0NjkyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
