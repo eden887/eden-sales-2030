@@ -2022,8 +2022,6 @@
                                             <option value="employee">Employee-wise Report</option>
                                             <option value="store">Store-wise Report</option>
                                             <option value="monthly">Monthly Report</option>
-                                            <option value="daterange">Date Range Report</option>
-                                        <option value="margin">Margin Analysis Report</option>
                                         </select>
                                     </div>
                                     <div class="form-group" id="specificFilterGroup" style="display: none;">
@@ -6149,12 +6147,6 @@
                 case 'monthly':
                     reportHTML = generateMonthlyReport(filteredData);
                     break;
-                case 'daterange':
-                    reportHTML = generateDateRangeReport(filteredData);
-                    break;
-                case 'margin':
-                    reportHTML = generateMarginReport(filteredData);
-                    break;
             }
             
             document.getElementById('reportResults').innerHTML = reportHTML;
@@ -6168,12 +6160,12 @@
             window.currentReportType = reportType;
         }
 
-        function generateDetailedReport(data) {
-            if (data.length === 0) {
-                return '<div class="no-data">No data found for the selected criteria</div>';
-            }
-            
-            console.log('Generating compact detailed report with data:', data);
+        // Global variable to store processed report data for consistency across formats
+        let currentProcessedReportData = null;
+
+        // Shared function to process report data consistently across all formats (HTML, PDF, CSV)
+        function processReportDataForAllFormats(data) {
+            console.log('Processing report data for all formats:', data.length, 'records');
             
             // Hidden employees list - these will not appear in reports
             const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
@@ -6181,36 +6173,100 @@
             // Filter data to exclude hidden employees
             const filteredData = data.filter(sale => !hiddenEmployees.includes(sale.user));
             
-            // Default prices for fallback
+            // Default prices and costs for fallback
             const defaultPrices = {
                 'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
             };
             
-            // Calculate comprehensive statistics
+            const defaultCosts = {
+                'product1': 1800, 'product2': 800, 'product3': 500, 'product4': 150, 'product5': 250
+            };
+            
+            // Calculate comprehensive statistics with margin analysis
             let totalQuantity = 0;
             let totalRevenue = 0;
+            let totalCost = 0;
+            let totalMargin = 0;
             let totalSales = filteredData.length;
+            let discrepancyCount = 0;
             
-            // Process each sale for detailed calculations
+            // Process each sale for detailed calculations with margin analysis
             const processedData = filteredData.map(sale => {
                 let price = 0;
+                let cost = 0;
                 
-                // First try Firebase store prices
+                // Get price from Firebase store prices or default prices
                 if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
                     price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
                 } else {
-                    // Fallback to default prices
                     price = defaultPrices[sale.product] || 0;
                 }
                 
-                const saleAmount = price * sale.qty;
+                // Get cost from Firebase store costs or default costs
+                if (firebaseStoreCosts && firebaseStoreCosts[sale.store] && firebaseStoreCosts[sale.store][sale.product]) {
+                    cost = parseFloat(firebaseStoreCosts[sale.store][sale.product]) || 0;
+                } else {
+                    cost = defaultCosts[sale.product] || 0;
+                }
+                
+                const saleRevenue = price * sale.qty;
+                const saleCost = cost * sale.qty;
+                const saleMargin = saleRevenue - saleCost;
+                const marginPercent = saleRevenue > 0 ? ((saleMargin / saleRevenue) * 100) : 0;
+                
+                // Flag potential discrepancies
+                let hasDiscrepancy = false;
+                let discrepancyFlags = [];
+                
+                // Check for zero or missing prices
+                if (price === 0) {
+                    hasDiscrepancy = true;
+                    discrepancyFlags.push('NO PRICE');
+                }
+                
+                // Check for zero or missing costs
+                if (cost === 0) {
+                    hasDiscrepancy = true;
+                    discrepancyFlags.push('NO COST');
+                }
+                
+                // Check for negative margins
+                if (saleMargin < 0) {
+                    hasDiscrepancy = true;
+                    discrepancyFlags.push('LOSS');
+                }
+                
+                // Check for unusually low margins (less than 5%)
+                if (marginPercent > 0 && marginPercent < 5) {
+                    hasDiscrepancy = true;
+                    discrepancyFlags.push('LOW MARGIN');
+                }
+                
+                // Check for unusually high margins (more than 80%)
+                if (marginPercent > 80) {
+                    hasDiscrepancy = true;
+                    discrepancyFlags.push('HIGH MARGIN');
+                }
+                
+                if (hasDiscrepancy) {
+                    discrepancyCount++;
+                }
+                
                 totalQuantity += sale.qty;
-                totalRevenue += saleAmount;
+                totalRevenue += saleRevenue;
+                totalCost += saleCost;
+                totalMargin += saleMargin;
                 
                 return {
                     ...sale,
                     unitPrice: price,
-                    totalAmount: saleAmount,
+                    unitCost: cost,
+                    totalAmount: saleRevenue,
+                    totalCost: saleCost,
+                    totalMargin: saleMargin,
+                    marginPercent: marginPercent,
+                    hasDiscrepancy: hasDiscrepancy,
+                    discrepancyFlags: discrepancyFlags,
                     productName: getProductName(sale.product),
                     employeeName: getEmployeeName(sale.user),
                     storeName: getStoreName(sale.store)
@@ -6228,49 +6284,142 @@
                 return timeB.localeCompare(timeA);
             });
             
+            const overallMarginPercent = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
+            
+            console.log('Processed report data:', {
+                originalCount: data.length,
+                filteredCount: filteredData.length,
+                processedCount: processedData.length,
+                totalQuantity,
+                totalRevenue,
+                totalMargin,
+                discrepancyCount
+            });
+            
+            return {
+                filteredData,
+                processedData,
+                totalQuantity,
+                totalRevenue,
+                totalCost,
+                totalMargin,
+                totalSales,
+                discrepancyCount,
+                overallMarginPercent
+            };
+        }
+
+        function generateDetailedReport(data) {
+            if (data.length === 0) {
+                return '<div class="no-data">No data found for the selected criteria</div>';
+            }
+            
+            console.log('Generating detailed report with margin analysis:', data);
+            
+            // Process data using shared function for consistency
+            const processedResult = processReportDataForAllFormats(data);
+            
+            // Store processed data globally for PDF/CSV export consistency
+            currentProcessedReportData = processedResult;
+            
+            const {
+                filteredData,
+                processedData,
+                totalQuantity,
+                totalRevenue,
+                totalCost,
+                totalMargin,
+                totalSales,
+                discrepancyCount,
+                overallMarginPercent
+            } = processedResult;
+            
             let html = `
-                <div class="report-summary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
+                <div class="report-summary" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 20px;">
                     <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalSales}</div>
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.6rem; color: #007aff;">${totalSales}</div>
                         <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Sales</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalQuantity}</div>
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.6rem; color: #007aff;">${totalQuantity}</div>
                         <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Quantity</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-value" style="font-weight: bold; font-size: 1.8rem; color: #007aff;">${totalRevenue.toLocaleString()} DHS</div>
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.6rem; color: #007aff;">${totalRevenue.toLocaleString()} DHS</div>
                         <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Revenue</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.6rem; color: ${totalMargin >= 0 ? '#22c55e' : '#ef4444'};">${totalMargin.toLocaleString()} DHS</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Total Margin (${overallMarginPercent.toFixed(1)}%)</div>
+                    </div>
+                    <div class="summary-card" style="background: ${discrepancyCount > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)'}; border-color: ${discrepancyCount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'};">
+                        <div class="summary-value" style="font-weight: bold; font-size: 1.6rem; color: ${discrepancyCount > 0 ? '#ef4444' : '#22c55e'};">${discrepancyCount}</div>
+                        <div class="summary-label" style="font-weight: bold; color: #ffffff;">Discrepancies</div>
                     </div>
                 </div>
                 
-                <table class="report-table" style="font-size: 0.85rem;">
+                ${discrepancyCount > 0 ? `
+                <div style="background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <h4 style="color: #ffa500; margin-bottom: 8px; font-size: 1rem;">⚠️ PRICING DISCREPANCIES DETECTED</h4>
+                    <p style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 8px;">
+                        Found ${discrepancyCount} items with potential pricing or cost issues. Review highlighted rows below.
+                    </p>
+                    <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.8);">
+                        <strong>Legend:</strong> 
+                        <span style="color: #ef4444;">NO PRICE</span> = Missing price data | 
+                        <span style="color: #ef4444;">NO COST</span> = Missing cost data | 
+                        <span style="color: #ef4444;">LOSS</span> = Negative margin | 
+                        <span style="color: #ffa500;">LOW MARGIN</span> = Less than 5% | 
+                        <span style="color: #ffa500;">HIGH MARGIN</span> = More than 80%
+                    </div>
+                </div>
+                ` : ''}
+                
+                <table class="report-table" style="font-size: 0.8rem;">
                     <thead>
                         <tr style="background: rgba(0, 122, 255, 0.2);">
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Date</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Employee</th>
                             <th style="padding: 8px; font-weight: bold; color: #ffffff;">Store</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Employee Name</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Sales Date</th>
                             <th style="padding: 8px; font-weight: bold; color: #ffffff;">Product</th>
                             <th style="padding: 8px; font-weight: bold; color: #ffffff;">Qty</th>
                             <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Price</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total</th>
-                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Entry Time & Date</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Revenue</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Unit Cost</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Total Cost</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Margin</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Margin %</th>
+                            <th style="padding: 8px; font-weight: bold; color: #ffffff;">Status</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
             processedData.forEach(sale => {
+                const rowStyle = sale.hasDiscrepancy ? 
+                    'background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444;' : 
+                    '';
+                
+                const marginColor = sale.totalMargin < 0 ? '#ef4444' : 
+                                   sale.marginPercent < 5 ? '#ffa500' : 
+                                   sale.marginPercent > 80 ? '#ffa500' : '#22c55e';
+                
                 html += `
-                    <tr>
-                        <td style="padding: 6px;">${sale.storeName}</td>
-                        <td style="padding: 6px;">${sale.employeeName}</td>
+                    <tr style="${rowStyle}">
                         <td style="padding: 6px;">${new Date(sale.date).toLocaleDateString()}</td>
+                        <td style="padding: 6px;">${sale.employeeName}</td>
+                        <td style="padding: 6px;">${sale.storeName}</td>
                         <td style="padding: 6px;">${sale.productName}</td>
                         <td style="padding: 6px; text-align: center; font-weight: bold;">${sale.qty}</td>
-                        <td style="padding: 6px; text-align: right;">${sale.unitPrice.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; ${sale.unitPrice === 0 ? 'color: #ef4444; font-weight: bold;' : ''}">${sale.unitPrice === 0 ? 'NO PRICE' : sale.unitPrice.toLocaleString() + ' DHS'}</td>
                         <td style="padding: 6px; text-align: right; font-weight: bold;">${sale.totalAmount.toLocaleString()} DHS</td>
-                        <td style="padding: 6px;">${sale.timestamp || 'N/A'}</td>
+                        <td style="padding: 6px; text-align: right; ${sale.unitCost === 0 ? 'color: #ef4444; font-weight: bold;' : ''}">${sale.unitCost === 0 ? 'NO COST' : sale.unitCost.toLocaleString() + ' DHS'}</td>
+                        <td style="padding: 6px; text-align: right; font-weight: bold;">${sale.totalCost.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; font-weight: bold; color: ${marginColor};">${sale.totalMargin.toLocaleString()} DHS</td>
+                        <td style="padding: 6px; text-align: right; font-weight: bold; color: ${marginColor};">${sale.marginPercent.toFixed(1)}%</td>
+                        <td style="padding: 6px; font-size: 0.7rem; color: ${sale.hasDiscrepancy ? '#ef4444' : '#22c55e'}; font-weight: bold;">
+                            ${sale.hasDiscrepancy ? sale.discrepancyFlags.join(', ') : '✓ OK'}
+                        </td>
                     </tr>
                 `;
             });
@@ -6278,6 +6427,28 @@
             html += `
                     </tbody>
                 </table>
+                
+                <div style="margin-top: 20px; padding: 16px; background: rgba(99, 99, 102, 0.1); border-radius: 8px;">
+                    <h4 style="color: #ffffff; margin-bottom: 12px; font-size: 1rem;">📊 MARGIN ANALYSIS SUMMARY</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; font-size: 0.9rem;">
+                        <div>
+                            <strong style="color: #007aff;">Overall Performance:</strong><br>
+                            <span style="color: rgba(255, 255, 255, 0.9);">
+                                Total Cost: ${totalCost.toLocaleString()} DHS<br>
+                                Total Revenue: ${totalRevenue.toLocaleString()} DHS<br>
+                                Total Margin: <span style="color: ${totalMargin >= 0 ? '#22c55e' : '#ef4444'};">${totalMargin.toLocaleString()} DHS (${overallMarginPercent.toFixed(1)}%)</span>
+                            </span>
+                        </div>
+                        <div>
+                            <strong style="color: #007aff;">Quality Check:</strong><br>
+                            <span style="color: rgba(255, 255, 255, 0.9);">
+                                Clean Records: ${totalSales - discrepancyCount} items<br>
+                                Issues Found: <span style="color: ${discrepancyCount > 0 ? '#ef4444' : '#22c55e'};">${discrepancyCount} items</span><br>
+                                Data Quality: <span style="color: ${discrepancyCount === 0 ? '#22c55e' : discrepancyCount < totalSales * 0.1 ? '#ffa500' : '#ef4444'};">${((totalSales - discrepancyCount) / totalSales * 100).toFixed(1)}%</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             `;
             
             return html;
@@ -6289,10 +6460,17 @@
             }
             
             console.log('Generating employee-focused summary report with data:', data);
-            console.log('Current firebaseStorePrices:', firebaseStorePrices);
+            
+            // Process data using shared function for consistency
+            const processedResult = processReportDataForAllFormats(data);
+            
+            // Store processed data globally for PDF/CSV export consistency
+            currentProcessedReportData = processedResult;
+            
+            const { filteredData, processedData, totalQuantity, totalRevenue } = processedResult;
             
             // Get date range for the report
-            const dates = [...new Set(data.map(sale => sale.date))].sort();
+            const dates = [...new Set(filteredData.map(sale => sale.date))].sort();
             const startDate = dates[0];
             const endDate = dates[dates.length - 1];
             const reportPeriod = startDate === endDate ? 
@@ -6313,7 +6491,7 @@
             });
             
             // Add employees from sales data (excluding hidden ones)
-            data.forEach(sale => {
+            filteredData.forEach(sale => {
                 if (sale.user && !hiddenEmployees.includes(sale.user)) {
                     allEmployees.add(sale.user);
                 }
@@ -6321,45 +6499,23 @@
             
             console.log('All employees found (excluding hidden):', Array.from(allEmployees));
             
-            // Group data by employee
+            // Group data by employee using processed data
             const byEmployee = {};
-            let grandTotalQty = 0;
-            let grandTotalRevenue = 0;
-            let grandTotalSales = data.length;
-            
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
+            let grandTotalQty = totalQuantity;
+            let grandTotalRevenue = totalRevenue;
+            let grandTotalSales = filteredData.length;
             
             // Initialize all employees with zero stats
             allEmployees.forEach(employeeName => {
                 byEmployee[employeeName] = { qty: 0, revenue: 0, sales: 0, isAbsent: true };
             });
             
-            // Process actual sales data (excluding hidden employees)
-            data.forEach(sale => {
-                // Skip sales from hidden employees
-                if (hiddenEmployees.includes(sale.user)) {
-                    return;
-                }
-                
-                let price = 0;
-                
-                // Get price from Firebase store prices or default prices
-                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    price = defaultPrices[sale.product] || 0;
-                }
-                
-                const revenue = price * sale.qty;
-                grandTotalQty += sale.qty;
-                grandTotalRevenue += revenue;
-                
+            // Process actual sales data using processed data (already filtered)
+            processedData.forEach(sale => {
                 // Mark employee as present and update stats
                 if (byEmployee[sale.user]) {
                     byEmployee[sale.user].qty += sale.qty;
-                    byEmployee[sale.user].revenue += revenue;
+                    byEmployee[sale.user].revenue += sale.totalAmount;
                     byEmployee[sale.user].sales += 1;
                     byEmployee[sale.user].isAbsent = false;
                 }
@@ -6467,22 +6623,15 @@
                         <tbody>
             `;
             
-            // Group by date for daily summary
+            // Group by date for daily summary using processed data
             const byDate = {};
-            data.forEach(sale => {
+            processedData.forEach(sale => {
                 if (!byDate[sale.date]) {
                     byDate[sale.date] = { qty: 0, revenue: 0, sales: 0, employees: new Set() };
                 }
                 
-                let price = 0;
-                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    price = defaultPrices[sale.product] || 0;
-                }
-                
                 byDate[sale.date].qty += sale.qty;
-                byDate[sale.date].revenue += (price * sale.qty);
+                byDate[sale.date].revenue += sale.totalAmount;
                 byDate[sale.date].sales += 1;
                 byDate[sale.date].employees.add(sale.user);
             });
@@ -6550,9 +6699,7 @@
             return generateSummaryReport(data);
         }
 
-        function generateDateRangeReport(data) {
-            return generateDetailedReport(data);
-        }
+
 
         // Shared margin calculation function for consistency between dashboard and PDF
         function calculateMarginData(data) {
@@ -6755,45 +6902,62 @@
         }
 
         function exportReportCSV() {
-            if (!window.currentReportData) {
+            if (!currentProcessedReportData) {
                 showErrorToast('No report data available to export');
                 return;
             }
             
             try {
-                const data = window.currentReportData;
+                console.log('Exporting CSV with processed report data:', currentProcessedReportData);
+                
+                const { processedData, totalQuantity, totalRevenue, totalCost, totalMargin, totalSales, discrepancyCount, overallMarginPercent } = currentProcessedReportData;
                 
                 // Add BOM for proper UTF-8 encoding
                 let csv = '\uFEFF';
-                csv += '"Store","Employee Name","Sales Date","Product","Qty","Unit Price","Total","Entry Time & Date"\r\n';
                 
-                data.forEach(sale => {
-                    const storeName = getStoreName(sale.store);
-                    const productName = getProductName(sale.product);
-                    const employeeName = getEmployeeName(sale.user);
+                // Add summary header
+                csv += '"EDEN DETAILED SALES REPORT WITH MARGIN ANALYSIS"\r\n';
+                csv += `"Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}"\r\n`;
+                csv += '\r\n';
+                
+                // Add summary totals
+                csv += '"SUMMARY TOTALS"\r\n';
+                csv += `"Total Sales Records","${totalSales}"\r\n`;
+                csv += `"Total Quantity Sold","${totalQuantity}"\r\n`;
+                csv += `"Total Revenue","${totalRevenue.toLocaleString()} DHS"\r\n`;
+                csv += `"Total Cost","${totalCost.toLocaleString()} DHS"\r\n`;
+                csv += `"Total Margin","${totalMargin.toLocaleString()} DHS (${overallMarginPercent.toFixed(1)}%)"\r\n`;
+                csv += `"Discrepancies Found","${discrepancyCount}"\r\n`;
+                csv += '\r\n';
+                
+                // Add detailed data header with margin columns
+                csv += '"DETAILED SALES DATA WITH MARGIN ANALYSIS"\r\n';
+                csv += '"Date","Employee","Store","Product","Qty","Unit Price (DHS)","Revenue (DHS)","Unit Cost (DHS)","Total Cost (DHS)","Margin (DHS)","Margin %","Status","Entry Time"\r\n';
+                
+                // Add each processed sale with all margin data
+                processedData.forEach(sale => {
                     const salesDate = new Date(sale.date).toLocaleDateString();
                     const entryDateTime = sale.timestamp || 'N/A';
-                    
-                    // Calculate unit price and total
-                    const defaultPrices = {
-                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                    };
-                    
-                    let unitPrice = 0;
-                    if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                        unitPrice = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                    } else {
-                        unitPrice = defaultPrices[sale.product] || 0;
-                    }
-                    
-                    const total = unitPrice * sale.qty;
+                    const status = sale.hasDiscrepancy ? sale.discrepancyFlags.join(', ') : 'OK';
                     
                     // Properly escape all values
-                    csv += `"${storeName.replace(/"/g, '""')}","${employeeName.replace(/"/g, '""')}","${salesDate}","${productName.replace(/"/g, '""')}","${sale.qty}","${unitPrice.toLocaleString()} DHS","${total.toLocaleString()} DHS","${entryDateTime.replace(/"/g, '""')}"\r\n`;
+                    csv += `"${salesDate}","${sale.employeeName.replace(/"/g, '""')}","${sale.storeName.replace(/"/g, '""')}","${sale.productName.replace(/"/g, '""')}","${sale.qty}","${sale.unitPrice.toLocaleString()}","${sale.totalAmount.toLocaleString()}","${sale.unitCost.toLocaleString()}","${sale.totalCost.toLocaleString()}","${sale.totalMargin.toLocaleString()}","${sale.marginPercent.toFixed(1)}%","${status}","${entryDateTime.replace(/"/g, '""')}"\r\n`;
                 });
                 
-                const filename = `sales_report_${new Date().toISOString().split('T')[0]}.csv`;
+                // Add legend
+                csv += '\r\n';
+                csv += '"LEGEND"\r\n';
+                csv += '"NO PRICE","Missing price data"\r\n';
+                csv += '"NO COST","Missing cost data"\r\n';
+                csv += '"LOSS","Negative margin (loss-making sale)"\r\n';
+                csv += '"LOW MARGIN","Margin less than 5%"\r\n';
+                csv += '"HIGH MARGIN","Margin more than 80%"\r\n';
+                csv += '"OK","No issues detected"\r\n';
+                
+                const filename = `EDEN_Detailed_Report_${new Date().toISOString().split('T')[0]}.csv`;
                 downloadCSVFile(csv, filename);
+                
+                console.log('CSV export completed with processed data');
                 
             } catch (error) {
                 console.error('Error exporting report CSV:', error);
@@ -6802,16 +6966,14 @@
         }
 
         function exportReportPDF() {
-            if (!window.currentReportData || window.currentReportData.length === 0) {
+            if (!currentProcessedReportData) {
                 showErrorToast('No report data available to export');
                 return;
             }
             
             try {
-                console.log('Starting PDF export...');
-                console.log('Report type:', window.currentReportType);
-                console.log('Data length:', window.currentReportData.length);
-                console.log('Sample data:', window.currentReportData.slice(0, 2));
+                console.log('Starting PDF export with processed data...');
+                console.log('Processed report data:', currentProcessedReportData);
                 
                 // Check for jsPDF with better error handling
                 let jsPDF = null;
@@ -6832,144 +6994,23 @@
                 const doc = new jsPDF();
                 console.log('jsPDF instance created successfully');
                 
-                // Get data and report type
-                const data = window.currentReportData;
+                // Get processed data
+                const { processedData, totalQuantity, totalRevenue, totalCost, totalMargin, totalSales, discrepancyCount, overallMarginPercent } = currentProcessedReportData;
                 const reportType = window.currentReportType || 'detailed';
                 
                 console.log('Processing report type:', reportType);
                 
                 // Check report type for proper handling
-                const isMarginReport = reportType === 'margin';
                 const isSummaryReport = ['summary', 'product', 'employee', 'store', 'monthly'].includes(reportType);
                 
-                if (isMarginReport) {
-                    console.log('Generating PDF for margin analysis report...');
+                if (isSummaryReport) {
+                    console.log('Generating PDF for summary report using processed data...');
+                    
+                    // Use the same processed data that was used for HTML display
+                    const { filteredData, processedData, totalQuantity, totalRevenue } = currentProcessedReportData;
                     
                     // Get date range for the report
-                    const dates = [...new Set(data.map(sale => sale.date))].sort();
-                    const startDate = dates[0];
-                    const endDate = dates[dates.length - 1];
-                    const reportPeriod = startDate === endDate ? 
-                        new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
-                        `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
-                    
-                    // Use shared calculation function for consistency
-                    const { 
-                        grandTotalQty: totalQuantity, 
-                        grandTotalRevenue: totalRevenue, 
-                        grandTotalCost: totalCost, 
-                        grandTotalMargin: totalMargin, 
-                        sortedEmployees 
-                    } = calculateMarginData(data);
-                    
-                    console.log('Margin calculations:', { totalQuantity, totalRevenue, totalCost, totalMargin, employeeCount: sortedEmployees.length });
-                    
-                    const overallMarginPercent = totalRevenue > 0 ? ((totalMargin / totalRevenue) * 100) : 0;
-                    
-                    // Create PDF with margin analysis format
-                    doc.setFontSize(16);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('EDEN MARGIN ANALYSIS REPORT', 105, 20, { align: 'center' });
-                    
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(reportPeriod, 105, 30, { align: 'center' });
-                    
-                    // Summary totals
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('MARGIN SUMMARY', 20, 50);
-                    
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(`Total Quantity Sold: ${totalQuantity.toLocaleString()} units`, 20, 60);
-                    doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 70);
-                    doc.text(`Total Cost: ${totalCost.toLocaleString()} DHS`, 20, 80);
-                    doc.text(`Total Margin: ${totalMargin.toLocaleString()} DHS`, 20, 90);
-                    doc.text(`Overall Margin %: ${overallMarginPercent.toFixed(1)}%`, 20, 100);
-                    
-                    // Employee Margin Performance Table
-                    if (typeof doc.autoTable === 'function' && sortedEmployees.length > 0) {
-                        console.log('Creating autoTable with employees:', sortedEmployees.length);
-                        
-                        const marginTableData = sortedEmployees.map(([employee, stats], index) => {
-                            const marginPercent = stats.revenue > 0 ? ((stats.margin / stats.revenue) * 100) : 0;
-                            return [
-                                index + 1,
-                                employee,
-                                stats.qty.toLocaleString(),
-                                `${stats.revenue.toLocaleString()} DHS`,
-                                `${stats.cost.toLocaleString()} DHS`,
-                                `${stats.margin.toLocaleString()} DHS`,
-                                `${marginPercent.toFixed(1)}%`,
-                                stats.sales
-                            ];
-                        });
-                        
-                        console.log('Table data prepared:', marginTableData.length, 'rows');
-                        
-                        doc.autoTable({
-                            head: [['Rank', 'Employee Name', 'Qty Sold', 'Revenue', 'Cost', 'Margin', 'Margin %', 'Sales']],
-                            body: marginTableData,
-                            startY: 115,
-                            styles: { fontSize: 8, cellPadding: 2 },
-                            headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
-                            alternateRowStyles: { fillColor: [245, 245, 245] },
-                            margin: { left: 10, right: 10 },
-                            columnStyles: {
-                                0: { halign: 'center' },
-                                2: { halign: 'center' },
-                                3: { halign: 'right' },
-                                4: { halign: 'right' },
-                                5: { halign: 'right' },
-                                6: { halign: 'right' },
-                                7: { halign: 'center' }
-                            }
-                        });
-                        
-                        console.log('AutoTable created successfully');
-                        
-                        // Analysis Summary
-                        const finalY = doc.lastAutoTable.finalY || 200;
-                        
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('ANALYSIS SUMMARY', 20, finalY + 20);
-                        
-                        doc.setFont('helvetica', 'normal');
-                        if (sortedEmployees.length > 0) {
-                            doc.text(`Best Performing Employee: ${sortedEmployees[0][0]} - ${sortedEmployees[0][1].margin.toLocaleString()} DHS margin`, 20, finalY + 35);
-                            doc.text(`Average Margin per Employee: ${(totalMargin / sortedEmployees.length).toLocaleString()} DHS`, 20, finalY + 45);
-                        } else {
-                            doc.text('No employee data available', 20, finalY + 35);
-                        }
-                        doc.text(`Total Units Sold: ${totalQuantity.toLocaleString()} units`, 20, finalY + 55);
-                        doc.text(`Average Margin per Unit: ${totalQuantity > 0 ? (totalMargin / totalQuantity).toFixed(2) : '0'} DHS`, 20, finalY + 65);
-                        
-                    } else {
-                        // Fallback without autoTable
-                        console.log('Using fallback without autoTable');
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('EMPLOYEE PERFORMANCE', 20, 120);
-                        
-                        let yPos = 135;
-                        doc.setFont('helvetica', 'normal');
-                        sortedEmployees.slice(0, 15).forEach(([employee, stats], index) => {
-                            if (yPos > 270) {
-                                doc.addPage();
-                                yPos = 30;
-                            }
-                            const marginPercent = stats.revenue > 0 ? ((stats.margin / stats.revenue) * 100) : 0;
-                            doc.text(`${index + 1}. ${employee}: ${stats.margin.toLocaleString()} DHS (${marginPercent.toFixed(1)}%)`, 20, yPos);
-                            yPos += 10;
-                        });
-                    }
-                    
-                } else if (isSummaryReport) {
-                    console.log('Generating PDF for summary report...');
-                    
-                    // Get date range for the report
-                    const dates = [...new Set(data.map(sale => sale.date))].sort();
+                    const dates = [...new Set(filteredData.map(sale => sale.date))].sort();
                     const startDate = dates[0];
                     const endDate = dates[dates.length - 1];
                     const reportPeriod = startDate === endDate ? 
@@ -6978,9 +7019,6 @@
                     
                     // Hidden employees list - these will not appear in reports
                     const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
-                    
-                    // Filter data to exclude hidden employees
-                    const filteredData = data.filter(sale => !hiddenEmployees.includes(sale.user));
                     
                     // Get all possible employees (default + Firebase) excluding hidden ones
                     const allEmployees = new Set();
@@ -7001,13 +7039,9 @@
                     
                     console.log('All employees found (excluding hidden):', Array.from(allEmployees));
                     
-                    // Calculate comprehensive statistics
-                    const defaultPrices = {
-                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                    };
-                    
-                    let grandTotalQty = 0;
-                    let grandTotalRevenue = 0;
+                    // Use processed data for employee calculations
+                    let grandTotalQty = totalQuantity;
+                    let grandTotalRevenue = totalRevenue;
                     let grandTotalSales = filteredData.length;
                     const byEmployee = {};
                     
@@ -7016,25 +7050,12 @@
                         byEmployee[employeeName] = { qty: 0, revenue: 0, sales: 0, isAbsent: true };
                     });
                     
-                    // Process actual sales data (excluding hidden employees)
-                    filteredData.forEach(sale => {
-                        let price = 0;
-                        
-                        // Get price from Firebase store prices or default prices
-                        if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                            price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                        } else {
-                            price = defaultPrices[sale.product] || 0;
-                        }
-                        
-                        const revenue = price * sale.qty;
-                        grandTotalQty += sale.qty;
-                        grandTotalRevenue += revenue;
-                        
+                    // Process actual sales data using processed data (already calculated)
+                    processedData.forEach(sale => {
                         // Mark employee as present and update stats
                         if (byEmployee[sale.user]) {
                             byEmployee[sale.user].qty += sale.qty;
-                            byEmployee[sale.user].revenue += revenue;
+                            byEmployee[sale.user].revenue += sale.totalAmount;
                             byEmployee[sale.user].sales += 1;
                             byEmployee[sale.user].isAbsent = false;
                         }
@@ -7049,7 +7070,7 @@
                     
                     const sortedEmployees = [...presentEmployees, ...absentEmployees];
                     
-                    console.log('Summary calculations:', { grandTotalQty, grandTotalRevenue, employeeCount: sortedEmployees.length, presentCount: presentEmployees.length, absentCount: absentEmployees.length });
+                    console.log('PDF Summary calculations (using processed data):', { grandTotalQty, grandTotalRevenue, employeeCount: sortedEmployees.length, presentCount: presentEmployees.length, absentCount: absentEmployees.length });
                     
                     // Create PDF with summary report format
                     doc.setFontSize(16);
@@ -7142,15 +7163,10 @@
                     }
                     
                 } else {
-                    console.log('Generating PDF for detailed report...');
+                    console.log('Generating PDF for detailed report with margin analysis...');
                     
-                    // Default prices for calculations
-                    const defaultPrices = {
-                        'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-                    };
-                    
-                    // Get date range
-                    const dates = [...new Set(data.map(sale => sale.date))].sort();
+                    // Get date range from processed data
+                    const dates = [...new Set(processedData.map(sale => sale.date))].sort();
                     const startDate = dates[0];
                     const endDate = dates[dates.length - 1];
                     const reportPeriod = startDate === endDate ? 
@@ -7160,91 +7176,100 @@
                     // Add title
                     doc.setFontSize(16);
                     doc.setFont('helvetica', 'bold');
-                    doc.text('EDEN DETAILED SALES REPORT', 105, 20, { align: 'center' });
+                    doc.text('EDEN DETAILED SALES REPORT WITH MARGIN ANALYSIS', 105, 20, { align: 'center' });
                     
                     doc.setFontSize(12);
                     doc.setFont('helvetica', 'normal');
                     doc.text(reportPeriod, 105, 30, { align: 'center' });
                     
-                    // Calculate summary
-                    let totalQty = 0;
-                    let totalRevenue = 0;
+                    console.log('PDF detailed report calculations:', { totalQuantity, totalRevenue, totalMargin, recordCount: processedData.length });
                     
-                    const processedData = data.map(sale => {
-                        let price = 0;
-                        
-                        // Get price from Firebase store prices or default prices
-                        if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                            price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                        } else {
-                            price = defaultPrices[sale.product] || 0;
-                        }
-                        
-                        const totalAmount = price * sale.qty;
-                        totalQty += sale.qty;
-                        totalRevenue += totalAmount;
-                        
-                        return {
-                            ...sale,
-                            unitPrice: price,
-                            totalAmount: totalAmount,
-                            storeName: getStoreName(sale.store),
-                            productName: getProductName(sale.product),
-                            employeeName: getEmployeeName(sale.user)
-                        };
-                    });
-                    
-                    console.log('Detailed report calculations:', { totalQty, totalRevenue, recordCount: processedData.length });
-                    
-                    // Summary section
+                    // Summary section with margin analysis
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
-                    doc.text('SUMMARY', 20, 50);
+                    doc.text('SUMMARY WITH MARGIN ANALYSIS', 20, 50);
                     
                     doc.setFont('helvetica', 'normal');
-                    doc.text(`Total Sales Records: ${data.length}`, 20, 60);
-                    doc.text(`Total Quantity Sold: ${totalQty.toLocaleString()}`, 20, 70);
+                    doc.text(`Total Sales Records: ${totalSales}`, 20, 60);
+                    doc.text(`Total Quantity Sold: ${totalQuantity.toLocaleString()}`, 20, 70);
                     doc.text(`Total Revenue: ${totalRevenue.toLocaleString()} DHS`, 20, 80);
+                    doc.text(`Total Cost: ${totalCost.toLocaleString()} DHS`, 20, 90);
+                    doc.text(`Total Margin: ${totalMargin.toLocaleString()} DHS (${overallMarginPercent.toFixed(1)}%)`, 20, 100);
+                    doc.text(`Discrepancies Found: ${discrepancyCount}`, 20, 110);
                     
-                    // Detailed table
+                    // Detailed table with margin columns
                     if (typeof doc.autoTable === 'function') {
-                        console.log('Creating detailed sales table');
+                        console.log('Creating detailed sales table with margin analysis');
                         
                         const tableData = processedData.map(sale => [
-                            sale.storeName,
-                            sale.employeeName,
                             new Date(sale.date).toLocaleDateString(),
+                            sale.employeeName,
+                            sale.storeName,
                             sale.productName,
                             sale.qty,
-                            `${sale.unitPrice.toLocaleString()} DHS`,
-                            `${sale.totalAmount.toLocaleString()} DHS`
+                            `${sale.unitPrice.toLocaleString()}`,
+                            `${sale.totalAmount.toLocaleString()}`,
+                            `${sale.unitCost.toLocaleString()}`,
+                            `${sale.totalCost.toLocaleString()}`,
+                            `${sale.totalMargin.toLocaleString()}`,
+                            `${sale.marginPercent.toFixed(1)}%`,
+                            sale.hasDiscrepancy ? sale.discrepancyFlags.join(', ') : 'OK'
                         ]);
                         
                         doc.autoTable({
-                            head: [['Store', 'Employee', 'Date', 'Product', 'Qty', 'Unit Price', 'Total']],
+                            head: [['Date', 'Employee', 'Store', 'Product', 'Qty', 'Unit Price', 'Revenue', 'Unit Cost', 'Total Cost', 'Margin', 'Margin %', 'Status']],
                             body: tableData,
-                            startY: 95,
-                            styles: { fontSize: 7, cellPadding: 2 },
+                            startY: 125,
+                            styles: { fontSize: 6, cellPadding: 1 },
                             headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
                             alternateRowStyles: { fillColor: [245, 245, 245] },
-                            margin: { left: 10, right: 10 }
+                            margin: { left: 5, right: 5 },
+                            columnStyles: {
+                                0: { cellWidth: 15 }, // Date
+                                1: { cellWidth: 20 }, // Employee
+                                2: { cellWidth: 18 }, // Store
+                                3: { cellWidth: 25 }, // Product
+                                4: { cellWidth: 10 }, // Qty
+                                5: { cellWidth: 15 }, // Unit Price
+                                6: { cellWidth: 15 }, // Revenue
+                                7: { cellWidth: 15 }, // Unit Cost
+                                8: { cellWidth: 15 }, // Total Cost
+                                9: { cellWidth: 15 }, // Margin
+                                10: { cellWidth: 12 }, // Margin %
+                                11: { cellWidth: 20 }  // Status
+                            },
+                            didParseCell: function(data) {
+                                // Highlight discrepancy rows
+                                if (data.row.raw && data.row.raw[11] !== 'OK') {
+                                    data.cell.styles.textColor = [200, 0, 0]; // Red text for discrepancies
+                                }
+                                // Color margin values
+                                if (data.column.index === 9 || data.column.index === 10) { // Margin columns
+                                    const marginValue = parseFloat(data.row.raw[9]);
+                                    if (marginValue < 0) {
+                                        data.cell.styles.textColor = [200, 0, 0]; // Red for negative
+                                    } else if (marginValue > 0) {
+                                        data.cell.styles.textColor = [0, 150, 0]; // Green for positive
+                                    }
+                                }
+                            }
                         });
                         
-                        console.log('Detailed table created successfully');
+                        console.log('Detailed margin table created successfully');
                     } else {
                         // Fallback without autoTable
-                        console.log('Using fallback for detailed report');
+                        console.log('Using fallback for detailed margin report');
                         doc.setFontSize(8);
                         doc.setFont('helvetica', 'normal');
-                        let yPos = 100;
+                        let yPos = 130;
                         
-                        processedData.slice(0, 20).forEach((sale, index) => {
+                        processedData.slice(0, 15).forEach((sale, index) => {
                             if (yPos > 270) {
                                 doc.addPage();
                                 yPos = 30;
                             }
-                            doc.text(`${index + 1}. ${sale.productName} - Qty: ${sale.qty} - ${sale.totalAmount.toLocaleString()} DHS`, 20, yPos);
-                            yPos += 8;
+                            doc.text(`${index + 1}. ${sale.productName} - Qty: ${sale.qty} - Revenue: ${sale.totalAmount.toLocaleString()} - Margin: ${sale.totalMargin.toLocaleString()} DHS`, 20, yPos);
+                            yPos += 10;
                         });
                     }
                 }
@@ -7472,65 +7497,30 @@
             
             console.log('🎯 YESTERDAY SALES (excluding hidden employees):', filteredYesterdaySales.length);
             
-            // Calculate total sales amount
-            let totalAmount = 0;
-            let totalQty = 0;
-            const userSales = {};
+            // Use shared calculation function for consistency
+            const {
+                grandTotalQty,
+                grandTotalRevenue,
+                grandTotalCost,
+                grandTotalMargin,
+                sortedEmployees,
+                byEmployee
+            } = calculateMarginData(filteredYesterdaySales);
+            
+            // Find best performer by quantity sold (matching PDF format)
+            let bestPerformer = 'No Data';
+            let maxQty = 0;
+            
+            sortedEmployees.forEach(([user, stats]) => {
+                if (stats.qty > maxQty) {
+                    maxQty = stats.qty;
+                    bestPerformer = user;
+                }
+            });
+            
+            // Track product sales for most sold product
             const productSales = {};
-            
-            // Default prices for fallback
-            const defaultPrices = {
-                'product1': 2500, 'product2': 1200, 'product3': 800, 'product4': 300, 'product5': 450
-            };
-            
-            // Get all possible employees (Firebase only, excluding hidden ones) for tracking absent employees
-            const allEmployees = new Set();
-            
-            // Add Firebase employees (excluding hidden ones)
-            Object.values(firebaseEmployees).forEach(employee => {
-                if (employee.name && !hiddenEmployees.includes(employee.name)) {
-                    allEmployees.add(employee.name);
-                }
-            });
-            
-            // Add employees from sales data (excluding hidden ones)
             filteredYesterdaySales.forEach(sale => {
-                if (sale.user && !hiddenEmployees.includes(sale.user)) {
-                    allEmployees.add(sale.user);
-                }
-            });
-            
-            // Initialize all employees
-            allEmployees.forEach(employeeName => {
-                userSales[employeeName] = { amount: 0, qty: 0, isAbsent: true };
-            });
-            
-            filteredYesterdaySales.forEach(sale => {
-                const qty = parseInt(sale.qty);
-                if (isNaN(qty) || qty <= 0) return;
-                
-                // Get price from Firebase store prices or default prices
-                let price = 0;
-                if (firebaseStorePrices && firebaseStorePrices[sale.store] && firebaseStorePrices[sale.store][sale.product]) {
-                    price = parseFloat(firebaseStorePrices[sale.store][sale.product]) || 0;
-                } else {
-                    price = defaultPrices[sale.product] || 0;
-                }
-                
-                const saleAmount = price * qty;
-                totalAmount += saleAmount;
-                totalQty += qty;
-                
-                // Track sales by user for best performer (use actual user name, excluding hidden)
-                const userName = sale.user || 'Unknown User';
-                if (!userSales[userName]) {
-                    userSales[userName] = { amount: 0, qty: 0, isAbsent: true };
-                }
-                userSales[userName].amount += saleAmount;
-                userSales[userName].qty += qty;
-                userSales[userName].isAbsent = false; // Mark as present
-                
-                // Track product sales for most sold product (use actual product name)
                 const productName = getProductName(sale.product);
                 
                 // Only track valid product names
@@ -7542,33 +7532,9 @@
                     if (!productSales[productName]) {
                         productSales[productName] = 0;
                     }
-                    productSales[productName] += qty;
+                    productSales[productName] += parseInt(sale.qty) || 0;
                 }
             });
-            
-            // Find best performer by quantity sold (matching PDF format)
-            let bestPerformer = 'No Data';
-            let maxQty = 0;
-            
-            Object.entries(userSales).forEach(([user, stats]) => {
-                if (!stats.isAbsent && stats.qty > maxQty) {
-                    maxQty = stats.qty;
-                    bestPerformer = user;
-                }
-            });
-            
-            // Count absent employees
-            const absentEmployees = Object.entries(userSales).filter(([user, stats]) => stats.isAbsent);
-            if (absentEmployees.length > 0) {
-                const absentCount = absentEmployees.length;
-                const absentNames = absentEmployees.map(([name]) => name).join(', ');
-                console.log(`📊 ABSENT EMPLOYEES (${absentCount}):`, absentNames);
-                
-                // If best performer is "No Data" but we have absent employees, show absent info
-                if (bestPerformer === 'No Data' && absentCount > 0) {
-                    bestPerformer = `All ${absentCount} employees absent`;
-                }
-            }
             
             // Find most sold product by quantity
             let mostSoldProduct = 'No Data';
@@ -7580,6 +7546,22 @@
                     mostSoldProduct = `${product} (${qty} units)`;
                 }
             });
+            
+            // Get all possible employees for absent tracking
+            const allEmployees = new Set();
+            Object.values(firebaseEmployees).forEach(employee => {
+                if (employee.name && !hiddenEmployees.includes(employee.name)) {
+                    allEmployees.add(employee.name);
+                }
+            });
+            
+            // Check for absent employees
+            const presentEmployees = new Set(sortedEmployees.map(([name]) => name));
+            const absentEmployees = Array.from(allEmployees).filter(name => !presentEmployees.has(name));
+            
+            if (absentEmployees.length > 0 && bestPerformer === 'No Data') {
+                bestPerformer = `All ${absentEmployees.length} employees absent`;
+            }
             
             // Update display elements if they exist
             const totalSalesElement = document.getElementById('totalSalesAmount');
@@ -7609,11 +7591,11 @@
             
             // Update all display elements instantly
             if (totalSalesElement) {
-                totalSalesElement.textContent = `${totalAmount.toLocaleString()} DHS`;
+                totalSalesElement.textContent = `${grandTotalRevenue.toLocaleString()} DHS`;
             }
             
             if (totalQtyElement) {
-                totalQtyElement.textContent = totalQty.toString();
+                totalQtyElement.textContent = grandTotalQty.toString();
             }
             
             if (bestPerformerElement) {
@@ -7628,8 +7610,9 @@
                 yesterdayStr,
                 totalSalesCount: yesterdaySales.length,
                 filteredSalesCount: filteredYesterdaySales.length,
-                totalAmount,
-                totalQty,
+                totalAmount: grandTotalRevenue,
+                totalQty: grandTotalQty,
+                totalMargin: grandTotalMargin,
                 bestPerformer,
                 mostSoldProduct,
                 hiddenEmployeesExcluded: hiddenEmployees
@@ -8604,5 +8587,5 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976b7903e510f9db',t:'MTc1NjQ2NDQ3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
