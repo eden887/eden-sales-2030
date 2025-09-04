@@ -1549,7 +1549,7 @@
                     
                     // If no date found, use current date as fallback
                     if (!saleDate) {
-                        saleDate = new Date().toISOString().split('T')[0];
+                        saleDate = dubaiDate();
                         console.warn('Sale missing date, using current date as fallback:', sale);
                     }
                     
@@ -1561,7 +1561,7 @@
                     // Validate date format
                     if (!/^\d{4}-\d{2}-\d{2}$/.test(saleDate)) {
                         console.error('Invalid date format detected:', saleDate, 'for sale:', sale);
-                        saleDate = new Date().toISOString().split('T')[0];
+                        saleDate = dubaiDate();
                     }
                     
                     const processedSale = {
@@ -1571,8 +1571,8 @@
                         product: sale.product || 'product1',
                         qty: parseInt(sale.qty) || 0,
                         user: sale.user || 'Unknown User',
-                        timestamp: sale.timestamp || new Date().toLocaleString(),
-                        createdAt: sale.createdAt || new Date().toISOString(),
+                        timestamp: dubaiDate(),
+                        createdAt: dubaiDate(),
                         saleDate: sale.saleDate, // Preserve backup date field
                         entryTimestamp: sale.entryTimestamp, // Preserve entry timestamp
                         firebaseKey: sale.firebaseKey // Preserve Firebase key for updates
@@ -2760,7 +2760,7 @@
                     id: textId,
                     name: name,
                     code: productCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: userSession.username
                 };
                 
@@ -2803,7 +2803,7 @@
                     password: password,
                     role: role,
                     empId: employeeId,
-                    createdAt: new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: userSession.username
                 };
                 
@@ -2839,7 +2839,7 @@
                     id: textId,
                     name: name,
                     code: storeCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: userSession.username
                 };
                 
@@ -3105,7 +3105,7 @@
                 stores: JSON.parse(localStorage.getItem('stores')) || [],
                 storePrices: JSON.parse(localStorage.getItem('storePrices')) || {},
                 userSession: JSON.parse(localStorage.getItem('userSession')) || {},
-                timestamp: new Date().toISOString(),
+                timestamp: dubaiDate(),
                 version: '1.0'
             };
             
@@ -3113,7 +3113,7 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `eden_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `eden_backup_${dubaiDate()}.json`;
             a.click();
             window.URL.revokeObjectURL(url);
             
@@ -4113,8 +4113,8 @@
                     product: productId,
                     qty: parseInt(quantity) || 0,
                     user: user,
-                    timestamp: sale.timestamp || new Date().toLocaleString(),
-                    createdAt: sale.createdAt || new Date().toISOString()
+                    timestamp: dubaiDate(),
+                    createdAt: dubaiDate()
                 };
                 
                 if (cleanSale.qty > 0) {
@@ -4217,7 +4217,7 @@
                     id: generateTextId('PROD'),
                     name: productName,
                     code: productCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
@@ -4245,7 +4245,7 @@
                         id: product.id || generateTextId('PROD'),
                         name: product.name || 'Unnamed Product',
                         code: product.code || generateProductCode(),
-                        createdAt: product.createdAt || new Date().toISOString(),
+                        createdAt: dubaiDate(),
                         createdBy: product.createdBy || 'Import',
                         type: product.type || 'imported'
                     };
@@ -4333,7 +4333,7 @@
                     username: username,
                     password: password,
                     role: role,
-                    createdAt: new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
@@ -4364,7 +4364,7 @@
                         username: employee.username || 'user' + Date.now(),
                         password: employee.password || 'password123',
                         role: employee.role || 'sales',
-                        createdAt: employee.createdAt || new Date().toISOString(),
+                        createdAt: dubaiDate(),
                         createdBy: employee.createdBy || 'Import',
                         type: employee.type || 'imported'
                     };
@@ -4463,7 +4463,7 @@
                     id: generateTextId('STORE'),
                     name: storeName,
                     code: storeCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
@@ -4491,7 +4491,7 @@
                         id: store.id || generateTextId('STORE'),
                         name: store.name || 'Unnamed Store',
                         code: store.code || generateStoreCode(),
-                        createdAt: store.createdAt || new Date().toISOString(),
+                        createdAt: dubaiDate(),
                         createdBy: store.createdBy || 'Import',
                         type: store.type || 'imported'
                     };
@@ -4961,7 +4961,7 @@
                 switch(type) {
                     case 'sales':
                         html += `
-                            <div>${new Date(item.date).toLocaleDateString()}</div>
+                            <div>${fromYMD_Dubai(item.date).toLocaleDateString()}</div>
                             <div>${getEmployeeName(item.user)}</div>
                             <div>${getStoreName(item.store)}</div>
                             <div>${getProductName(item.product)}</div>
@@ -4978,7 +4978,7 @@
                         html += `
                             <div>${item.code}</div>
                             <div>${item.name}</div>
-                            <div>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</div>
+                            <div>${item.createdAt ? fromYMD_Dubai(item.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div>
                                 <button class="btn-edit" onclick="editProduct('${productKey}')">Edit</button>
                                 <button class="btn-delete" onclick="deleteProduct('${productKey}')">Delete</button>
@@ -4991,7 +4991,7 @@
                         html += `
                             <div>${item.empId}</div>
                             <div>${item.name}</div>
-                            <div>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</div>
+                            <div>${item.createdAt ? fromYMD_Dubai(item.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div>
                                 <button class="btn-edit" onclick="editEmployee('${employeeKey}')">Edit</button>
                                 <button class="btn-delete" onclick="deleteEmployee('${employeeKey}')">Delete</button>
@@ -5004,7 +5004,7 @@
                         html += `
                             <div>${item.code}</div>
                             <div>${item.name}</div>
-                            <div>${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</div>
+                            <div>${item.createdAt ? fromYMD_Dubai(item.createdAt).toLocaleDateString() : 'N/A'}</div>
                             <div>
                                 <button class="btn-edit" onclick="editStore('${storeKey}')">Edit</button>
                                 <button class="btn-delete" onclick="deleteStore('${storeKey}')">Delete</button>
@@ -5051,7 +5051,7 @@
             endDate.style.display = 'none';
             
             // Set default dates
-            const today = new Date().toISOString().split('T')[0];
+            const today = dubaiDate();
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -5102,7 +5102,7 @@
                 return salesData;
             }
             
-            const today = new Date().toISOString().split('T')[0];
+            const today = dubaiDate();
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -5805,7 +5805,7 @@
                     id: updatedStore.id || storeId,
                     name: updatedStore.name || 'Unnamed Store',
                     code: updatedStore.code || generateStoreCode(),
-                    createdAt: updatedStore.createdAt || new Date().toISOString(),
+                    createdAt: dubaiDate(),
                     createdBy: updatedStore.createdBy || 'System',
                     type: updatedStore.type || 'custom',
                     updatedAt: updatedStore.updatedAt,
@@ -5880,13 +5880,13 @@
                 // Ensure all required fields are present and not undefined
                 const saleToSave = {
                     id: updatedSale.id || saleId,
-                    date: updatedSale.date || new Date().toISOString().split('T')[0],
+                    date: updatedSale.date || dubaiDate(),
                     store: updatedSale.store || 'store1',
                     product: updatedSale.product || 'product1',
                     qty: parseInt(updatedSale.qty) || 0,
                     user: updatedSale.user || 'Unknown User',
-                    timestamp: updatedSale.timestamp || new Date().toLocaleString(),
-                    createdAt: updatedSale.createdAt || new Date().toISOString(),
+                    timestamp: dubaiDate(),
+                    createdAt: dubaiDate(),
                     updatedAt: updatedSale.updatedAt,
                     updatedBy: updatedSale.updatedBy
                 };
@@ -5908,7 +5908,7 @@
                                 break;
                             case 'date':
                             case 'selectedDate':
-                                saleToSave[key] = new Date().toISOString().split('T')[0];
+                                saleToSave[key] = dubaiDate();
                                 break;
                             case 'store':
                                 saleToSave[key] = 'store1';
@@ -5923,7 +5923,7 @@
                                 saleToSave[key] = 'Unknown User';
                                 break;
                             case 'timestamp':
-                                saleToSave[key] = new Date().toLocaleString();
+                                saleToSave[key] = dubaiDate();
                                 break;
                             case 'createdAt':
                             case 'updatedAt':
@@ -6275,7 +6275,7 @@
             
             // Sort by date (newest first), then by timestamp
             processedData.sort((a, b) => {
-                const dateCompare = new Date(b.date) - new Date(a.date);
+                const dateCompare = fromYMD_Dubai(b.date) - fromYMD_Dubai(a.date);
                 if (dateCompare !== 0) return dateCompare;
                 
                 // If same date, sort by timestamp
@@ -6406,7 +6406,7 @@
                 
                 html += `
                     <tr style="${rowStyle}">
-                        <td style="padding: 6px;">${new Date(sale.date).toLocaleDateString()}</td>
+                        <td style="padding: 6px;">${fromYMD_Dubai(sale.date).toLocaleDateString()}</td>
                         <td style="padding: 6px;">${sale.employeeName}</td>
                         <td style="padding: 6px;">${sale.storeName}</td>
                         <td style="padding: 6px;">${sale.productName}</td>
@@ -6936,7 +6936,7 @@
                 
                 // Add each processed sale with all margin data
                 processedData.forEach(sale => {
-                    const salesDate = new Date(sale.date).toLocaleDateString();
+                    const salesDate = fromYMD_Dubai(sale.date).toLocaleDateString();
                     const entryDateTime = sale.timestamp || 'N/A';
                     const status = sale.hasDiscrepancy ? sale.discrepancyFlags.join(', ') : 'OK';
                     
@@ -6954,7 +6954,7 @@
                 csv += '"HIGH MARGIN","Margin more than 80%"\r\n';
                 csv += '"OK","No issues detected"\r\n';
                 
-                const filename = `EDEN_Detailed_Report_${new Date().toISOString().split('T')[0]}.csv`;
+                const filename = `EDEN_Detailed_Report_${dubaiDate()}.csv`;
                 downloadCSVFile(csv, filename);
                 
                 console.log('CSV export completed with processed data');
@@ -7202,7 +7202,7 @@
                         console.log('Creating detailed sales table with margin analysis');
                         
                         const tableData = processedData.map(sale => [
-                            new Date(sale.date).toLocaleDateString(),
+                            fromYMD_Dubai(sale.date).toLocaleDateString(),
                             sale.employeeName,
                             sale.storeName,
                             sale.productName,
@@ -7285,7 +7285,7 @@
                 }
                 
                 // Save the PDF
-                const filename = `EDEN_${reportType}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                const filename = `EDEN_${reportType}_Report_${dubaiDate()}.pdf`;
                 console.log('Saving PDF as:', filename);
                 
                 doc.save(filename);
@@ -7319,7 +7319,7 @@
                     fallbackDoc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
                     fallbackDoc.text(`Total Records: ${window.currentReportData.length}`, 20, 60);
                     fallbackDoc.text('For detailed data, please use CSV export.', 20, 80);
-                    fallbackDoc.save(`EDEN_Simple_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                    fallbackDoc.save(`EDEN_Simple_Report_${dubaiDate()}.pdf`);
                     showSuccessToast('Simple PDF report generated successfully!');
                 } catch (fallbackError) {
                     console.error('Fallback PDF also failed:', fallbackError);
@@ -7461,7 +7461,7 @@
                 today: today.toISOString().split('T')[0],
                 yesterday: yesterdayStr,
                 yesterdayFormatted: yesterday.toLocaleDateString(),
-                currentTime: new Date().toLocaleString(),
+                currentTime: dubaiDate(),
                 totalSalesInSystem: salesData.length
             });
             
@@ -7762,7 +7762,7 @@
             console.log('Saving sale with EXACT selected date:', selectedDate);
             
             // Validate that the date is not in the future
-            const today = new Date().toISOString().split('T')[0];
+            const today = dubaiDate();
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -7788,9 +7788,9 @@
                 store: store,
                 product: product,
                 qty: qty,
-                timestamp: new Date().toLocaleString(),
+                timestamp: dubaiDate(),
                 user: userSession.username,
-                createdAt: new Date().toISOString(),
+                createdAt: dubaiDate(),
                 saleDate: selectedDate, // Backup field to ensure date integrity
                 entryTimestamp: Date.now() // Unix timestamp for precise tracking
             };
@@ -7874,7 +7874,7 @@
         function updateTotalQty() {
             // Get the selected date from the form (for sales entry page)
             const dateSelect = document.getElementById('salesDate');
-            let targetDate = new Date().toISOString().split('T')[0]; // Default to today
+            let targetDate = dubaiDate(); // Default to today
             
             if (dateSelect && dateSelect.value) {
                 targetDate = dateSelect.value;
@@ -7981,7 +7981,7 @@
             
             // Get the selected date from the form
             const dateSelect = document.getElementById('salesDate');
-            let selectedDate = new Date().toISOString().split('T')[0]; // Default to today
+            let selectedDate = dubaiDate(); // Default to today
             
             if (dateSelect && dateSelect.value) {
                 selectedDate = dateSelect.value;
@@ -8035,7 +8035,7 @@
                     <div class="sales-item">
                         <div>
                             <div class="sales-item-label">Date</div>
-                            <div class="sales-item-value">${new Date(sale.date).toLocaleDateString()}</div>
+                            <div class="sales-item-value">${fromYMD_Dubai(sale.date).toLocaleDateString()}</div>
                         </div>
                         <div>
                             <div class="sales-item-label">Store</div>
@@ -8409,7 +8409,7 @@
             console.log('Generated CSV with proper IDs');
             
             // Export CSV using improved download function
-            const filename = `EDEN_Master_Data_Export_${new Date().toISOString().split('T')[0]}.csv`;
+            const filename = `EDEN_Master_Data_Export_${dubaiDate()}.csv`;
             downloadCSVFile(csv, filename);
             
             console.log('Master data export completed with proper IDs');
@@ -8434,7 +8434,7 @@
                 
                 // Get current date for filtering (use selected date from form)
                 const dateSelect = document.getElementById('salesDate');
-                const selectedDate = dateSelect ? dateSelect.value : new Date().toISOString().split('T')[0];
+                const selectedDate = dateSelect ? dateSelect.value : dubaiDate();
                 const selectedDateFormatted = new Date(selectedDate).toLocaleDateString();
                 
                 // Filter sales for current user and selected date
@@ -8587,5 +8587,51 @@
 
 
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>
+// ---- Timezone: Dubai (UTC+4, no DST) ----
+const APP_TZ = 'Asia/Dubai';
+
+// Return DD-MM-YYYY in Dubai time
+function dubaiDate(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TZ, day: '2-digit', month: '2-digit', year: 'numeric'
+  }).formatToParts(date);
+  const day = parts.find(p => p.type === 'day').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const year = parts.find(p => p.type === 'year').value;
+  return `${day}-${month}-${year}`;
+}
+
+// Parse date string (DD-MM-YYYY or YYYY-MM-DD) as Dubai midnight
+function fromYMD_Dubai(str) {
+  if (!str) return null;
+  let d, m, y;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    // value came from <input type="date"> or legacy storage
+    [y, m, d] = str.split('-');
+  } else if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+    [d, m, y] = str.split('-');
+  } else {
+    // Try to coerce by Date first, then format back to DD-MM-YYYY
+    const tmp = new Date(str);
+    if (!isNaN(tmp)) {
+      const ddmmyyyy = dubaiDate(tmp);
+      [d, m, y] = ddmmyyyy.split('-');
+    } else {
+      return null;
+    }
+  }
+  return new Date(`${y}-${m}-${d}T00:00:00+04:00`);
+}
+
+// Ensure display is DD-MM-YYYY
+function displayDubaiDate(s) {
+  if (!s) return '';
+  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
+  const d = fromYMD_Dubai(s);
+  if (!d) return s;
+  return dubaiDate(d);
+}
+</script>
+</body>
 </html>
