@@ -1300,7 +1300,12 @@
             <button class="modal-btn" onclick="closeModal()">Continue</button>
         </div>
     </div>
-
+<script>
+// >>> Injected helper to build local YYYY-MM-DD without UTC shifting
+function localDateStr(d = new Date()) {
+  // en-CA locale outputs YYYY-MM-DD; uses LOCAL timezone
+  return d.toLocaleDateString('en-CA');
+}
     <script>
         // Create floating particles
         function createParticles() {
@@ -5051,10 +5056,11 @@
             endDate.style.display = 'none';
             
             // Set default dates
-            const today = new Date().toISOString().split('T')[0];
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const today = localDateStr();
+const yesterday = new Date();
+yesterday.setDate(yesterday.getDate() - 1);
+const yesterdayStr = localDateStr(yesterday);
+
             
             switch(dateFilterType) {
                 case 'specific':
@@ -5880,7 +5886,7 @@
                 // Ensure all required fields are present and not undefined
                 const saleToSave = {
                     id: updatedSale.id || saleId,
-                    date: updatedSale.date || new Date().toISOString().split('T')[0],
+                    date: updatedsale.date || localDateStr,
                     store: updatedSale.store || 'store1',
                     product: updatedSale.product || 'product1',
                     qty: parseInt(updatedSale.qty) || 0,
@@ -5970,6 +5976,7 @@
             
             document.getElementById('fromDate').value = lastMonth.toISOString().split('T')[0];
             document.getElementById('toDate').value = today.toISOString().split('T')[0];
+
             
             // Populate month selector
             const monthSelect = document.getElementById('monthSelect');
@@ -8589,3 +8596,4 @@
     </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
+
