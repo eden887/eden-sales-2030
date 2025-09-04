@@ -1307,6 +1307,26 @@ function localDateStr(d = new Date()) {
   return d.toLocaleDateString('en-CA');
 }
 
+// Keep 'YYYY-MM-DD' strings as local calendar dates without UTC shift
+function safeYMDToDate(ymd) {
+  // ymd expected 'YYYY-MM-DD'
+  if (typeof ymd !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return new Date(ymd);
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d); // local date constructor
+}
+
+// Compare two values as local YYYY-MM-DD dates without parsing to UTC
+function ymdEquals(a, b) {
+  const toYMD = (x) => {
+    if (typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x)) return x;
+    if (x instanceof Date) return localDateStr(x);
+    return localDateStr(safeYMDToDate(String(x)));
+  };
+  return toYMD(a) === toYMD(b);
+}
+
+
+
         // Create floating particles
         function createParticles() {
             const particlesContainer = document.getElementById('particles');
@@ -1554,7 +1574,7 @@ function localDateStr(d = new Date()) {
                     
                     // If no date found, use current date as fallback
                     if (!saleDate) {
-                        saleDate = new Date().toISOString().split('T')[0];
+                        saleDate = localDateStr();
                         console.warn('Sale missing date, using current date as fallback:', sale);
                     }
                     
@@ -1566,7 +1586,7 @@ function localDateStr(d = new Date()) {
                     // Validate date format
                     if (!/^\d{4}-\d{2}-\d{2}$/.test(saleDate)) {
                         console.error('Invalid date format detected:', saleDate, 'for sale:', sale);
-                        saleDate = new Date().toISOString().split('T')[0];
+                        saleDate = localDateStr();
                     }
                     
                     const processedSale = {
@@ -3118,7 +3138,7 @@ function localDateStr(d = new Date()) {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `eden_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `eden_backup_${localDateStr()}.json`;
             a.click();
             window.URL.revokeObjectURL(url);
             
@@ -5108,10 +5128,10 @@ const yesterdayStr = localDateStr(yesterday);
                 return salesData;
             }
             
-            const today = new Date().toISOString().split('T')[0];
+            const today = localDateStr();
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const yesterdayStr = localDateStr(yesterday);
             
             let targetDate = '';
             let startDate = '';
@@ -5914,7 +5934,7 @@ const yesterdayStr = localDateStr(yesterday);
                                 break;
                             case 'date':
                             case 'selectedDate':
-                                saleToSave[key] = new Date().toISOString().split('T')[0];
+                                saleToSave[key] = localDateStr();
                                 break;
                             case 'store':
                                 saleToSave[key] = 'store1';
@@ -5974,8 +5994,8 @@ const yesterdayStr = localDateStr(yesterday);
             const today = new Date();
             const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
             
-            document.getElementById('fromDate').value = lastMonth.toISOString().split('T')[0];
-            document.getElementById('toDate').value = today.toISOString().split('T')[0];
+            document.getElementById('fromDate').value = localDateStr(lastMonth);
+            document.getElementById('toDate').value = localDateStr(today);
 
             
             // Populate month selector
@@ -6481,8 +6501,8 @@ const yesterdayStr = localDateStr(yesterday);
             const startDate = dates[0];
             const endDate = dates[dates.length - 1];
             const reportPeriod = startDate === endDate ? 
-                new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
-                `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+                safeYMDToDate(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                `${safeYMDToDate(startDate).toLocaleDateString()} - ${safeYMDToDate(endDate).toLocaleDateString()}`;
             
             // Hidden employees list - these will not appear in reports
             const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
@@ -6799,8 +6819,8 @@ const yesterdayStr = localDateStr(yesterday);
             const startDate = dates[0];
             const endDate = dates[dates.length - 1];
             const reportPeriod = startDate === endDate ? 
-                new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
-                `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+                safeYMDToDate(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                `${safeYMDToDate(startDate).toLocaleDateString()} - ${safeYMDToDate(endDate).toLocaleDateString()}`;
             
             // Hidden employees list - these will not appear in reports
             const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
@@ -6961,7 +6981,7 @@ const yesterdayStr = localDateStr(yesterday);
                 csv += '"HIGH MARGIN","Margin more than 80%"\r\n';
                 csv += '"OK","No issues detected"\r\n';
                 
-                const filename = `EDEN_Detailed_Report_${new Date().toISOString().split('T')[0]}.csv`;
+                const filename = `EDEN_Detailed_Report_${localDateStr()}.csv`;
                 downloadCSVFile(csv, filename);
                 
                 console.log('CSV export completed with processed data');
@@ -7021,8 +7041,8 @@ const yesterdayStr = localDateStr(yesterday);
                     const startDate = dates[0];
                     const endDate = dates[dates.length - 1];
                     const reportPeriod = startDate === endDate ? 
-                        new Date(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
-                        `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+                        safeYMDToDate(startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) :
+                        `${safeYMDToDate(startDate).toLocaleDateString()} - ${safeYMDToDate(endDate).toLocaleDateString()}`;
                     
                     // Hidden employees list - these will not appear in reports
                     const hiddenEmployees = ['Administrator', 'Sales User', 'test'];
@@ -7177,8 +7197,8 @@ const yesterdayStr = localDateStr(yesterday);
                     const startDate = dates[0];
                     const endDate = dates[dates.length - 1];
                     const reportPeriod = startDate === endDate ? 
-                        new Date(startDate).toLocaleDateString() :
-                        `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+                        safeYMDToDate(startDate).toLocaleDateString() :
+                        `${safeYMDToDate(startDate).toLocaleDateString()} - ${safeYMDToDate(endDate).toLocaleDateString()}`;
                     
                     // Add title
                     doc.setFontSize(16);
@@ -7292,7 +7312,7 @@ const yesterdayStr = localDateStr(yesterday);
                 }
                 
                 // Save the PDF
-                const filename = `EDEN_${reportType}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                const filename = `EDEN_${reportType}_Report_${localDateStr()}.pdf`;
                 console.log('Saving PDF as:', filename);
                 
                 doc.save(filename);
@@ -7326,7 +7346,7 @@ const yesterdayStr = localDateStr(yesterday);
                     fallbackDoc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
                     fallbackDoc.text(`Total Records: ${window.currentReportData.length}`, 20, 60);
                     fallbackDoc.text('For detailed data, please use CSV export.', 20, 80);
-                    fallbackDoc.save(`EDEN_Simple_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                    fallbackDoc.save(`EDEN_Simple_Report_${localDateStr()}.pdf`);
                     showSuccessToast('Simple PDF report generated successfully!');
                 } catch (fallbackError) {
                     console.error('Fallback PDF also failed:', fallbackError);
@@ -7462,10 +7482,10 @@ const yesterdayStr = localDateStr(yesterday);
             const today = new Date();
             const yesterday = new Date(today);
             yesterday.setDate(today.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const yesterdayStr = localDateStr(yesterday);
             
             console.log('🔍 DASHBOARD ANALYTICS - Calculating for YESTERDAY:', {
-                today: today.toISOString().split('T')[0],
+                today: localDateStr(today),
                 yesterday: yesterdayStr,
                 yesterdayFormatted: yesterday.toLocaleDateString(),
                 currentTime: new Date().toLocaleString(),
@@ -7639,8 +7659,8 @@ const yesterdayStr = localDateStr(yesterday);
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const todayStr = localDateStr(today);
+            const yesterdayStr = localDateStr(yesterday);
             
             console.log('🗓️ INITIALIZING SALES ENTRY DATES:', {
                 today: todayStr,
@@ -7769,10 +7789,10 @@ const yesterdayStr = localDateStr(yesterday);
             console.log('Saving sale with EXACT selected date:', selectedDate);
             
             // Validate that the date is not in the future
-            const today = new Date().toISOString().split('T')[0];
+            const today = localDateStr();
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            const yesterdayStr = localDateStr(yesterday);
             
             if (selectedDate !== today && selectedDate !== yesterdayStr) {
                 showErrorToast('Sales can only be entered for today or yesterday');
@@ -7881,7 +7901,7 @@ const yesterdayStr = localDateStr(yesterday);
         function updateTotalQty() {
             // Get the selected date from the form (for sales entry page)
             const dateSelect = document.getElementById('salesDate');
-            let targetDate = new Date().toISOString().split('T')[0]; // Default to today
+            let targetDate = localDateStr(); // Default to today
             
             if (dateSelect && dateSelect.value) {
                 targetDate = dateSelect.value;
@@ -7988,7 +8008,7 @@ const yesterdayStr = localDateStr(yesterday);
             
             // Get the selected date from the form
             const dateSelect = document.getElementById('salesDate');
-            let selectedDate = new Date().toISOString().split('T')[0]; // Default to today
+            let selectedDate = localDateStr(); // Default to today
             
             if (dateSelect && dateSelect.value) {
                 selectedDate = dateSelect.value;
@@ -8029,7 +8049,7 @@ const yesterdayStr = localDateStr(yesterday);
             console.log('Filtered sales for selected date:', sortedSales.length);
             
             if (sortedSales.length === 0) {
-                const selectedDateFormatted = new Date(selectedDate).toLocaleDateString();
+                const selectedDateFormatted = safeYMDToDate(selectedDate).toLocaleDateString();
                 salesList.innerHTML = `<div class="no-sales">No sales recorded by you on ${selectedDateFormatted}</div>`;
                 return;
             }
@@ -8416,7 +8436,7 @@ const yesterdayStr = localDateStr(yesterday);
             console.log('Generated CSV with proper IDs');
             
             // Export CSV using improved download function
-            const filename = `EDEN_Master_Data_Export_${new Date().toISOString().split('T')[0]}.csv`;
+            const filename = `EDEN_Master_Data_Export_${localDateStr()}.csv`;
             downloadCSVFile(csv, filename);
             
             console.log('Master data export completed with proper IDs');
@@ -8441,8 +8461,8 @@ const yesterdayStr = localDateStr(yesterday);
                 
                 // Get current date for filtering (use selected date from form)
                 const dateSelect = document.getElementById('salesDate');
-                const selectedDate = dateSelect ? dateSelect.value : new Date().toISOString().split('T')[0];
-                const selectedDateFormatted = new Date(selectedDate).toLocaleDateString();
+                const selectedDate = dateSelect ? dateSelect.value : localDateStr();
+                const selectedDateFormatted = safeYMDToDate(selectedDate).toLocaleDateString();
                 
                 // Filter sales for current user and selected date
                 const userSales = salesData.filter(sale => {
