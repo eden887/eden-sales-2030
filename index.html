@@ -1556,7 +1556,7 @@
                         qty: parseInt(sale.qty) || 0,
                         user: sale.user || 'Unknown User',
                         timestamp: sale.timestamp || new Date().toLocaleString(),
-                        createdAt: sale.createdAt || new Date().toISOString(),
+                        createdAt: sale.createdAt || new Date().toLocaleString(),
                         saleDate: sale.saleDate, // Preserve backup date field
                         entryTimestamp: sale.entryTimestamp, // Preserve entry timestamp
                         firebaseKey: sale.firebaseKey // Preserve Firebase key for updates
@@ -2747,7 +2747,7 @@ function ymd(dLike = new Date()) {
                     id: textId,
                     name: name,
                     code: productCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date().toLocaleString(),
                     createdBy: userSession.username
                 };
                 
@@ -2790,7 +2790,7 @@ function ymd(dLike = new Date()) {
                     password: password,
                     role: role,
                     empId: employeeId,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date().toLocaleString(),
                     createdBy: userSession.username
                 };
                 
@@ -2826,7 +2826,7 @@ function ymd(dLike = new Date()) {
                     id: textId,
                     name: name,
                     code: storeCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date().toLocaleString(),
                     createdBy: userSession.username
                 };
                 
@@ -3092,7 +3092,7 @@ function ymd(dLike = new Date()) {
                 stores: JSON.parse(localStorage.getItem('stores')) || [],
                 storePrices: JSON.parse(localStorage.getItem('storePrices')) || {},
                 userSession: JSON.parse(localStorage.getItem('userSession')) || {},
-                timestamp: new Date().toISOString(),
+                timestamp: new Date().toLocaleString(),
                 version: '1.0'
             };
             
@@ -3100,7 +3100,7 @@ function ymd(dLike = new Date()) {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `eden_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `eden_backup_${new Date().toLocaleString().split('T')[0]}.json`;
             a.click();
             window.URL.revokeObjectURL(url);
             
@@ -4101,7 +4101,7 @@ function ymd(dLike = new Date()) {
                     qty: parseInt(quantity) || 0,
                     user: user,
                     timestamp: sale.timestamp || new Date().toLocaleString(),
-                    createdAt: sale.createdAt || new Date().toISOString()
+                    createdAt: sale.createdAt || new Date().toLocaleString()
                 };
                 
                 if (cleanSale.qty > 0) {
@@ -4204,7 +4204,7 @@ function ymd(dLike = new Date()) {
                     id: generateTextId('PROD'),
                     name: productName,
                     code: productCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date().toLocaleString(),
                     createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
@@ -4232,7 +4232,7 @@ function ymd(dLike = new Date()) {
                         id: product.id || generateTextId('PROD'),
                         name: product.name || 'Unnamed Product',
                         code: product.code || generateProductCode(),
-                        createdAt: product.createdAt || new Date().toISOString(),
+                        createdAt: product.createdAt || new Date().toLocaleString(),
                         createdBy: product.createdBy || 'Import',
                         type: product.type || 'imported'
                     };
@@ -4243,7 +4243,7 @@ function ymd(dLike = new Date()) {
                             console.error(`Field ${key} is undefined/null, setting default value`);
                             productToSave[key] = key === 'name' ? 'Unnamed Product' : 
                                                 key === 'code' ? generateProductCode() :
-                                                key === 'createdAt' ? new Date().toISOString() :
+                                                key === 'createdAt' ? new Date().toLocaleString() :
                                                 key === 'createdBy' ? 'Import' :
                                                 key === 'type' ? 'imported' : 'default';
                         }
@@ -4320,7 +4320,7 @@ function ymd(dLike = new Date()) {
                     username: username,
                     password: password,
                     role: role,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date().toLocaleString(),
                     createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
@@ -4351,7 +4351,7 @@ function ymd(dLike = new Date()) {
                         username: employee.username || 'user' + Date.now(),
                         password: employee.password || 'password123',
                         role: employee.role || 'sales',
-                        createdAt: employee.createdAt || new Date().toISOString(),
+                        createdAt: employee.createdAt || new Date().toLocaleString(),
                         createdBy: employee.createdBy || 'Import',
                         type: employee.type || 'imported'
                     };
@@ -4365,7 +4365,7 @@ function ymd(dLike = new Date()) {
                                                  key === 'username' ? 'user' + Date.now() :
                                                  key === 'password' ? 'password123' :
                                                  key === 'role' ? 'sales' :
-                                                 key === 'createdAt' ? new Date().toISOString() :
+                                                 key === 'createdAt' ? new Date().toLocaleString() :
                                                  key === 'createdBy' ? 'Import' :
                                                  key === 'type' ? 'imported' : 'default';
                         }
@@ -4450,7 +4450,7 @@ function ymd(dLike = new Date()) {
                     id: generateTextId('STORE'),
                     name: storeName,
                     code: storeCode,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date().toLocaleString(),
                     createdBy: userSession?.username || 'Import',
                     type: 'imported'
                 };
@@ -4478,7 +4478,7 @@ function ymd(dLike = new Date()) {
                         id: store.id || generateTextId('STORE'),
                         name: store.name || 'Unnamed Store',
                         code: store.code || generateStoreCode(),
-                        createdAt: store.createdAt || new Date().toISOString(),
+                        createdAt: store.createdAt || new Date().toLocaleString(),
                         createdBy: store.createdBy || 'Import',
                         type: store.type || 'imported'
                     };
@@ -4489,7 +4489,7 @@ function ymd(dLike = new Date()) {
                             console.error(`Field ${key} is undefined/null, setting default value`);
                             storeToSave[key] = key === 'name' ? 'Unnamed Store' : 
                                               key === 'code' ? generateStoreCode() :
-                                              key === 'createdAt' ? new Date().toISOString() :
+                                              key === 'createdAt' ? new Date().toLocaleString() :
                                               key === 'createdBy' ? 'Import' :
                                               key === 'type' ? 'imported' : 'default';
                         }
@@ -5038,7 +5038,7 @@ function ymd(dLike = new Date()) {
             endDate.style.display = 'none';
             
             // Set default dates
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleString().split('T')[0];
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -5089,7 +5089,7 @@ function ymd(dLike = new Date()) {
                 return salesData;
             }
             
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleString().split('T')[0];
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -5730,7 +5730,7 @@ function ymd(dLike = new Date()) {
                 const updatedProduct = { 
                     ...firebaseProducts[productId], 
                     ...updates,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date().toLocaleString(),
                     updatedBy: userSession.username
                 };
                 
@@ -5754,7 +5754,7 @@ function ymd(dLike = new Date()) {
                 const updatedEmployee = { 
                     ...firebaseEmployees[employeeId], 
                     ...updates,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date().toLocaleString(),
                     updatedBy: userSession.username
                 };
                 
@@ -5783,7 +5783,7 @@ function ymd(dLike = new Date()) {
                 const updatedStore = { 
                     ...currentStore, 
                     ...updates,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date().toLocaleString(),
                     updatedBy: userSession?.username || 'Unknown'
                 };
                 
@@ -5792,7 +5792,7 @@ function ymd(dLike = new Date()) {
                     id: updatedStore.id || storeId,
                     name: updatedStore.name || 'Unnamed Store',
                     code: updatedStore.code || generateStoreCode(),
-                    createdAt: updatedStore.createdAt || new Date().toISOString(),
+                    createdAt: updatedStore.createdAt || new Date().toLocaleString(),
                     createdBy: updatedStore.createdBy || 'System',
                     type: updatedStore.type || 'custom',
                     updatedAt: updatedStore.updatedAt,
@@ -5805,7 +5805,7 @@ function ymd(dLike = new Date()) {
                         console.error(`Field ${key} is undefined/null, setting default value`);
                         storeToSave[key] = key === 'name' ? 'Unnamed Store' : 
                                           key === 'code' ? generateStoreCode() :
-                                          key === 'createdAt' ? new Date().toISOString() :
+                                          key === 'createdAt' ? new Date().toLocaleString() :
                                           key === 'createdBy' ? 'System' :
                                           key === 'updatedBy' ? 'System' :
                                           key === 'type' ? 'custom' : 'default';
@@ -5860,20 +5860,20 @@ function ymd(dLike = new Date()) {
                 const updatedSale = { 
                     ...currentSale, 
                     ...updates,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date().toLocaleString(),
                     updatedBy: userSession?.username || 'Admin'
                 };
                 
                 // Ensure all required fields are present and not undefined
                 const saleToSave = {
                     id: updatedSale.id || saleId,
-                    date: updatedSale.date || new Date().toISOString().split('T')[0],
+                    date: updatedSale.date || new Date().toLocaleString().split('T')[0],
                     store: updatedSale.store || 'store1',
                     product: updatedSale.product || 'product1',
                     qty: parseInt(updatedSale.qty) || 0,
                     user: updatedSale.user || 'Unknown User',
                     timestamp: updatedSale.timestamp || new Date().toLocaleString(),
-                    createdAt: updatedSale.createdAt || new Date().toISOString(),
+                    createdAt: updatedSale.createdAt || new Date().toLocaleString(),
                     updatedAt: updatedSale.updatedAt,
                     updatedBy: updatedSale.updatedBy
                 };
@@ -5895,7 +5895,7 @@ function ymd(dLike = new Date()) {
                                 break;
                             case 'date':
                             case 'selectedDate':
-                                saleToSave[key] = new Date().toISOString().split('T')[0];
+                                saleToSave[key] = new Date().toLocaleString().split('T')[0];
                                 break;
                             case 'store':
                                 saleToSave[key] = 'store1';
@@ -5914,7 +5914,7 @@ function ymd(dLike = new Date()) {
                                 break;
                             case 'createdAt':
                             case 'updatedAt':
-                                saleToSave[key] = new Date().toISOString();
+                                saleToSave[key] = new Date().toLocaleString();
                                 break;
                             case 'updatedBy':
                                 saleToSave[key] = 'System';
@@ -6941,7 +6941,7 @@ function ymd(dLike = new Date()) {
                 csv += '"HIGH MARGIN","Margin more than 80%"\r\n';
                 csv += '"OK","No issues detected"\r\n';
                 
-                const filename = `EDEN_Detailed_Report_${new Date().toISOString().split('T')[0]}.csv`;
+                const filename = `EDEN_Detailed_Report_${new Date().toLocaleString().split('T')[0]}.csv`;
                 downloadCSVFile(csv, filename);
                 
                 console.log('CSV export completed with processed data');
@@ -7272,7 +7272,7 @@ function ymd(dLike = new Date()) {
                 }
                 
                 // Save the PDF
-                const filename = `EDEN_${reportType}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                const filename = `EDEN_${reportType}_Report_${new Date().toLocaleString().split('T')[0]}.pdf`;
                 console.log('Saving PDF as:', filename);
                 
                 doc.save(filename);
@@ -7306,7 +7306,7 @@ function ymd(dLike = new Date()) {
                     fallbackDoc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 40);
                     fallbackDoc.text(`Total Records: ${window.currentReportData.length}`, 20, 60);
                     fallbackDoc.text('For detailed data, please use CSV export.', 20, 80);
-                    fallbackDoc.save(`EDEN_Simple_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                    fallbackDoc.save(`EDEN_Simple_Report_${new Date().toLocaleString().split('T')[0]}.pdf`);
                     showSuccessToast('Simple PDF report generated successfully!');
                 } catch (fallbackError) {
                     console.error('Fallback PDF also failed:', fallbackError);
@@ -7749,7 +7749,7 @@ function ymd(dLike = new Date()) {
             console.log('Saving sale with EXACT selected date:', selectedDate);
             
             // Validate that the date is not in the future
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleString().split('T')[0];
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -7777,7 +7777,7 @@ function ymd(dLike = new Date()) {
                 qty: qty,
                 timestamp: new Date().toLocaleString(),
                 user: userSession.username,
-                createdAt: new Date().toISOString(),
+                createdAt: new Date().toLocaleString(),
                 saleDate: selectedDate, // Backup field to ensure date integrity
                 entryTimestamp: Date.now() // Unix timestamp for precise tracking
             };
@@ -7861,7 +7861,7 @@ function ymd(dLike = new Date()) {
         function updateTotalQty() {
             // Get the selected date from the form (for sales entry page)
             const dateSelect = document.getElementById('salesDate');
-            let targetDate = new Date().toISOString().split('T')[0]; // Default to today
+            let targetDate = new Date().toLocaleString().split('T')[0]; // Default to today
             
             if (dateSelect && dateSelect.value) {
                 targetDate = dateSelect.value;
@@ -7968,7 +7968,7 @@ function ymd(dLike = new Date()) {
             
             // Get the selected date from the form
             const dateSelect = document.getElementById('salesDate');
-            let selectedDate = new Date().toISOString().split('T')[0]; // Default to today
+            let selectedDate = new Date().toLocaleString().split('T')[0]; // Default to today
             
             if (dateSelect && dateSelect.value) {
                 selectedDate = dateSelect.value;
@@ -8396,7 +8396,7 @@ function ymd(dLike = new Date()) {
             console.log('Generated CSV with proper IDs');
             
             // Export CSV using improved download function
-            const filename = `EDEN_Master_Data_Export_${new Date().toISOString().split('T')[0]}.csv`;
+            const filename = `EDEN_Master_Data_Export_${new Date().toLocaleString().split('T')[0]}.csv`;
             downloadCSVFile(csv, filename);
             
             console.log('Master data export completed with proper IDs');
@@ -8421,7 +8421,7 @@ function ymd(dLike = new Date()) {
                 
                 // Get current date for filtering (use selected date from form)
                 const dateSelect = document.getElementById('salesDate');
-                const selectedDate = dateSelect ? dateSelect.value : new Date().toISOString().split('T')[0];
+                const selectedDate = dateSelect ? dateSelect.value : new Date().toLocaleString().split('T')[0];
                 const selectedDateFormatted = new Date(selectedDate).toLocaleDateString();
                 
                 // Filter sales for current user and selected date
