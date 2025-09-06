@@ -5906,7 +5906,7 @@ const yesterdayStr = localDateStr(yesterday);
                 // Ensure all required fields are present and not undefined
                 const saleToSave = {
                     id: updatedSale.id || saleId,
-                    date: updatedsale.date || localDateStr,
+                    date: updatedSale.date || localDateStr()(),
                     store: updatedSale.store || 'store1',
                     product: updatedSale.product || 'product1',
                     qty: parseInt(updatedSale.qty) || 0,
