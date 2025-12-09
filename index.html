@@ -7478,11 +7478,11 @@ const yesterdayStr = localDateStr(yesterday);
         }
 
         function calculateYesterdayAnalytics() {
-            // Date restriction removed – all dates now allowed
-           const today = localDateStr();
-const yesterday = new Date();
-yesterday.setDate(yesterday.getDate() - 1);
-const yesterdayStr = localDateStr(yesterday);
+            // Always show YESTERDAY's data (one day before current date)
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            const yesterdayStr = localDateStr(yesterday);
             
             console.log('🔍 DASHBOARD ANALYTICS - Calculating for YESTERDAY:', {
                 today: localDateStr(today),
@@ -8616,6 +8616,5 @@ const yesterdayStr = localDateStr(yesterday);
     </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
-
 
 
