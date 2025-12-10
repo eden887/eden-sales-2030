@@ -2047,19 +2047,12 @@ function ymdEquals(a, b) {
                                             <option value="employee">Employee-wise Report</option>
                                             <option value="store">Store-wise Report</option>
                                             <option value="monthly">Monthly Report</option>
-                                            <option value="attendance">Attendance Report</option>
                                         </select>
                                     </div>
                                     <div class="form-group" id="specificFilterGroup" style="display: none;">
                                         <label class="form-label" id="specificFilterLabel">Select Item</label>
                                         <select class="form-input" id="specificFilter">
                                             <option value="">All</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" id="staffFilterGroup" style="display:none;">
-                                        <label class="form-label">Select Staff</label>
-                                        <select class="form-input" id="staffFilter">
-                                            <option value="">All Staff</option>
                                         </select>
                                     </div>
                                 </div>
@@ -6022,25 +6015,21 @@ const yesterdayStr = localDateStr(yesterday);
             updateReportFilters();
         }
 
-        
         function updateReportFilters() {
-            const type = document.getElementById('reportType').value;
+            const reportType = document.getElementById('reportType').value;
             const specificFilterGroup = document.getElementById('specificFilterGroup');
             const specificFilter = document.getElementById('specificFilter');
             const specificFilterLabel = document.getElementById('specificFilterLabel');
             const dateFilters = document.getElementById('dateFilters');
             const monthFilter = document.getElementById('monthFilter');
-            const staffFilterGroup = document.getElementById('staffFilterGroup');
-
-            // Default visibility
+            
+            // Hide all specific filters first
             specificFilterGroup.style.display = 'none';
             dateFilters.style.display = 'flex';
             monthFilter.style.display = 'none';
-            if (staffFilterGroup) {
-                staffFilterGroup.style.display = 'none';
-            }
-
-            switch (type) {
+            
+            // Show specific filters based on report type
+            switch(reportType) {
                 case 'product':
                     specificFilterGroup.style.display = 'block';
                     specificFilterLabel.textContent = 'Select Product';
@@ -6059,19 +6048,6 @@ const yesterdayStr = localDateStr(yesterday);
                 case 'monthly':
                     dateFilters.style.display = 'none';
                     monthFilter.style.display = 'flex';
-                    break;
-                case 'attendance':
-                    // Use normal date range + staff filter
-                    if (staffFilterGroup) {
-                        staffFilterGroup.style.display = 'block';
-                        const staffSelect = document.getElementById('staffFilter');
-                        staffSelect.innerHTML = '<option value="">All Staff</option>';
-                        Object.values(firebaseEmployees || {}).forEach(emp => {
-                            if (emp && emp.name) {
-                                staffSelect.innerHTML += `<option value="${emp.name}">${emp.name}</option>`;
-                            }
-                        });
-                    }
                     break;
             }
         }
@@ -6152,134 +6128,6 @@ const yesterdayStr = localDateStr(yesterday);
             const toDate = document.getElementById('toDate').value;
             const monthSelect = document.getElementById('monthSelect').value;
             
-            
-            // Attendance report handled separately
-            if (reportType === 'attendance') {
-                const staffFilterElem = document.getElementById('staffFilter');
-                const selectedStaff = staffFilterElem ? staffFilterElem.value : '';
-
-                if (!fromDate || !toDate) {
-                    document.getElementById('reportResults').innerHTML =
-                        '<div class="no-data">Please select both From Date and To Date for attendance report</div>';
-                    document.getElementById('exportCSVBtn').style.display = 'none';
-                    document.getElementById('exportPDFBtn').style.display = 'none';
-                    return;
-                }
-
-                // Build list of employees (optionally filtered by selected staff)
-                const employees = Object.values(firebaseEmployees || {}).filter(emp => emp && emp.name);
-                const targetEmployees = selectedStaff
-                    ? employees.filter(emp => emp.name === selectedStaff)
-                    : employees;
-
-                const attendanceRows = [];
-                const startDate = new Date(fromDate);
-                const endDate = new Date(toDate);
-
-                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                    const day = d.toISOString().split('T')[0];
-
-                    targetEmployees.forEach(emp => {
-                        const salesForDay = salesData.filter(sale =>
-                            sale.user === emp.name && sale.date === day
-                        );
-                        const totalQty = salesForDay.reduce((sum, sale) => {
-                            const q = parseInt(sale.qty, 10);
-                            return sum + (isNaN(q) ? 0 : q);
-                        }, 0);
-
-                        attendanceRows.push({
-                            employee: emp.name,
-                            date: day,
-                            status: totalQty > 0 ? 'Present' : 'Absent',
-                            qty: totalQty
-                        });
-                    });
-                }
-
-                // Build detailed table HTML
-                let html = `
-                    <table class="report-table">
-                        <tr>
-                            <th>Staff</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Total Qty Sold</th>
-                        </tr>`;
-
-                attendanceRows.forEach(row => {
-                    const statusColor = row.status === 'Present' ? '#22c55e' : '#ff453a';
-                    html += `
-                        <tr>
-                            <td>${row.employee}</td>
-                            <td>${row.date}</td>
-                            <td style="color:${statusColor}">${row.status}</td>
-                            <td>${row.qty}</td>
-                        </tr>`;
-                });
-
-                html += `</table>`;
-
-                // Build summary per staff
-                const summaryByStaff = {};
-                attendanceRows.forEach(row => {
-                    if (!summaryByStaff[row.employee]) {
-                        summaryByStaff[row.employee] = {
-                            present: 0,
-                            absent: 0,
-                            totalQty: 0,
-                            bestDay: '',
-                            bestQty: 0
-                        };
-                    }
-                    const s = summaryByStaff[row.employee];
-                    if (row.status === 'Present') s.present++;
-                    else s.absent++;
-                    s.totalQty += row.qty;
-                    if (row.qty > s.bestQty) {
-                        s.bestQty = row.qty;
-                        s.bestDay = row.date;
-                    }
-                });
-
-                html += `
-                    <h3 style="margin-top:20px; color:#fff;">Attendance Summary</h3>
-                    <table class="report-table">
-                        <tr>
-                            <th>Staff</th>
-                            <th>Present Days</th>
-                            <th>Absent Days</th>
-                            <th>Total Qty Sold</th>
-                            <th>Best Day</th>
-                        </tr>`;
-
-                Object.keys(summaryByStaff).forEach(name => {
-                    const s = summaryByStaff[name];
-                    const best = s.bestDay ? `${s.bestDay} (${s.bestQty})` : '-';
-                    html += `
-                        <tr>
-                            <td>${name}</td>
-                            <td style="color:#22c55e">${s.present}</td>
-                            <td style="color:#ff453a">${s.absent}</td>
-                            <td>${s.totalQty}</td>
-                            <td>${best}</td>
-                        </tr>`;
-                });
-
-                html += `</table>`;
-
-                document.getElementById('reportResults').innerHTML = html;
-
-                // For now, disable export buttons for attendance to avoid mismatched CSV/PDF formats
-                document.getElementById('exportCSVBtn').style.display = 'none';
-                document.getElementById('exportPDFBtn').style.display = 'none';
-
-                // Store attendance rows for any future use
-                window.currentReportData = attendanceRows;
-                window.currentReportType = reportType;
-                return;
-            }
-
             let filteredData = [...salesData];
             
             // Apply date filters
