@@ -91,6 +91,27 @@ document.addEventListener('submit', async function (e) {
 });
 /* =========================================== */
 
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
+/* =========================================== */
+
 </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js">
 /* ===== Previous Date Sale (CLEAN FINAL) ===== */
@@ -176,6 +197,27 @@ document.addEventListener('submit', async function (e) {
     loadFirebaseData();
   }
 });
+/* =========================================== */
+
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
 /* =========================================== */
 
 </script>
@@ -267,6 +309,27 @@ document.addEventListener('submit', async function (e) {
 });
 /* =========================================== */
 
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
+/* =========================================== */
+
 </script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
 /* ===== Previous Date Sale (CLEAN FINAL) ===== */
@@ -354,6 +417,27 @@ document.addEventListener('submit', async function (e) {
 });
 /* =========================================== */
 
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
+/* =========================================== */
+
 </script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js">
 /* ===== Previous Date Sale (CLEAN FINAL) ===== */
@@ -439,6 +523,27 @@ document.addEventListener('submit', async function (e) {
     loadFirebaseData();
   }
 });
+/* =========================================== */
+
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
 /* =========================================== */
 
 </script>
@@ -9130,6 +9235,27 @@ document.addEventListener('submit', async function (e) {
 });
 /* =========================================== */
 
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
+/* =========================================== */
+
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
 /* ===== Previous Date Sale (CLEAN FINAL) ===== */
@@ -9215,6 +9341,27 @@ document.addEventListener('submit', async function (e) {
     loadFirebaseData();
   }
 });
+/* =========================================== */
+
+
+/* ===== FINAL OVERRIDE: Safe Delete Sale ===== */
+async function deleteSale(firebaseKey) {
+  if (!firebaseKey) {
+    showToast('Invalid sale reference');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this sale?')) return;
+
+  try {
+    await database.ref(`sales/${firebaseKey}`).remove();
+    showToast('Sale deleted successfully');
+    loadFirebaseData();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete sale');
+  }
+}
 /* =========================================== */
 
 </script>
