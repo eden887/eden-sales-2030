@@ -6,8 +6,7 @@
     <title>EDEN - Sales Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -40,12 +39,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -56,23 +54,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -81,21 +76,24 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js">
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -128,12 +126,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -144,23 +141,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -169,23 +163,26 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js">
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -218,12 +215,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -234,23 +230,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -259,21 +252,24 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js">
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -306,12 +302,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -322,23 +317,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -347,21 +339,24 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js">
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -394,12 +389,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -410,23 +404,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -435,16 +426,20 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
     <style>
@@ -9050,8 +9045,7 @@ const yesterdayStr = localDateStr(yesterday);
 
 
     
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -9084,12 +9078,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -9100,23 +9093,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -9125,21 +9115,24 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977b05682541f9db',t:'MTc1NjYyNzUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
-
-// ===== Previous Date Sale (MULTI PRODUCT) =====
+/* ===== Previous Date Sale (CLEAN FINAL) ===== */
 function openPreviousDateSaleModal() {
   const modal = document.getElementById('previousDateSaleModal');
   modal.style.display = 'flex';
@@ -9172,12 +9165,11 @@ function addPrevProductRow() {
   row.innerHTML = `
     <select class="form-input prev-product" required>
       <option value="">Select Product</option>
-      ${Object.values(firebaseProducts).map(p =>
-        `<option value="${p.name}">${p.name}</option>`).join('')}
+      ${Object.values(firebaseProducts)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join('')}
     </select>
-
     <input type="number" class="form-input prev-qty" min="1" placeholder="Qty" required>
-
     <button type="button" class="btn-danger" onclick="this.parentElement.remove()">✕</button>
   `;
 
@@ -9188,23 +9180,20 @@ function closePreviousDateSaleModal() {
   document.getElementById('previousDateSaleModal').style.display = 'none';
 }
 
-document.addEventListener('submit', async (e) => {
+document.addEventListener('submit', async function (e) {
   if (e.target && e.target.id === 'previousDateSaleForm') {
     e.preventDefault();
 
     const date = document.getElementById('prevSaleDate').value;
     const store = document.getElementById('prevSaleStore').value;
-
     const rows = document.querySelectorAll('#prevProductRows > div');
-    if (!rows.length) return alert('Add at least one product');
 
     for (const r of rows) {
       const product = r.querySelector('.prev-product').value;
       const qty = parseInt(r.querySelector('.prev-qty').value);
-
       if (!product || !qty) continue;
 
-      await pushToFirebase('sales', {
+      const saleData = {
         date,
         store,
         product,
@@ -9213,21 +9202,24 @@ document.addEventListener('submit', async (e) => {
         entryTimestamp: new Date().toLocaleString(),
         createdAt: new Date().toISOString(),
         isManualPreviousDate: true
-      });
+      };
+
+      const res = await pushToFirebase('sales', saleData);
+      if (res.success && res.key) {
+        await database.ref('sales/' + res.key).update({ firebaseKey: res.key });
+      }
     }
 
-    alert('All previous date sales saved');
+    alert('Previous date sales saved successfully');
     closePreviousDateSaleModal();
     loadFirebaseData();
   }
 });
-// ==============================================
-
+/* =========================================== */
 
 </script>
-
-<!-- Previous Date Sale Modal (Multi Product) -->
-<div class="modal-overlay" id="previousDateSaleModal">
+<!-- Previous Date Sale Modal -->
+<div class="modal-overlay" id="previousDateSaleModal" style="display:none">
   <div class="modal-card extra-large-modal">
     <div class="modal-header">
       <h3 class="modal-title">Add Previous Date Sale</h3>
@@ -9235,7 +9227,6 @@ document.addEventListener('submit', async (e) => {
     </div>
     <div class="modal-form">
       <form id="previousDateSaleForm">
-
         <div class="form-group">
           <label class="form-label">Sale Date</label>
           <input type="date" class="form-input" id="prevSaleDate" required>
@@ -9246,7 +9237,7 @@ document.addEventListener('submit', async (e) => {
           <select class="form-input" id="prevSaleStore" required></select>
         </div>
 
-        <hr style="border-color: rgba(99,99,102,0.2); margin:20px 0">
+        <hr style="border-color:rgba(99,99,102,.2);margin:20px 0">
 
         <div id="prevProductRows"></div>
 
@@ -9258,12 +9249,10 @@ document.addEventListener('submit', async (e) => {
           <button type="submit" class="btn-primary">Save All Sales</button>
           <button type="button" class="btn-secondary" onclick="closePreviousDateSaleModal()">Cancel</button>
         </div>
-
       </form>
     </div>
   </div>
 </div>
-
 
 </body>
 </html>
